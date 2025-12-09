@@ -1,11 +1,24 @@
 # 📡 Chat Signal Radar
 
-A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch live chat in real-time, clustering messages into actionable categories: **Questions**, **Issues/Bugs**, **Requests**, and **General Chat**.
+A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch live chat in real-time. Built for content creators who need to keep up with fast-moving chat streams.
+
+## ✨ Features
+
+- **Message Clustering**: Automatically categorizes messages into Questions, Issues/Bugs, Requests, and General Chat
+- **Sentiment Analysis**: Real-time mood indicator showing chat sentiment (excited, positive, angry, negative, confused, neutral)
+- **Trending Topics**: Word cloud of frequently mentioned terms, with special highlighting for emotes
+- **AI Summaries**: Optional WebLLM-powered chat summaries (works offline, falls back gracefully)
 
 ## 🏗️ Architecture
 
-- **Rust WASM Engine** (`wasm-engine/`): Message clustering logic compiled to WebAssembly
-- **Chrome Extension** (`extension/`): Manifest V3 extension with content script and sidebar UI
+- **Rust WASM Engine** (`wasm-engine/`): High-performance analysis compiled to WebAssembly
+  - Message clustering
+  - Topic extraction with stop-word filtering
+  - Sentiment signal analysis
+- **Chrome Extension** (`extension/`): Manifest V3 extension with sidebar UI
+  - Real-time chat observation
+  - Mood indicator with color-coded display
+  - Trending topics word cloud
 - **Build Scripts** (`scripts/`): Automated build pipeline from Rust → WASM → Extension
 
 ## 🚀 Quick Start
@@ -33,23 +46,27 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 3. **Test it:**
    - Navigate to a YouTube live stream or Twitch channel with active chat
    - Click the extension icon to open the sidebar
-   - Watch messages cluster in real-time! 📊
+   - Watch the dashboard update in real-time:
+     - 🎭 Mood indicator shows overall chat sentiment
+     - 🏷️ Trending topics highlight what people are talking about
+     - 📊 Message clusters organize chat by type
 
 ## 📁 Project Structure
 
 ```
 chat-signal-radar/
-├── wasm-engine/           # Rust → WASM clustering engine
+├── wasm-engine/           # Rust → WASM analysis engine
 │   ├── Cargo.toml
-│   └── src/lib.rs
+│   └── src/lib.rs         # Clustering, topics, sentiment
 ├── extension/             # Chrome extension (Manifest V3)
 │   ├── manifest.json
-│   ├── background.js
-│   ├── content-script.js
+│   ├── background.js      # Service worker
+│   ├── content-script.js  # Chat DOM observer
+│   ├── llm-adapter.js     # WebLLM integration
 │   ├── sidebar/
-│   │   ├── sidebar.html
-│   │   ├── sidebar.css
-│   │   └── sidebar.js
+│   │   ├── sidebar.html   # Dashboard UI
+│   │   ├── sidebar.css    # Styling (mood colors, topic tags)
+│   │   └── sidebar.js     # WASM loading, rendering
 │   └── wasm/              # (generated) WASM artifacts
 └── scripts/
     ├── build.sh           # Build Rust → WASM → Extension
@@ -81,12 +98,15 @@ Requires [cargo-watch](https://github.com/watchexec/cargo-watch):
 cargo install cargo-watch
 ```
 
-### Modifying the Clustering Logic
+### Modifying the Analysis Logic
 
-Edit `wasm-engine/src/lib.rs` and rebuild. Current v0 implementation uses simple keyword matching. Future improvements could include:
-- TF-IDF or embedding-based similarity
-- Language-specific NLP models
-- User-configurable categories
+Edit `wasm-engine/src/lib.rs` and rebuild. The engine includes:
+
+- **Clustering**: Keyword-based message categorization
+- **Topic Detection**: Word frequency with smart stop-word filtering
+- **Sentiment Analysis**: Lexicon-based mood detection
+
+Word lists for emotes, stop words, and sentiment are defined at the top of `lib.rs`.
 
 ### Run Tests
 
@@ -95,13 +115,34 @@ cd wasm-engine
 cargo test
 ```
 
+14 unit tests cover clustering, topic extraction, and sentiment analysis.
+
 ## 🎯 How It Works
 
 1. **Content Script** observes YouTube/Twitch chat DOM
 2. Batches messages every 5 seconds
 3. Sends batch to **Sidebar** via `chrome.runtime`
-4. **WASM module** clusters messages by keywords
-5. **Sidebar UI** displays categorized results
+4. **WASM engine** runs combined analysis:
+   - Clusters messages by type
+   - Extracts trending topics (5+ mentions)
+   - Computes sentiment signals
+5. **LLM Adapter** optionally enhances sentiment with WebLLM
+6. **Sidebar UI** displays:
+   - Mood indicator (emoji + label + confidence)
+   - Trending topics word cloud
+   - Categorized message clusters
+   - AI summary (if LLM available)
+
+## 🎭 Sentiment Moods
+
+| Mood | Emoji | Trigger |
+|------|-------|---------|
+| Excited | 🎉 | Very positive chat (score > 50) |
+| Positive | 😊 | Positive keywords (love, great, pog, etc.) |
+| Neutral | 😐 | Normal chat |
+| Confused | 🤔 | Questions, "wait", "huh", etc. |
+| Negative | 😔 | Negative keywords (bad, boring, etc.) |
+| Angry | 😠 | Very negative chat (score < -50) |
 
 ## 📝 License
 
@@ -109,4 +150,10 @@ MPL 2.0
 
 ## 🤝 Contributing
 
-PRs welcome! This is a v0 prototype — lots of room for improvement.
+PRs welcome! Some ideas for future improvements:
+
+- User-configurable sentiment keywords
+- Additional streaming platforms
+- Historical trend graphs
+- Export/share functionality
+- Embedding-based semantic clustering

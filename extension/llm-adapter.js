@@ -73,6 +73,7 @@ async function initializeLLM(progressCallback = null) {
  */
 function createFallbackEngine() {
   return {
+    _isFallback: true,
     chat: {
       completions: {
         create: async ({ messages }) => {
@@ -205,6 +206,176 @@ function buildSummaryPrompt(buckets) {
 }
 
 /**
+ * Mood emoji mapping
+ */
+const MOOD_EMOJIS = {
+  excited: '🎉',
+  positive: '😊',
+  angry: '😠',
+  negative: '😔',
+  confused: '🤔',
+  neutral: '😐'
+};
+
+/**
+ * Analyze sentiment of chat messages using LLM or fallback
+ * @param {Array} messages - Recent messages for context
+ * @param {Object} sentimentSignals - Pre-computed signals from WASM
+ * @returns {Promise<Object>} Sentiment result with mood, confidence, summary
+ */
+async function analyzeSentiment(messages, sentimentSignals) {
+  if (!isInitialized) {
+    throw new Error('LLM not initialized. Call initializeLLM() first.');
+  }
+
+  // If using fallback engine, skip LLM and use rule-based
+  if (engine && engine._isFallback) {
+    return computeFallbackSentiment(sentimentSignals);
+  }
+
+  try {
+    const signalSummary = buildSignalSummary(sentimentSignals);
+
+    // Sample recent messages for LLM analysis
+    const sampleMessages = messages
+      .slice(-15)
+      .map(m => m.text)
+      .join('\n');
+
+    const prompt = `Analyze the overall mood of this live stream chat.
+
+Pre-computed signals:
+${signalSummary}
+
+Recent messages:
+${sampleMessages}
+
+Classify the overall mood as ONE of: excited, positive, angry, negative, confused, neutral
+
+Respond in this exact format:
+MOOD: [mood]
+CONFIDENCE: [0.0-1.0]
+REASON: [one sentence explanation]`;
+
+    const response = await engine.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are analyzing live stream chat sentiment. Be concise and accurate. Consider emotes and slang as valid sentiment indicators.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 60
+    });
+
+    return parseSentimentResponse(response.choices[0].message.content);
+  } catch (error) {
+    console.error('[LLM] Sentiment analysis failed:', error);
+    return computeFallbackSentiment(sentimentSignals);
+  }
+}
+
+/**
+ * Build summary string from sentiment signals
+ */
+function buildSignalSummary(signals) {
+  const total = signals.positive_count + signals.negative_count +
+                signals.confused_count + signals.neutral_count;
+  if (total === 0) return 'No messages analyzed yet.';
+
+  return `- Positive indicators: ${signals.positive_count} (${Math.round(signals.positive_count / total * 100)}%)
+- Negative indicators: ${signals.negative_count} (${Math.round(signals.negative_count / total * 100)}%)
+- Confused indicators: ${signals.confused_count} (${Math.round(signals.confused_count / total * 100)}%)
+- Neutral: ${signals.neutral_count} (${Math.round(signals.neutral_count / total * 100)}%)
+- Overall sentiment score: ${signals.sentiment_score}/100`;
+}
+
+/**
+ * Parse structured sentiment response from LLM
+ */
+function parseSentimentResponse(response) {
+  const lines = response.split('\n');
+  let mood = 'neutral';
+  let confidence = 0.5;
+  let reason = '';
+
+  for (const line of lines) {
+    if (line.toUpperCase().startsWith('MOOD:')) {
+      mood = line.replace(/^MOOD:\s*/i, '').trim().toLowerCase();
+    } else if (line.toUpperCase().startsWith('CONFIDENCE:')) {
+      confidence = parseFloat(line.replace(/^CONFIDENCE:\s*/i, '').trim()) || 0.5;
+    } else if (line.toUpperCase().startsWith('REASON:')) {
+      reason = line.replace(/^REASON:\s*/i, '').trim();
+    }
+  }
+
+  // Validate mood
+  const validMoods = ['excited', 'positive', 'angry', 'negative', 'confused', 'neutral'];
+  if (!validMoods.includes(mood)) {
+    mood = 'neutral';
+  }
+
+  return {
+    mood,
+    confidence: Math.min(1, Math.max(0, confidence)),
+    summary: reason,
+    emoji: MOOD_EMOJIS[mood] || '😐'
+  };
+}
+
+/**
+ * Compute sentiment using rule-based fallback (no LLM)
+ */
+function computeFallbackSentiment(signals) {
+  const total = signals.positive_count + signals.negative_count +
+                signals.confused_count + signals.neutral_count;
+
+  if (total === 0) {
+    return {
+      mood: 'neutral',
+      confidence: 0.5,
+      summary: 'Waiting for more messages...',
+      emoji: MOOD_EMOJIS.neutral
+    };
+  }
+
+  // Determine dominant sentiment
+  const scores = [
+    { mood: 'positive', count: signals.positive_count },
+    { mood: 'negative', count: signals.negative_count },
+    { mood: 'confused', count: signals.confused_count },
+    { mood: 'neutral', count: signals.neutral_count }
+  ];
+
+  scores.sort((a, b) => b.count - a.count);
+  const dominant = scores[0];
+
+  // Upgrade positive to excited if very high sentiment score
+  let mood = dominant.mood;
+  if (mood === 'positive' && signals.sentiment_score > 50) {
+    mood = 'excited';
+  }
+  // Upgrade negative to angry if very low sentiment score
+  if (mood === 'negative' && signals.sentiment_score < -50) {
+    mood = 'angry';
+  }
+
+  const confidence = dominant.count / total;
+  const summary = `Chat is ${mood} (${dominant.count} of ${total} messages)`;
+
+  return {
+    mood,
+    confidence,
+    summary,
+    emoji: MOOD_EMOJIS[mood] || '😐'
+  };
+}
+
+/**
  * Check if LLM is ready
  */
 function isLLMReady() {
@@ -226,6 +397,8 @@ async function resetLLM() {
 export {
   initializeLLM,
   summarizeBuckets,
+  analyzeSentiment,
+  computeFallbackSentiment,
   isLLMReady,
   resetLLM
 };

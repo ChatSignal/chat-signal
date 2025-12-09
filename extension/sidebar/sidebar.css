@@ -175,3 +175,148 @@ h1 {
   font-size: 14px;
   line-height: 1.6;
 }
+
+/* ============================================================================
+   MOOD INDICATOR SECTION
+   ============================================================================ */
+
+.mood-section {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.mood-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mood-emoji {
+  font-size: 48px;
+  line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+.mood-emoji.pulse {
+  animation: mood-pulse 0.5s ease;
+}
+
+@keyframes mood-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.mood-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.mood-label {
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.mood-confidence {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.mood-summary {
+  font-size: 13px;
+  opacity: 0.85;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+/* Mood-specific background colors */
+.mood-section.excited { background: rgba(34, 197, 94, 0.35); }
+.mood-section.positive { background: rgba(59, 130, 246, 0.35); }
+.mood-section.angry { background: rgba(239, 68, 68, 0.35); }
+.mood-section.negative { background: rgba(249, 115, 22, 0.35); }
+.mood-section.confused { background: rgba(168, 85, 247, 0.35); }
+.mood-section.neutral { background: rgba(255, 255, 255, 0.15); }
+
+/* ============================================================================
+   TRENDING TOPICS SECTION
+   ============================================================================ */
+
+.topics-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.topics-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.topics-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-tag {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+}
+
+.topic-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.topic-tag.emote {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.topic-count {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.topic-tag.emote .topic-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Size variations based on frequency */
+.topic-tag.size-large {
+  font-size: 16px;
+  padding: 8px 16px;
+}
+
+.topic-tag.size-medium {
+  font-size: 14px;
+  padding: 7px 14px;
+}
+
+.topic-tag.size-small {
+  font-size: 12px;
+  padding: 5px 10px;
+}

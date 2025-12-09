@@ -1,9 +1,23 @@
 // Sidebar script - loads WASM and processes chat messages
 
-import { initializeLLM, summarizeBuckets, isLLMReady } from '../llm-adapter.js';
+import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady } from '../llm-adapter.js';
 
 let wasmModule = null;
 let llmEnabled = false;
+
+// Mood emoji mapping
+const MOOD_EMOJIS = {
+  excited: '🎉',
+  positive: '😊',
+  angry: '😠',
+  negative: '😔',
+  confused: '🤔',
+  neutral: '😐'
+};
+
+// Throttle sentiment analysis to every 10 seconds
+let lastSentimentUpdate = 0;
+const SENTIMENT_UPDATE_INTERVAL = 10000;
 
 // DOM elements
 const statusText = document.getElementById('status-text');
@@ -15,20 +29,29 @@ const errorDiv = document.getElementById('error');
 const aiSummaryDiv = document.getElementById('ai-summary');
 const aiSummaryText = document.getElementById('ai-summary-text');
 
+// New DOM elements for mood and topics
+const moodSection = document.getElementById('mood-section');
+const moodEmoji = document.getElementById('mood-emoji');
+const moodLabel = document.getElementById('mood-label');
+const moodConfidence = document.getElementById('mood-confidence');
+const moodSummary = document.getElementById('mood-summary');
+const topicsSection = document.getElementById('topics-section');
+const topicsCloud = document.getElementById('topics-cloud');
+
 // Initialize WASM module
 async function initWasm() {
   try {
     statusText.textContent = 'Loading clustering engine...';
-    
+
     // Import the WASM module
     const wasmPath = chrome.runtime.getURL('wasm/wasm_engine.js');
-    const { default: init, cluster_messages } = await import(wasmPath);
-    
+    const { default: init, cluster_messages, analyze_chat } = await import(wasmPath);
+
     // Initialize WASM
     const wasmBinaryPath = chrome.runtime.getURL('wasm/wasm_engine_bg.wasm');
     await init(wasmBinaryPath);
-    
-    wasmModule = { cluster_messages };
+
+    wasmModule = { cluster_messages, analyze_chat };
     
     statusText.textContent = 'Loading AI model...';
     
@@ -61,29 +84,39 @@ function processMessages(messages) {
   }
 
   try {
-    // Call WASM clustering function - returns ClusterResult
-    const result = wasmModule.cluster_messages(messages);
-    
-    // Validate ClusterResult shape
+    // Use combined analysis function for efficiency
+    const result = wasmModule.analyze_chat(messages);
+
+    // Validate AnalysisResult shape
     if (!result || typeof result !== 'object') {
-      throw new Error('Invalid result from cluster_messages');
+      throw new Error('Invalid result from analyze_chat');
     }
     if (!Array.isArray(result.buckets)) {
-      throw new Error('ClusterResult.buckets must be an array');
+      throw new Error('AnalysisResult.buckets must be an array');
     }
     if (typeof result.processed_count !== 'number') {
-      throw new Error('ClusterResult.processed_count must be a number');
+      throw new Error('AnalysisResult.processed_count must be a number');
     }
-    
+
     // Update UI
     statusDiv.classList.add('active');
     statusText.textContent = 'Processing live chat...';
     statsDiv.classList.remove('hidden');
     processedCount.textContent = result.processed_count;
-    
+
+    // Update trending topics
+    updateTopics(result.topics);
+
+    // Update mood indicator (throttled)
+    const now = Date.now();
+    if (now - lastSentimentUpdate > SENTIMENT_UPDATE_INTERVAL) {
+      lastSentimentUpdate = now;
+      updateMoodIndicator(messages, result.sentiment_signals);
+    }
+
     // Clear previous clusters
     clustersDiv.innerHTML = '';
-    
+
     if (result.buckets.length === 0) {
       clustersDiv.innerHTML = `
         <div class="empty-state">
@@ -92,42 +125,122 @@ function processMessages(messages) {
       `;
       return;
     }
-    
+
     // Render cluster buckets - validate each bucket shape
     result.buckets.forEach(bucket => {
       if (!bucket.label || !bucket.count || !Array.isArray(bucket.sample_messages)) {
         console.warn('Invalid bucket shape:', bucket);
         return;
       }
-      
+
       const bucketEl = document.createElement('div');
       bucketEl.className = 'cluster-bucket';
-      
+
       bucketEl.innerHTML = `
         <div class="cluster-header">
           <div class="cluster-label">${escapeHtml(bucket.label)}</div>
           <div class="cluster-count">${bucket.count}</div>
         </div>
         <div class="cluster-messages">
-          ${bucket.sample_messages.map(msg => 
+          ${bucket.sample_messages.map(msg =>
             `<div class="message-item">${escapeHtml(msg)}</div>`
           ).join('')}
         </div>
       `;
-      
+
       clustersDiv.appendChild(bucketEl);
     });
-    
+
     // Generate AI summary if enabled
     if (llmEnabled && isLLMReady() && result.buckets.length > 0) {
       generateAISummary(result.buckets);
     }
-    
+
   } catch (error) {
     console.error('Error processing messages:', error);
     errorDiv.textContent = `Processing error: ${error.message}`;
     errorDiv.classList.remove('hidden');
   }
+}
+
+// Update trending topics display
+function updateTopics(topics) {
+  if (!topics || topics.length === 0) {
+    topicsSection.classList.add('hidden');
+    return;
+  }
+
+  topicsSection.classList.remove('hidden');
+  topicsCloud.innerHTML = '';
+
+  // Determine max count for sizing
+  const maxCount = Math.max(...topics.map(t => t.count));
+
+  topics.forEach(topic => {
+    const tag = document.createElement('span');
+    tag.className = 'topic-tag';
+
+    // Add emote class if applicable
+    if (topic.is_emote) {
+      tag.classList.add('emote');
+    }
+
+    // Size class based on relative frequency
+    const ratio = topic.count / maxCount;
+    if (ratio > 0.7) {
+      tag.classList.add('size-large');
+    } else if (ratio > 0.4) {
+      tag.classList.add('size-medium');
+    } else {
+      tag.classList.add('size-small');
+    }
+
+    tag.innerHTML = `
+      ${escapeHtml(topic.term)}
+      <span class="topic-count">${topic.count}</span>
+    `;
+
+    topicsCloud.appendChild(tag);
+  });
+}
+
+// Update mood indicator display
+async function updateMoodIndicator(messages, sentimentSignals) {
+  moodSection.classList.remove('hidden');
+
+  let sentimentResult;
+
+  if (llmEnabled && isLLMReady()) {
+    try {
+      // Use LLM for more accurate sentiment
+      sentimentResult = await analyzeSentiment(messages, sentimentSignals);
+    } catch (error) {
+      console.warn('[Sidebar] LLM sentiment failed, using fallback:', error);
+      sentimentResult = computeFallbackSentiment(sentimentSignals);
+    }
+  } else {
+    // Use rule-based fallback
+    sentimentResult = computeFallbackSentiment(sentimentSignals);
+  }
+
+  // Get previous mood for animation
+  const moodClasses = ['excited', 'positive', 'angry', 'negative', 'confused', 'neutral'];
+  const previousMood = moodClasses.find(c => moodSection.classList.contains(c));
+
+  // Remove previous mood class, add new one
+  moodClasses.forEach(c => moodSection.classList.remove(c));
+  moodSection.classList.add(sentimentResult.mood);
+
+  // Animate emoji change
+  if (previousMood !== sentimentResult.mood) {
+    moodEmoji.classList.add('pulse');
+    setTimeout(() => moodEmoji.classList.remove('pulse'), 500);
+  }
+
+  moodEmoji.textContent = MOOD_EMOJIS[sentimentResult.mood] || '😐';
+  moodLabel.textContent = sentimentResult.mood;
+  moodConfidence.textContent = `${Math.round(sentimentResult.confidence * 100)}% confidence`;
+  moodSummary.textContent = sentimentResult.summary || '';
 }
 
 // Generate AI summary from buckets
