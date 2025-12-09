@@ -17,8 +17,9 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
   - Sentiment signal analysis
 - **Chrome Extension** (`extension/`): Manifest V3 extension with sidebar UI
   - Real-time chat observation
-  - Mood indicator with color-coded display
+  - Mood indicator with theme-aware display
   - Trending topics word cloud
+  - Automatic light/dark mode support (follows system theme)
 - **Build Scripts** (`scripts/`): Automated build pipeline from Rust → WASM → Extension
 
 ## 🚀 Quick Start
@@ -65,7 +66,7 @@ chat-signal-radar/
 │   ├── llm-adapter.js     # WebLLM integration
 │   ├── sidebar/
 │   │   ├── sidebar.html   # Dashboard UI
-│   │   ├── sidebar.css    # Styling (mood colors, topic tags)
+│   │   ├── sidebar.css    # Styling (light/dark theme support)
 │   │   └── sidebar.js     # WASM loading, rendering
 │   └── wasm/              # (generated) WASM artifacts
 └── scripts/
@@ -137,12 +138,14 @@ cargo test
 
 | Mood | Emoji | Trigger |
 |------|-------|---------|
-| Excited | 🎉 | Very positive chat (score > 50) |
+| Excited | 🎉 | Strong positive signals (score > 30) |
 | Positive | 😊 | Positive keywords (love, great, pog, etc.) |
-| Neutral | 😐 | Normal chat |
+| Neutral | 😐 | Few sentiment signals detected |
 | Confused | 🤔 | Questions, "wait", "huh", etc. |
 | Negative | 😔 | Negative keywords (bad, boring, etc.) |
-| Angry | 😠 | Very negative chat (score < -50) |
+| Angry | 😠 | Strong negative signals (score < -30) |
+
+Sentiment requires at least 3 signal-bearing messages before showing a non-neutral mood.
 
 ## 📝 License
 

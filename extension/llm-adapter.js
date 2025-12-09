@@ -343,29 +343,52 @@ function computeFallbackSentiment(signals) {
     };
   }
 
-  // Determine dominant sentiment
+  // Count only sentiment-bearing messages (exclude neutral)
+  const sentimentTotal = signals.positive_count + signals.negative_count + signals.confused_count;
+
+  // If very few sentiment signals, default to neutral
+  if (sentimentTotal < 3) {
+    return {
+      mood: 'neutral',
+      confidence: 0.5,
+      summary: `Analyzing... (${total} messages)`,
+      emoji: MOOD_EMOJIS.neutral
+    };
+  }
+
+  // Determine dominant sentiment (ignoring neutral)
   const scores = [
     { mood: 'positive', count: signals.positive_count },
     { mood: 'negative', count: signals.negative_count },
-    { mood: 'confused', count: signals.confused_count },
-    { mood: 'neutral', count: signals.neutral_count }
+    { mood: 'confused', count: signals.confused_count }
   ];
 
   scores.sort((a, b) => b.count - a.count);
   const dominant = scores[0];
 
+  // Need at least some signal to declare a mood
+  if (dominant.count === 0) {
+    return {
+      mood: 'neutral',
+      confidence: 0.5,
+      summary: `No strong signals (${total} messages)`,
+      emoji: MOOD_EMOJIS.neutral
+    };
+  }
+
   // Upgrade positive to excited if very high sentiment score
   let mood = dominant.mood;
-  if (mood === 'positive' && signals.sentiment_score > 50) {
+  if (mood === 'positive' && signals.sentiment_score > 30) {
     mood = 'excited';
   }
   // Upgrade negative to angry if very low sentiment score
-  if (mood === 'negative' && signals.sentiment_score < -50) {
+  if (mood === 'negative' && signals.sentiment_score < -30) {
     mood = 'angry';
   }
 
-  const confidence = dominant.count / total;
-  const summary = `Chat is ${mood} (${dominant.count} of ${total} messages)`;
+  // Confidence based on how dominant the signal is among sentiment-bearing messages
+  const confidence = dominant.count / sentimentTotal;
+  const summary = `${dominant.count} ${mood} signals detected`;
 
   return {
     mood,

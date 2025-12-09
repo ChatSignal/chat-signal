@@ -28,7 +28,7 @@ Content Script → Background Worker → Sidebar UI → WASM Engine
   - `content-script.js`: DOM observer for YouTube/Twitch chat
   - `background.js`: Service worker for message relay
   - `llm-adapter.js`: WebLLM integration with fallback summarizer
-  - `sidebar/`: UI components (HTML, JS, CSS)
+  - `sidebar/`: UI components (HTML, JS, CSS with system theme support)
   - `libs/web-llm/`: Bundled WebLLM library (optional, for AI summaries)
   - `wasm/`: Generated WASM artifacts (git-ignored)
 - **scripts/**: Build automation
@@ -110,6 +110,28 @@ Analyzes sentiment using lexicon-based matching.
 - Structure messages with `type` field for chrome message passing
 - Use `chrome.runtime.getURL()` for extension resource paths
 - LLM calls should have fallback behavior for when WebLLM is unavailable
+
+### CSS (sidebar)
+- Use CSS variables for theming (defined in `:root`)
+- Support system theme via `@media (prefers-color-scheme: dark)`
+- Use `var(--variable-name)` for colors, not hardcoded values
+
+## Sentiment Analysis Logic
+
+The sentiment system uses a two-tier approach:
+
+1. **WASM Engine** counts messages matching sentiment keywords:
+   - Positive: "love", "great", "pog", "awesome", etc.
+   - Negative: "hate", "bad", "boring", "trash", etc.
+   - Confused: "?", "wait", "huh", "explain", etc.
+   - Neutral: everything else
+
+2. **LLM Adapter** determines mood from signals:
+   - Ignores neutral messages when calculating mood
+   - Requires at least 3 sentiment signals before declaring a non-neutral mood
+   - Upgrades positive → excited when sentiment_score > 30
+   - Upgrades negative → angry when sentiment_score < -30
+   - Falls back to rule-based analysis if WebLLM unavailable
 
 ## Data Flow
 
