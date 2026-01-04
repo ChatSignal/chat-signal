@@ -48,6 +48,14 @@ const moodConfidence = document.getElementById('mood-confidence');
 const moodSummary = document.getElementById('mood-summary');
 const topicsSection = document.getElementById('topics-section');
 const topicsCloud = document.getElementById('topics-cloud');
+const firstRunDiv = document.getElementById('first-run');
+const settingsLink = document.getElementById('settings-link');
+
+// Settings link opens options page
+settingsLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.runtime.openOptionsPage();
+});
 
 // Load settings from chrome.storage
 async function loadSettings() {
@@ -142,6 +150,9 @@ function processMessages(messages) {
     statusText.textContent = 'Processing live chat...';
     statsDiv.classList.remove('hidden');
     processedCount.textContent = result.processed_count;
+
+    // Hide first-run guidance once we have messages
+    firstRunDiv.classList.add('hidden');
 
     // Update trending topics
     updateTopics(result.topics);
