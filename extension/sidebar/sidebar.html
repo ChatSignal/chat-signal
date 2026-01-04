@@ -62,10 +62,59 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <a href="https://github.com/johnzilla/chat-signal-radar/issues" target="_blank" rel="noopener">Send Feedback</a>
-    <span class="footer-divider">·</span>
-    <a href="#" id="settings-link">Settings</a>
+    <button id="end-session-btn" class="end-session-btn hidden">End Session</button>
+    <div class="footer-links">
+      <a href="https://github.com/johnzilla/chat-signal-radar/issues" target="_blank" rel="noopener">Feedback</a>
+      <span class="footer-divider">·</span>
+      <a href="#" id="settings-link">Settings</a>
+    </div>
   </footer>
+
+  <!-- Session Summary Modal -->
+  <div id="summary-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Session Summary</h2>
+
+      <div class="summary-stats">
+        <div class="stat-item">
+          <span class="stat-value" id="summary-duration">--</span>
+          <span class="stat-label">Duration</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="summary-messages">--</span>
+          <span class="stat-label">Messages</span>
+        </div>
+      </div>
+
+      <div class="summary-section">
+        <h3>Sentiment Breakdown</h3>
+        <div id="summary-sentiment" class="sentiment-bars"></div>
+      </div>
+
+      <div class="summary-section">
+        <h3>Top Topics</h3>
+        <div id="summary-topics" class="summary-topics"></div>
+      </div>
+
+      <div class="summary-section">
+        <h3>Clusters</h3>
+        <div id="summary-clusters" class="summary-clusters"></div>
+      </div>
+
+      <div class="summary-section">
+        <h3>Top Questions</h3>
+        <div id="summary-questions" class="summary-questions"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="copy-summary-btn" class="btn btn-primary">Copy Summary</button>
+        <button id="close-summary-btn" class="btn btn-secondary">Start New Session</button>
+      </div>
+
+      <div id="copy-toast" class="copy-toast hidden">Copied to clipboard!</div>
+    </div>
+  </div>
 
   <script type="module" src="sidebar.js"></script>
 </body>

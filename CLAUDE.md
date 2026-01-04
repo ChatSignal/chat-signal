@@ -197,3 +197,33 @@ const sentiment = await analyzeSentiment(messages, signals);  // Analyze mood
 isLLMReady();  // Check if ready
 await resetLLM();  // Cleanup
 ```
+
+## Roadmap
+
+### Shipped (MVP)
+- [x] Message clustering (Questions, Issues, Requests, General Chat)
+- [x] Sentiment analysis with 6 moods
+- [x] Trending topics with emote detection
+- [x] Spam/duplicate filtering
+- [x] User-configurable settings
+- [x] Session summary with "End Session" button
+- [x] Copy summary to clipboard
+- [x] System theme support (dark/light)
+- [x] First-run guidance
+- [x] Extension icons
+
+### Next Up (Post-MVP)
+- [ ] **Smart Session Detection**: Auto-detect when messages stop for 2+ minutes and prompt "Stream ended? Save your session summary"
+- [ ] **Session History**: Persist summaries to chrome.storage, add "History" view of past sessions
+- [ ] **Export Options**: Download session data as JSON or Markdown files
+- [ ] **Platform Expansion**: Support for Kick, Facebook Gaming, and other streaming platforms
+- [ ] **Alerts**: Notify when sentiment spikes (positive or negative)
+- [ ] **Historical Trends**: Graphs showing sentiment/engagement over time during a stream
+
+### Future Ideas
+- User-configurable sentiment keywords
+- Embedding-based semantic clustering (beyond keyword matching)
+- Moderator-specific features (flagging, quick actions)
+- Multi-stream monitoring
+- API/webhook integration for external tools
+- Chrome Web Store publication

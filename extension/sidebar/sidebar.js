@@ -50,11 +50,32 @@ const topicsSection = document.getElementById('topics-section');
 const topicsCloud = document.getElementById('topics-cloud');
 const firstRunDiv = document.getElementById('first-run');
 const settingsLink = document.getElementById('settings-link');
+const endSessionBtn = document.getElementById('end-session-btn');
+const summaryModal = document.getElementById('summary-modal');
+const copySummaryBtn = document.getElementById('copy-summary-btn');
+const closeSummaryBtn = document.getElementById('close-summary-btn');
+const copyToast = document.getElementById('copy-toast');
+
+// Session tracking
+let sessionStartTime = null;
+let lastAnalysisResult = null;
 
 // Settings link opens options page
 settingsLink.addEventListener('click', (e) => {
   e.preventDefault();
   chrome.runtime.openOptionsPage();
+});
+
+// End session button
+endSessionBtn.addEventListener('click', showSessionSummary);
+
+// Modal buttons
+copySummaryBtn.addEventListener('click', copySummaryToClipboard);
+closeSummaryBtn.addEventListener('click', startNewSession);
+
+// Close modal on backdrop click
+summaryModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+  summaryModal.classList.add('hidden');
 });
 
 // Load settings from chrome.storage
@@ -153,6 +174,17 @@ function processMessages(messages) {
 
     // Hide first-run guidance once we have messages
     firstRunDiv.classList.add('hidden');
+
+    // Start session timer on first message
+    if (!sessionStartTime) {
+      sessionStartTime = Date.now();
+    }
+
+    // Show End Session button
+    endSessionBtn.classList.remove('hidden');
+
+    // Store latest analysis result for summary
+    lastAnalysisResult = result;
 
     // Update trending topics
     updateTopics(result.topics);
@@ -337,3 +369,189 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Initialize on load
 initWasm();
+
+// ============================================================================
+// SESSION SUMMARY FUNCTIONS
+// ============================================================================
+
+function formatDuration(ms) {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
+function showSessionSummary() {
+  if (!lastAnalysisResult || !sessionStartTime) {
+    return;
+  }
+
+  const duration = Date.now() - sessionStartTime;
+  const result = lastAnalysisResult;
+
+  // Update duration and message count
+  document.getElementById('summary-duration').textContent = formatDuration(duration);
+  document.getElementById('summary-messages').textContent = result.processed_count;
+
+  // Update sentiment bars
+  const sentimentContainer = document.getElementById('summary-sentiment');
+  const signals = result.sentiment_signals;
+  const total = signals.positive_count + signals.negative_count + signals.confused_count + signals.neutral_count;
+
+  if (total > 0) {
+    sentimentContainer.innerHTML = ['positive', 'negative', 'confused', 'neutral'].map(type => {
+      const count = signals[`${type}_count`];
+      const percent = Math.round((count / total) * 100);
+      return `
+        <div class="sentiment-bar">
+          <span class="sentiment-bar-label">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+          <div class="sentiment-bar-track">
+            <div class="sentiment-bar-fill ${type}" style="width: ${percent}%"></div>
+          </div>
+          <span class="sentiment-bar-value">${count}</span>
+        </div>
+      `;
+    }).join('');
+  } else {
+    sentimentContainer.innerHTML = '<p class="summary-no-data">No sentiment data</p>';
+  }
+
+  // Update topics
+  const topicsContainer = document.getElementById('summary-topics');
+  if (result.topics && result.topics.length > 0) {
+    topicsContainer.innerHTML = result.topics.slice(0, 10).map(topic =>
+      `<span class="summary-topic ${topic.is_emote ? 'emote' : ''}">${escapeHtml(topic.term)} (${topic.count})</span>`
+    ).join('');
+  } else {
+    topicsContainer.innerHTML = '<p class="summary-no-data">No trending topics</p>';
+  }
+
+  // Update clusters
+  const clustersContainer = document.getElementById('summary-clusters');
+  if (result.buckets && result.buckets.length > 0) {
+    clustersContainer.innerHTML = result.buckets.map(bucket =>
+      `<div class="summary-cluster">
+        <span class="summary-cluster-label">${escapeHtml(bucket.label)}:</span>
+        <span class="summary-cluster-count">${bucket.count}</span>
+      </div>`
+    ).join('');
+  } else {
+    clustersContainer.innerHTML = '<p class="summary-no-data">No clusters</p>';
+  }
+
+  // Update top questions
+  const questionsContainer = document.getElementById('summary-questions');
+  const questionsBucket = result.buckets?.find(b => b.label === 'Questions');
+  if (questionsBucket && questionsBucket.sample_messages.length > 0) {
+    questionsContainer.innerHTML = questionsBucket.sample_messages.slice(0, 3).map(msg =>
+      `<div class="summary-question">${escapeHtml(msg)}</div>`
+    ).join('');
+  } else {
+    questionsContainer.innerHTML = '<p class="summary-no-data">No questions captured</p>';
+  }
+
+  // Show modal
+  summaryModal.classList.remove('hidden');
+}
+
+function generateSummaryText() {
+  if (!lastAnalysisResult || !sessionStartTime) {
+    return '';
+  }
+
+  const duration = Date.now() - sessionStartTime;
+  const result = lastAnalysisResult;
+  const signals = result.sentiment_signals;
+
+  let text = `📡 CHAT SIGNAL RADAR - SESSION SUMMARY\n`;
+  text += `${'='.repeat(40)}\n\n`;
+
+  text += `⏱️  Duration: ${formatDuration(duration)}\n`;
+  text += `💬 Messages: ${result.processed_count}\n\n`;
+
+  // Sentiment
+  text += `📊 SENTIMENT BREAKDOWN\n`;
+  text += `   Positive: ${signals.positive_count}\n`;
+  text += `   Negative: ${signals.negative_count}\n`;
+  text += `   Confused: ${signals.confused_count}\n`;
+  text += `   Neutral:  ${signals.neutral_count}\n`;
+  text += `   Score:    ${signals.sentiment_score}/100\n\n`;
+
+  // Topics
+  if (result.topics && result.topics.length > 0) {
+    text += `🏷️  TRENDING TOPICS\n`;
+    result.topics.slice(0, 5).forEach(topic => {
+      text += `   ${topic.is_emote ? '😀 ' : ''}${topic.term} (${topic.count})\n`;
+    });
+    text += `\n`;
+  }
+
+  // Clusters
+  if (result.buckets && result.buckets.length > 0) {
+    text += `📁 CLUSTERS\n`;
+    result.buckets.forEach(bucket => {
+      text += `   ${bucket.label}: ${bucket.count}\n`;
+    });
+    text += `\n`;
+  }
+
+  // Top questions
+  const questionsBucket = result.buckets?.find(b => b.label === 'Questions');
+  if (questionsBucket && questionsBucket.sample_messages.length > 0) {
+    text += `❓ TOP QUESTIONS\n`;
+    questionsBucket.sample_messages.slice(0, 3).forEach((msg, i) => {
+      text += `   ${i + 1}. ${msg}\n`;
+    });
+    text += `\n`;
+  }
+
+  text += `${'='.repeat(40)}\n`;
+  text += `Generated by Chat Signal Radar\n`;
+
+  return text;
+}
+
+async function copySummaryToClipboard() {
+  const text = generateSummaryText();
+
+  try {
+    await navigator.clipboard.writeText(text);
+
+    // Show toast
+    copyToast.classList.remove('hidden');
+    setTimeout(() => {
+      copyToast.classList.add('hidden');
+    }, 2000);
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    alert('Failed to copy to clipboard');
+  }
+}
+
+function startNewSession() {
+  // Reset session state
+  sessionStartTime = null;
+  lastAnalysisResult = null;
+  allMessages = [];
+
+  // Hide modal
+  summaryModal.classList.add('hidden');
+
+  // Reset UI
+  endSessionBtn.classList.add('hidden');
+  statsDiv.classList.add('hidden');
+  moodSection.classList.add('hidden');
+  topicsSection.classList.add('hidden');
+  aiSummaryDiv.classList.add('hidden');
+  clustersDiv.innerHTML = '';
+  firstRunDiv.classList.remove('hidden');
+  statusDiv.classList.remove('active');
+  statusText.textContent = 'Waiting for chat messages...';
+}
