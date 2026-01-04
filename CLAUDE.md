@@ -53,10 +53,11 @@ cd wasm-engine && wasm-pack build --target web --release
 cd wasm-engine && cargo test
 ```
 
-There are 14 unit tests in `wasm-engine/src/lib.rs` covering:
+There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 - Message clustering (5 tests)
 - Topic extraction (4 tests)
 - Sentiment analysis (4 tests)
+- Spam/duplicate detection (4 tests)
 - Combined analysis (1 test)
 
 ## Key Files

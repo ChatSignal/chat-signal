@@ -116,7 +116,7 @@ cd wasm-engine
 cargo test
 ```
 
-14 unit tests cover clustering, topic extraction, and sentiment analysis.
+18 unit tests cover clustering, topic extraction, sentiment analysis, and spam detection.
 
 ## 🎯 How It Works
 
