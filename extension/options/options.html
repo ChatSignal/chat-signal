@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Signal Radar Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Chat Signal Radar</h1>
+      <p class="subtitle">Settings</p>
+    </header>
+
+    <form id="settings-form">
+      <!-- Topic Detection -->
+      <section class="setting-group">
+        <h2>Topic Detection</h2>
+
+        <div class="setting-row">
+          <label for="topic-min-count">
+            <span class="setting-name">Minimum mentions</span>
+            <span class="setting-description">Words must appear this many times to show as trending</span>
+          </label>
+          <div class="input-group">
+            <input type="range" id="topic-min-count" min="1" max="20" value="5">
+            <span class="value-display" id="topic-min-count-value">5</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Spam Detection -->
+      <section class="setting-group">
+        <h2>Spam Detection</h2>
+
+        <div class="setting-row">
+          <label for="spam-threshold">
+            <span class="setting-name">Spam threshold</span>
+            <span class="setting-description">Max identical messages before marking as spam</span>
+          </label>
+          <div class="input-group">
+            <input type="range" id="spam-threshold" min="1" max="10" value="3">
+            <span class="value-display" id="spam-threshold-value">3</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label for="duplicate-window">
+            <span class="setting-name">Duplicate window</span>
+            <span class="setting-description">Time window (seconds) for duplicate detection</span>
+          </label>
+          <div class="input-group">
+            <input type="range" id="duplicate-window" min="10" max="120" step="5" value="30">
+            <span class="value-display" id="duplicate-window-value">30s</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sentiment Analysis -->
+      <section class="setting-group">
+        <h2>Sentiment Analysis</h2>
+
+        <div class="setting-row">
+          <label for="sentiment-sensitivity">
+            <span class="setting-name">Sensitivity</span>
+            <span class="setting-description">Minimum sentiment signals before declaring mood</span>
+          </label>
+          <div class="input-group">
+            <input type="range" id="sentiment-sensitivity" min="1" max="10" value="3">
+            <span class="value-display" id="sentiment-sensitivity-value">3</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label for="mood-upgrade-threshold">
+            <span class="setting-name">Mood upgrade threshold</span>
+            <span class="setting-description">Score threshold for excited/angry mood (higher = stricter)</span>
+          </label>
+          <div class="input-group">
+            <input type="range" id="mood-upgrade-threshold" min="10" max="50" step="5" value="30">
+            <span class="value-display" id="mood-upgrade-threshold-value">30</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button type="button" id="reset-btn" class="btn btn-secondary">Reset to Defaults</button>
+        <button type="submit" id="save-btn" class="btn btn-primary">Save Settings</button>
+      </div>
+
+      <div id="status" class="status hidden"></div>
+    </form>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
