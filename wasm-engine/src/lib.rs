@@ -71,7 +71,7 @@ const CONFUSED_INDICATORS: &[&str] = &[
     "understand", "unclear", "lost", "clueless",
 ];
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Message {
     pub text: String,
     pub author: String,
@@ -128,6 +128,26 @@ pub struct AnalysisResult {
     pub processed_count: usize,
     pub topics: Vec<TopicEntry>,
     pub sentiment_signals: SentimentSignals,
+}
+
+/// Result of spam filtering
+#[derive(Serialize, Deserialize)]
+pub struct SpamFilterResult {
+    pub filtered_messages: Vec<Message>,
+    pub spam_count: usize,
+    pub duplicate_count: usize,
+    pub original_count: usize,
+}
+
+/// Extended analysis result with spam stats
+#[derive(Serialize, Deserialize)]
+pub struct AnalysisResultWithSpam {
+    pub buckets: Vec<ClusterBucket>,
+    pub processed_count: usize,
+    pub topics: Vec<TopicEntry>,
+    pub sentiment_signals: SentimentSignals,
+    pub spam_count: usize,
+    pub duplicate_count: usize,
 }
 
 /// Clusters chat messages into labeled buckets (Questions, Issues, Requests, General Chat).
@@ -463,6 +483,125 @@ pub fn analyze_chat(messages_json: JsValue) -> Result<JsValue, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }
 
+// ============================================================================
+// SPAM/DUPLICATE DETECTION
+// ============================================================================
+
+/// Internal function for spam and duplicate filtering
+fn filter_spam_internal(
+    messages: &[Message],
+    spam_threshold: usize,
+    duplicate_window_ms: f64,
+) -> SpamFilterResult {
+    let mut filtered = Vec::new();
+    let mut spam_count = 0;
+    let mut duplicate_count = 0;
+
+    // Track (author, text_lower) -> last_timestamp for duplicate detection
+    let mut author_text_timestamps: HashMap<(String, String), f64> = HashMap::new();
+
+    // Track text_lower -> count for cross-user spam detection
+    let mut text_counts: HashMap<String, usize> = HashMap::new();
+
+    for msg in messages.iter() {
+        let text_lower = msg.text.to_lowercase().trim().to_string();
+        let author_lower = msg.author.to_lowercase();
+
+        // Skip empty messages
+        if text_lower.is_empty() {
+            continue;
+        }
+
+        // Check for duplicate from same author within time window
+        let key = (author_lower.clone(), text_lower.clone());
+        if let Some(last_ts) = author_text_timestamps.get(&key) {
+            if msg.timestamp - last_ts < duplicate_window_ms {
+                duplicate_count += 1;
+                continue;
+            }
+        }
+
+        // Check for spam (same text appearing too many times across users)
+        let text_count = text_counts.entry(text_lower.clone()).or_insert(0);
+        *text_count += 1;
+
+        if *text_count > spam_threshold {
+            spam_count += 1;
+            continue;
+        }
+
+        // Message passes filters, keep it
+        author_text_timestamps.insert(key, msg.timestamp);
+        filtered.push(msg.clone());
+    }
+
+    SpamFilterResult {
+        filtered_messages: filtered,
+        spam_count,
+        duplicate_count,
+        original_count: messages.len(),
+    }
+}
+
+/// Filter spam and duplicate messages from chat.
+///
+/// # Parameters
+/// - `spam_threshold`: Maximum times a message text can appear before being flagged as spam
+/// - `duplicate_window_ms`: Time window in milliseconds for same-author duplicate detection
+#[wasm_bindgen]
+pub fn filter_spam(
+    messages_json: JsValue,
+    spam_threshold: usize,
+    duplicate_window_ms: f64,
+) -> Result<JsValue, JsValue> {
+    let messages: Vec<Message> = serde_wasm_bindgen::from_value(messages_json)
+        .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
+
+    let result = filter_spam_internal(&messages, spam_threshold, duplicate_window_ms);
+
+    serde_wasm_bindgen::to_value(&result)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+}
+
+/// Perform complete chat analysis with configurable settings.
+///
+/// This runs spam filtering first, then analysis on filtered messages.
+///
+/// # Parameters
+/// - `topic_min_count`: Minimum mentions for a word to appear as a trending topic
+/// - `spam_threshold`: Maximum times a message text can appear before being flagged as spam
+/// - `duplicate_window_ms`: Time window in milliseconds for same-author duplicate detection
+#[wasm_bindgen]
+pub fn analyze_chat_with_settings(
+    messages_json: JsValue,
+    topic_min_count: usize,
+    spam_threshold: usize,
+    duplicate_window_ms: f64,
+) -> Result<JsValue, JsValue> {
+    let messages: Vec<Message> = serde_wasm_bindgen::from_value(messages_json)
+        .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
+
+    // First, filter spam and duplicates
+    let spam_result = filter_spam_internal(&messages, spam_threshold, duplicate_window_ms);
+
+    // Run analysis on filtered messages
+    let cluster_result = cluster_messages_internal(&spam_result.filtered_messages);
+    let topic_result = extract_topics_internal(&spam_result.filtered_messages, topic_min_count);
+    let sentiment_signals = analyze_sentiment_internal(&spam_result.filtered_messages);
+
+    let result = AnalysisResultWithSpam {
+        buckets: cluster_result.buckets,
+        processed_count: spam_result.filtered_messages.len(),
+        topics: topic_result.topics,
+        sentiment_signals,
+        spam_count: spam_result.spam_count,
+        duplicate_count: spam_result.duplicate_count,
+    };
+
+    serde_wasm_bindgen::to_value(&result)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -728,5 +867,83 @@ mod tests {
         // Sentiment should be computed
         assert!(sentiment.positive_count + sentiment.negative_count +
                 sentiment.confused_count + sentiment.neutral_count == 4);
+    }
+
+    // ========================================================================
+    // SPAM/DUPLICATE DETECTION TESTS
+    // ========================================================================
+
+    fn create_test_message_with_author(text: &str, author: &str, timestamp: f64) -> Message {
+        Message {
+            text: text.to_string(),
+            author: author.to_string(),
+            timestamp,
+        }
+    }
+
+    #[test]
+    fn test_spam_detection_same_user() {
+        let messages = vec![
+            create_test_message_with_author("hello", "user1", 1000.0),
+            create_test_message_with_author("hello", "user1", 2000.0),  // duplicate
+            create_test_message_with_author("hello", "user1", 3000.0),  // duplicate
+            create_test_message_with_author("different message", "user1", 4000.0),
+        ];
+
+        let result = filter_spam_internal(&messages, 10, 30000.0);
+
+        assert_eq!(result.duplicate_count, 2, "Should detect 2 duplicates from same user");
+        assert_eq!(result.filtered_messages.len(), 2, "Should keep 2 unique messages");
+    }
+
+    #[test]
+    fn test_spam_detection_cross_user() {
+        let messages = vec![
+            create_test_message_with_author("spam message", "user1", 1000.0),
+            create_test_message_with_author("spam message", "user2", 2000.0),
+            create_test_message_with_author("spam message", "user3", 3000.0),
+            create_test_message_with_author("spam message", "user4", 4000.0),  // over threshold
+            create_test_message_with_author("unique message", "user5", 5000.0),
+        ];
+
+        let result = filter_spam_internal(&messages, 3, 30000.0);
+
+        assert_eq!(result.spam_count, 1, "Should detect 1 spam message");
+        assert_eq!(result.filtered_messages.len(), 4, "Should keep 4 messages (3 spam + 1 unique)");
+    }
+
+    #[test]
+    fn test_duplicate_window() {
+        let messages = vec![
+            create_test_message_with_author("hello", "user1", 1000.0),
+            create_test_message_with_author("hello", "user1", 40000.0),  // outside 30s window
+        ];
+
+        let result = filter_spam_internal(&messages, 10, 30000.0);
+
+        assert_eq!(result.duplicate_count, 0, "Should not detect duplicate outside window");
+        assert_eq!(result.filtered_messages.len(), 2, "Should keep both messages");
+    }
+
+    #[test]
+    fn test_analyze_with_settings() {
+        let messages = vec![
+            create_test_message_with_author("pog pog pog", "user1", 1000.0),
+            create_test_message_with_author("pog pog pog", "user2", 2000.0),
+            create_test_message_with_author("pog pog pog", "user3", 3000.0),
+            create_test_message_with_author("pog pog pog", "user4", 4000.0),  // spam (threshold 3)
+            create_test_message_with_author("How does this work?", "user5", 5000.0),
+        ];
+
+        let cluster_result = cluster_messages_internal(&messages);
+        let spam_result = filter_spam_internal(&messages, 3, 30000.0);
+
+        // Verify spam filtering
+        assert_eq!(spam_result.spam_count, 1, "Should detect 1 spam");
+        assert_eq!(spam_result.filtered_messages.len(), 4, "Should keep 4 messages");
+
+        // Verify clusters on original (unfiltered)
+        assert!(cluster_result.buckets.iter().any(|b| b.label == "Questions"),
+            "Should have Questions bucket");
     }
 }

@@ -5,6 +5,17 @@ import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSenti
 let wasmModule = null;
 let llmEnabled = false;
 
+// Default settings (must match options.js)
+const DEFAULT_SETTINGS = {
+  topicMinCount: 5,
+  spamThreshold: 3,
+  duplicateWindow: 30,
+  sentimentSensitivity: 3,
+  moodUpgradeThreshold: 30
+};
+
+let settings = { ...DEFAULT_SETTINGS };
+
 // Mood emoji mapping
 const MOOD_EMOJIS = {
   excited: '🎉',
@@ -38,20 +49,43 @@ const moodSummary = document.getElementById('mood-summary');
 const topicsSection = document.getElementById('topics-section');
 const topicsCloud = document.getElementById('topics-cloud');
 
+// Load settings from chrome.storage
+async function loadSettings() {
+  try {
+    const result = await chrome.storage.sync.get('settings');
+    settings = { ...DEFAULT_SETTINGS, ...result.settings };
+    console.log('[Sidebar] Settings loaded:', settings);
+  } catch (error) {
+    console.warn('[Sidebar] Failed to load settings, using defaults:', error);
+    settings = { ...DEFAULT_SETTINGS };
+  }
+}
+
+// Listen for settings changes
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.settings) {
+    settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
+    console.log('[Sidebar] Settings updated:', settings);
+  }
+});
+
 // Initialize WASM module
 async function initWasm() {
   try {
+    statusText.textContent = 'Loading settings...';
+    await loadSettings();
+
     statusText.textContent = 'Loading clustering engine...';
 
     // Import the WASM module
     const wasmPath = chrome.runtime.getURL('wasm/wasm_engine.js');
-    const { default: init, cluster_messages, analyze_chat } = await import(wasmPath);
+    const { default: init, cluster_messages, analyze_chat, analyze_chat_with_settings } = await import(wasmPath);
 
     // Initialize WASM
     const wasmBinaryPath = chrome.runtime.getURL('wasm/wasm_engine_bg.wasm');
     await init(wasmBinaryPath);
 
-    wasmModule = { cluster_messages, analyze_chat };
+    wasmModule = { cluster_messages, analyze_chat, analyze_chat_with_settings };
     
     statusText.textContent = 'Loading AI model...';
     
@@ -84,8 +118,13 @@ function processMessages(messages) {
   }
 
   try {
-    // Use combined analysis function for efficiency
-    const result = wasmModule.analyze_chat(messages);
+    // Use combined analysis function with settings for spam filtering
+    const result = wasmModule.analyze_chat_with_settings(
+      messages,
+      settings.topicMinCount,
+      settings.spamThreshold,
+      settings.duplicateWindow * 1000  // convert to milliseconds
+    );
 
     // Validate AnalysisResult shape
     if (!result || typeof result !== 'object') {
@@ -111,7 +150,7 @@ function processMessages(messages) {
     const now = Date.now();
     if (now - lastSentimentUpdate > SENTIMENT_UPDATE_INTERVAL) {
       lastSentimentUpdate = now;
-      updateMoodIndicator(messages, result.sentiment_signals);
+      updateMoodIndicator(messages, result.sentiment_signals, settings);
     }
 
     // Clear previous clusters
@@ -205,7 +244,7 @@ function updateTopics(topics) {
 }
 
 // Update mood indicator display
-async function updateMoodIndicator(messages, sentimentSignals) {
+async function updateMoodIndicator(messages, sentimentSignals, currentSettings) {
   moodSection.classList.remove('hidden');
 
   let sentimentResult;
@@ -216,11 +255,11 @@ async function updateMoodIndicator(messages, sentimentSignals) {
       sentimentResult = await analyzeSentiment(messages, sentimentSignals);
     } catch (error) {
       console.warn('[Sidebar] LLM sentiment failed, using fallback:', error);
-      sentimentResult = computeFallbackSentiment(sentimentSignals);
+      sentimentResult = computeFallbackSentiment(sentimentSignals, currentSettings);
     }
   } else {
     // Use rule-based fallback
-    sentimentResult = computeFallbackSentiment(sentimentSignals);
+    sentimentResult = computeFallbackSentiment(sentimentSignals, currentSettings);
   }
 
   // Get previous mood for animation

@@ -329,8 +329,13 @@ function parseSentimentResponse(response) {
 
 /**
  * Compute sentiment using rule-based fallback (no LLM)
+ * @param {Object} signals - Pre-computed sentiment signals from WASM
+ * @param {Object} settings - Optional settings for thresholds
  */
-function computeFallbackSentiment(signals) {
+function computeFallbackSentiment(signals, settings = {}) {
+  const sensitivity = settings.sentimentSensitivity || 3;
+  const upgradeThreshold = settings.moodUpgradeThreshold || 30;
+
   const total = signals.positive_count + signals.negative_count +
                 signals.confused_count + signals.neutral_count;
 
@@ -346,8 +351,8 @@ function computeFallbackSentiment(signals) {
   // Count only sentiment-bearing messages (exclude neutral)
   const sentimentTotal = signals.positive_count + signals.negative_count + signals.confused_count;
 
-  // If very few sentiment signals, default to neutral
-  if (sentimentTotal < 3) {
+  // If very few sentiment signals, default to neutral (use configurable sensitivity)
+  if (sentimentTotal < sensitivity) {
     return {
       mood: 'neutral',
       confidence: 0.5,
@@ -376,13 +381,13 @@ function computeFallbackSentiment(signals) {
     };
   }
 
-  // Upgrade positive to excited if very high sentiment score
+  // Upgrade positive to excited if very high sentiment score (use configurable threshold)
   let mood = dominant.mood;
-  if (mood === 'positive' && signals.sentiment_score > 30) {
+  if (mood === 'positive' && signals.sentiment_score > upgradeThreshold) {
     mood = 'excited';
   }
-  // Upgrade negative to angry if very low sentiment score
-  if (mood === 'negative' && signals.sentiment_score < -30) {
+  // Upgrade negative to angry if very low sentiment score (use configurable threshold)
+  if (mood === 'negative' && signals.sentiment_score < -upgradeThreshold) {
     mood = 'angry';
   }
 
