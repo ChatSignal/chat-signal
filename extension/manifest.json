@@ -45,13 +45,7 @@
     "page": "options/options.html",
     "open_in_tab": false
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["libs/web-llm/*", "models/*"],
-      "matches": ["<all_urls>"]
-    }
-  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://*.huggingface.co https://raw.githubusercontent.com;"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;"
   }
 }
