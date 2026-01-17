@@ -2,6 +2,8 @@
 
 import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM } from '../llm-adapter.js';
 
+const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
+
 let wasmModule = null;
 let llmEnabled = false;
 
@@ -64,27 +66,29 @@ let sessionStartTime = null;
 let lastAnalysisResult = null;
 
 // Settings link opens options page
-settingsLink.addEventListener('click', (e) => {
-  e.preventDefault();
-  chrome.runtime.openOptionsPage();
-});
+if (!isTestEnv) {
+  settingsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.runtime.openOptionsPage();
+  });
 
-enableAiBtn.addEventListener('click', async () => {
-  const updatedSettings = { ...settings, aiSummariesEnabled: true };
-  await chrome.storage.sync.set({ settings: updatedSettings });
-});
+  enableAiBtn.addEventListener('click', async () => {
+    const updatedSettings = { ...settings, aiSummariesEnabled: true };
+    await chrome.storage.sync.set({ settings: updatedSettings });
+  });
 
-// End session button
-endSessionBtn.addEventListener('click', showSessionSummary);
+  // End session button
+  endSessionBtn.addEventListener('click', showSessionSummary);
 
-// Modal buttons
-copySummaryBtn.addEventListener('click', copySummaryToClipboard);
-closeSummaryBtn.addEventListener('click', startNewSession);
+  // Modal buttons
+  copySummaryBtn.addEventListener('click', copySummaryToClipboard);
+  closeSummaryBtn.addEventListener('click', startNewSession);
 
-// Close modal on backdrop click
-summaryModal.querySelector('.modal-backdrop').addEventListener('click', () => {
-  summaryModal.classList.add('hidden');
-});
+  // Close modal on backdrop click
+  summaryModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+    summaryModal.classList.add('hidden');
+  });
+}
 
 // Load settings from chrome.storage
 async function loadSettings() {
@@ -101,13 +105,15 @@ async function loadSettings() {
 }
 
 // Listen for settings changes
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'sync' && changes.settings) {
-    settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
-    console.log('[Sidebar] Settings updated:', settings);
-    updateAiSummaryState();
-  }
-});
+if (!isTestEnv) {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'sync' && changes.settings) {
+      settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
+      console.log('[Sidebar] Settings updated:', settings);
+      updateAiSummaryState();
+    }
+  });
+}
 
 // Initialize WASM module
 async function initWasm() {
@@ -389,23 +395,25 @@ let allMessages = [];
 const MAX_MESSAGES = 100; // Keep last 100 messages
 
 // Listen for messages from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'CHAT_MESSAGES') {
-    // Add new messages to accumulator
-    allMessages.push(...message.messages);
-    
-    // Keep only recent messages
-    if (allMessages.length > MAX_MESSAGES) {
-      allMessages = allMessages.slice(-MAX_MESSAGES);
+if (!isTestEnv) {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'CHAT_MESSAGES') {
+      // Add new messages to accumulator
+      allMessages.push(...message.messages);
+      
+      // Keep only recent messages
+      if (allMessages.length > MAX_MESSAGES) {
+        allMessages = allMessages.slice(-MAX_MESSAGES);
+      }
+      
+      // Process all accumulated messages
+      processMessages(allMessages);
     }
-    
-    // Process all accumulated messages
-    processMessages(allMessages);
-  }
-});
+  });
 
-// Initialize on load
-initWasm();
+  // Initialize on load
+  initWasm();
+}
 
 // ============================================================================
 // SESSION SUMMARY FUNCTIONS
@@ -591,4 +599,29 @@ function startNewSession() {
   firstRunDiv.classList.remove('hidden');
   statusDiv.classList.remove('active');
   statusText.textContent = 'Waiting for chat messages...';
+}
+
+if (isTestEnv && typeof globalThis !== 'undefined') {
+  globalThis.ChatSignalRadarSidebar = {
+    updateAiSummaryState,
+    updateMoodIndicator,
+    updateTopics,
+    formatDuration,
+    generateSummaryText,
+    showSessionSummary,
+    setSidebarState: (state) => {
+      if (state.settings) {
+        settings = state.settings;
+      }
+      if (typeof state.llmEnabled === 'boolean') {
+        llmEnabled = state.llmEnabled;
+      }
+      if (state.sessionStartTime !== undefined) {
+        sessionStartTime = state.sessionStartTime;
+      }
+      if (state.lastAnalysisResult !== undefined) {
+        lastAnalysisResult = state.lastAnalysisResult;
+      }
+    }
+  };
 }

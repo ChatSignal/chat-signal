@@ -32,8 +32,8 @@ function restoreGlobals() {
 describe('content-script helpers', () => {
   it('extracts YouTube chat messages with author and text', async () => {
     const helpers = await loadContentScript('www.youtube.com');
-    const authorElement = { textContent: ' Alice ' };
-    const messageElement = { textContent: ' Hello world ' };
+    const authorElement = { textContent: ' NightOwl_77 ' };
+    const messageElement = { textContent: ' That clutch was unreal!' };
     const element = {
       querySelector: (selector) => {
         if (selector === '#author-name') return authorElement;
@@ -44,8 +44,8 @@ describe('content-script helpers', () => {
 
     const result = helpers.extractYouTubeMessage(element);
 
-    assert.equal(result.author, 'Alice');
-    assert.equal(result.text, 'Hello world');
+    assert.equal(result.author, 'NightOwl_77');
+    assert.equal(result.text, 'That clutch was unreal!');
     assert.equal(typeof result.timestamp, 'number');
     restoreGlobals();
   });
