@@ -151,6 +151,30 @@ Sentiment requires at least 3 signal-bearing messages before showing a non-neutr
 
 MPL 2.0
 
+## 🔒 Privacy & Data Handling
+
+Chat Signal Radar processes live chat messages locally inside your browser. It does **not** send chat content to any external servers by default.
+
+**What is collected/stored:**
+- Recent chat messages are held in memory for live analysis (up to the most recent 100 messages).
+- Settings are stored in Chrome sync storage.
+- If you enable AI summaries, the WebLLM model is downloaded and cached locally in IndexedDB for offline use.
+
+**What is *not* collected:**
+- No chat content is uploaded or transmitted to external servers.
+- No personal data is collected or sold.
+
+## 🌐 Network Access & External Resources
+
+This extension only makes external network requests when AI summaries are enabled. In that case, it may download model assets from:
+- `https://huggingface.co`
+- `https://cdn-lfs.huggingface.co`
+
+If you use the optional WebLLM setup instructions, the bundled library may be fetched from:
+- `https://raw.githubusercontent.com`
+
+You can keep AI summaries disabled to avoid any external downloads.
+
 ## 🤝 Contributing
 
 PRs welcome! Some ideas for future improvements:
