@@ -3,6 +3,8 @@
 const BATCH_INTERVAL = 5000; // 5 seconds
 let messageBatch = [];
 
+const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
+
 // Detect platform
 const isYouTube = window.location.hostname.includes('youtube.com');
 const isTwitch = window.location.hostname.includes('twitch.tv');
@@ -38,76 +40,25 @@ function extractTwitchMessage(element) {
   };
 }
 
+let currentObserver = null;
+let currentContainer = null;
+let batchTimer = null;
+let containerMonitor = null;
+let lastUrl = window.location.href;
+
 function observeChat() {
-  let chatContainer = null;
-  let observer = null;
-  const MAX_RETRIES = 30; // 30 seconds
-  let retryCount = 0;
-
-  if (isYouTube) {
-    // Wait for YouTube chat iframe or embedded chat
-    const checkForChat = setInterval(() => {
-      retryCount++;
-      const iframe = document.querySelector('iframe#chatframe');
-      if (iframe && iframe.contentDocument) {
-        chatContainer = iframe.contentDocument.querySelector('#items');
-      } else {
-        chatContainer = document.querySelector('yt-live-chat-item-list-renderer #items');
-      }
-
-      if (chatContainer) {
-        clearInterval(checkForChat);
-        console.log('[Chat Signal Radar] YouTube chat container found');
-        startObserving(chatContainer, YOUTUBE_CHAT_SELECTOR, extractYouTubeMessage, 'YouTube');
-      } else if (retryCount >= MAX_RETRIES) {
-        clearInterval(checkForChat);
-        console.warn('[Chat Signal Radar] YouTube chat container not found after 30 seconds. Chat may not be available on this page.');
-      }
-    }, 1000);
-  } else if (isTwitch) {
-    // Wait for Twitch chat
-    const checkForChat = setInterval(() => {
-      retryCount++;
-      chatContainer = document.querySelector('.chat-scrollable-area__message-container');
-      
-      if (chatContainer) {
-        clearInterval(checkForChat);
-        console.log('[Chat Signal Radar] Twitch chat container found');
-        startObserving(chatContainer, TWITCH_CHAT_SELECTOR, extractTwitchMessage, 'Twitch');
-      } else if (retryCount >= MAX_RETRIES) {
-        clearInterval(checkForChat);
-        console.warn('[Chat Signal Radar] Twitch chat container not found after 30 seconds. Chat may not be available on this page.');
-      }
-    }, 1000);
-  }
+  startBatchTimer();
+  startContainerWatcher();
+  startNavigationWatcher();
+  startContainerMonitor();
 }
 
-function startObserving(container, selector, extractor, platform) {
-  console.log(`[Chat Signal Radar] Started observing ${platform} chat`);
-  
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const messageElement = node.matches(selector) ? node : node.querySelector(selector);
-          if (messageElement) {
-            const message = extractor(messageElement);
-            if (message) {
-              messageBatch.push(message);
-            }
-          }
-        }
-      });
-    });
-  });
+function startBatchTimer() {
+  if (batchTimer) {
+    return;
+  }
 
-  observer.observe(container, {
-    childList: true,
-    subtree: true
-  });
-
-  // Send batched messages periodically
-  setInterval(() => {
+  batchTimer = setInterval(() => {
     if (messageBatch.length > 0) {
       chrome.runtime.sendMessage({
         type: 'CHAT_MESSAGES',
@@ -119,9 +70,137 @@ function startObserving(container, selector, extractor, platform) {
   }, BATCH_INTERVAL);
 }
 
+function startContainerWatcher() {
+  const MAX_RETRIES = 30; // 30 seconds
+  let retryCount = 0;
+
+  const checkForChat = setInterval(() => {
+    retryCount++;
+    const nextContainer = findChatContainer();
+
+    if (nextContainer && nextContainer !== currentContainer) {
+      clearInterval(checkForChat);
+      attachObserver(nextContainer);
+    } else if (retryCount >= MAX_RETRIES) {
+      clearInterval(checkForChat);
+      console.warn('[Chat Signal Radar] Chat container not found after 30 seconds. Chat may not be available on this page.');
+    }
+  }, 1000);
+}
+
+function startContainerMonitor() {
+  if (containerMonitor) {
+    return;
+  }
+
+  containerMonitor = setInterval(() => {
+    if (!currentContainer) {
+      return;
+    }
+    const ownerDoc = currentContainer.ownerDocument || document;
+    const stillPresent = ownerDoc.contains(currentContainer);
+    if (!stillPresent) {
+      resetObserver();
+      startContainerWatcher();
+    }
+  }, 5000);
+}
+
+function startNavigationWatcher() {
+  if (!document.body) {
+    return;
+  }
+  const navObserver = new MutationObserver(() => {
+    if (window.location.href !== lastUrl) {
+      lastUrl = window.location.href;
+      resetObserver();
+      startContainerWatcher();
+    }
+  });
+
+  navObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+function findChatContainer() {
+  if (isYouTube) {
+    const iframe = document.querySelector('iframe#chatframe');
+    if (iframe) {
+      try {
+        const iframeDoc = iframe.contentDocument;
+        if (iframeDoc) {
+          return iframeDoc.querySelector('#items');
+        }
+      } catch (error) {
+        console.warn('[Chat Signal Radar] Unable to access YouTube chat iframe:', error);
+      }
+    }
+    return document.querySelector('yt-live-chat-item-list-renderer #items');
+  }
+
+  if (isTwitch) {
+    return document.querySelector('.chat-scrollable-area__message-container');
+  }
+
+  return null;
+}
+
+function attachObserver(container) {
+  resetObserver();
+  currentContainer = container;
+  const platform = isYouTube ? 'YouTube' : 'Twitch';
+  console.log(`[Chat Signal Radar] Started observing ${platform} chat`);
+
+  currentObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const messageElement = node.matches(getSelector()) ? node : node.querySelector(getSelector());
+          if (messageElement) {
+            const extractor = isYouTube ? extractYouTubeMessage : extractTwitchMessage;
+            const message = extractor(messageElement);
+            if (message) {
+              messageBatch.push(message);
+            }
+          }
+        }
+      });
+    });
+  });
+
+  currentObserver.observe(container, {
+    childList: true,
+    subtree: true
+  });
+}
+
+function resetObserver() {
+  if (currentObserver) {
+    currentObserver.disconnect();
+    currentObserver = null;
+  }
+  currentContainer = null;
+}
+
+function getSelector() {
+  return isYouTube ? YOUTUBE_CHAT_SELECTOR : TWITCH_CHAT_SELECTOR;
+}
+
 // Start observing when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', observeChat);
-} else {
-  observeChat();
+if (!isTestEnv) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observeChat);
+  } else {
+    observeChat();
+  }
+}
+
+const ChatSignalRadarContent = {
+  extractYouTubeMessage,
+  extractTwitchMessage,
+  getSelector,
+  findChatContainer
+};
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.ChatSignalRadarContent = ChatSignalRadarContent;
 }
