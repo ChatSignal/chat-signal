@@ -190,4 +190,29 @@ describe('sidebar helpers', () => {
 
     restoreGlobals();
   });
+
+  it('hides AI opt-in once summaries are enabled', async () => {
+    globalThis.__CHAT_SIGNAL_RADAR_TEST__ = true;
+    const elements = setupSidebarDom();
+
+    await import(`../extension/sidebar/sidebar.js?test=${Date.now()}`);
+
+    const helpers = globalThis.ChatSignalRadarSidebar;
+    helpers.setSidebarState({
+      settings: {
+        topicMinCount: 3,
+        spamThreshold: 2,
+        duplicateWindow: 20,
+        sentimentSensitivity: 2,
+        moodUpgradeThreshold: 25,
+        aiSummariesEnabled: true
+      },
+      llmEnabled: true
+    });
+
+    helpers.updateAiSummaryState();
+
+    assert.equal(elements['ai-opt-in'].classList.contains('hidden'), true);
+    restoreGlobals();
+  });
 });
