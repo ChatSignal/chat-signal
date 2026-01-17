@@ -5,7 +5,8 @@ const DEFAULT_SETTINGS = {
   spamThreshold: 3,
   duplicateWindow: 30,
   sentimentSensitivity: 3,
-  moodUpgradeThreshold: 30
+  moodUpgradeThreshold: 30,
+  aiSummariesEnabled: false
 };
 
 // DOM elements
@@ -19,7 +20,8 @@ const inputs = {
   spamThreshold: document.getElementById('spam-threshold'),
   duplicateWindow: document.getElementById('duplicate-window'),
   sentimentSensitivity: document.getElementById('sentiment-sensitivity'),
-  moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold')
+  moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold'),
+  aiSummariesEnabled: document.getElementById('ai-summaries-enabled')
 };
 
 // Value display elements
@@ -47,6 +49,7 @@ function setInputValues(settings) {
   inputs.duplicateWindow.value = settings.duplicateWindow;
   inputs.sentimentSensitivity.value = settings.sentimentSensitivity;
   inputs.moodUpgradeThreshold.value = settings.moodUpgradeThreshold;
+  inputs.aiSummariesEnabled.checked = Boolean(settings.aiSummariesEnabled);
   updateDisplays(settings);
 }
 
@@ -57,7 +60,8 @@ function getInputValues() {
     spamThreshold: parseInt(inputs.spamThreshold.value, 10),
     duplicateWindow: parseInt(inputs.duplicateWindow.value, 10),
     sentimentSensitivity: parseInt(inputs.sentimentSensitivity.value, 10),
-    moodUpgradeThreshold: parseInt(inputs.moodUpgradeThreshold.value, 10)
+    moodUpgradeThreshold: parseInt(inputs.moodUpgradeThreshold.value, 10),
+    aiSummariesEnabled: inputs.aiSummariesEnabled.checked
   };
 }
 
@@ -130,3 +134,15 @@ resetBtn.addEventListener('click', async () => {
 
 // Load settings on page load
 document.addEventListener('DOMContentLoaded', loadSettings);
+
+if (typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true) {
+  globalThis.ChatSignalRadarOptions = {
+    DEFAULT_SETTINGS,
+    updateDisplays,
+    setInputValues,
+    getInputValues,
+    loadSettings,
+    saveSettings,
+    resetToDefaults
+  };
+}

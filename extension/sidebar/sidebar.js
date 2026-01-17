@@ -1,6 +1,6 @@
 // Sidebar script - loads WASM and processes chat messages
 
-import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady } from '../llm-adapter.js';
+import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM } from '../llm-adapter.js';
 
 let wasmModule = null;
 let llmEnabled = false;
@@ -11,7 +11,8 @@ const DEFAULT_SETTINGS = {
   spamThreshold: 3,
   duplicateWindow: 30,
   sentimentSensitivity: 3,
-  moodUpgradeThreshold: 30
+  moodUpgradeThreshold: 30,
+  aiSummariesEnabled: false
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -48,6 +49,8 @@ const moodConfidence = document.getElementById('mood-confidence');
 const moodSummary = document.getElementById('mood-summary');
 const topicsSection = document.getElementById('topics-section');
 const topicsCloud = document.getElementById('topics-cloud');
+const aiOptIn = document.getElementById('ai-opt-in');
+const enableAiBtn = document.getElementById('enable-ai-btn');
 const firstRunDiv = document.getElementById('first-run');
 const settingsLink = document.getElementById('settings-link');
 const endSessionBtn = document.getElementById('end-session-btn');
@@ -64,6 +67,11 @@ let lastAnalysisResult = null;
 settingsLink.addEventListener('click', (e) => {
   e.preventDefault();
   chrome.runtime.openOptionsPage();
+});
+
+enableAiBtn.addEventListener('click', async () => {
+  const updatedSettings = { ...settings, aiSummariesEnabled: true };
+  await chrome.storage.sync.set({ settings: updatedSettings });
 });
 
 // End session button
@@ -84,9 +92,11 @@ async function loadSettings() {
     const result = await chrome.storage.sync.get('settings');
     settings = { ...DEFAULT_SETTINGS, ...result.settings };
     console.log('[Sidebar] Settings loaded:', settings);
+    updateAiSummaryState();
   } catch (error) {
     console.warn('[Sidebar] Failed to load settings, using defaults:', error);
     settings = { ...DEFAULT_SETTINGS };
+    updateAiSummaryState();
   }
 }
 
@@ -95,6 +105,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'sync' && changes.settings) {
     settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
     console.log('[Sidebar] Settings updated:', settings);
+    updateAiSummaryState();
   }
 });
 
@@ -116,26 +127,52 @@ async function initWasm() {
 
     wasmModule = { cluster_messages, analyze_chat, analyze_chat_with_settings };
     
-    statusText.textContent = 'Loading AI model...';
-    
-    // Initialize LLM in background
-    initializeLLM((progress) => {
-      statusText.textContent = `Loading AI: ${Math.round(progress.progress * 100)}%`;
-    }).then(() => {
-      llmEnabled = true;
+    if (settings.aiSummariesEnabled) {
+      await initializeAIModel();
+    } else {
       statusText.textContent = 'Ready! Waiting for chat messages...';
-      console.log('[Sidebar] LLM initialized');
-    }).catch((error) => {
-      console.warn('[Sidebar] LLM initialization failed, continuing without AI summaries:', error);
-      llmEnabled = false;
-      statusText.textContent = 'Ready! Waiting for chat messages...';
-    });
+    }
     
   } catch (error) {
     console.error('Failed to load WASM:', error);
     statusText.textContent = 'Error loading clustering engine';
     errorDiv.textContent = `Failed to load WASM: ${error.message}`;
     errorDiv.classList.remove('hidden');
+  }
+}
+
+async function initializeAIModel() {
+  statusText.textContent = 'Loading AI model...';
+
+  try {
+    await initializeLLM((progress) => {
+      statusText.textContent = `Loading AI: ${Math.round(progress.progress * 100)}%`;
+    });
+    llmEnabled = true;
+    statusText.textContent = 'Ready! Waiting for chat messages...';
+    console.log('[Sidebar] LLM initialized');
+  } catch (error) {
+    console.warn('[Sidebar] LLM initialization failed, continuing without AI summaries:', error);
+    llmEnabled = false;
+    statusText.textContent = 'Ready! Waiting for chat messages...';
+  }
+}
+
+function updateAiSummaryState() {
+  if (!aiOptIn) {
+    return;
+  }
+
+  if (settings.aiSummariesEnabled) {
+    aiOptIn.classList.add('hidden');
+    if (!isLLMReady() && !llmEnabled) {
+      initializeAIModel();
+    }
+  } else {
+    aiOptIn.classList.remove('hidden');
+    aiSummaryDiv.classList.add('hidden');
+    llmEnabled = false;
+    resetLLM();
   }
 }
 
