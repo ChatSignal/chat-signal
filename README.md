@@ -118,6 +118,12 @@ cargo test
 
 18 unit tests cover clustering, topic extraction, sentiment analysis, and spam detection.
 
+For extension logic tests:
+
+```bash
+npm run test:js
+```
+
 ## 🎯 How It Works
 
 1. **Content Script** observes YouTube/Twitch chat DOM

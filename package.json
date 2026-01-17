@@ -1,0 +1,8 @@
+{
+  "name": "chat-signal-radar",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:js": "node --test tests/*.test.js"
+  }
+}
