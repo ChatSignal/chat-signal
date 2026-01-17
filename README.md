@@ -121,7 +121,6 @@ cargo test
 For extension logic tests:
 
 ```bash
-npm install
 npm run test:js
 ```
 

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 
 import { computeFallbackSentiment } from '../extension/llm-adapter.js';
 
@@ -12,8 +13,8 @@ describe('computeFallbackSentiment', () => {
       sentiment_score: 0
     });
 
-    expect(result.mood).toBe('neutral');
-    expect(result.summary).toContain('Waiting for more messages');
+    assert.equal(result.mood, 'neutral');
+    assert.match(result.summary, /Waiting for more messages/);
   });
 
   it('upgrades positive to excited when score exceeds threshold', () => {
@@ -28,8 +29,8 @@ describe('computeFallbackSentiment', () => {
       { sentimentSensitivity: 1, moodUpgradeThreshold: 30 }
     );
 
-    expect(result.mood).toBe('excited');
-    expect(result.summary).toContain('signals detected');
+    assert.equal(result.mood, 'excited');
+    assert.match(result.summary, /signals detected/);
   });
 
   it('upgrades negative to angry when score exceeds negative threshold', () => {
@@ -44,6 +45,6 @@ describe('computeFallbackSentiment', () => {
       { sentimentSensitivity: 1, moodUpgradeThreshold: 30 }
     );
 
-    expect(result.mood).toBe('angry');
+    assert.equal(result.mood, 'angry');
   });
 });

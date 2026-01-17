@@ -3,9 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:js": "vitest run"
-  },
-  "devDependencies": {
-    "vitest": "^1.6.0"
+    "test:js": "node --test tests/*.test.js"
   }
 }
