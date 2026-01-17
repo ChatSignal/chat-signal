@@ -3,6 +3,8 @@
 const BATCH_INTERVAL = 5000; // 5 seconds
 let messageBatch = [];
 
+const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
+
 // Detect platform
 const isYouTube = window.location.hostname.includes('youtube.com');
 const isTwitch = window.location.hostname.includes('twitch.tv');
@@ -184,8 +186,21 @@ function getSelector() {
 }
 
 // Start observing when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', observeChat);
-} else {
-  observeChat();
+if (!isTestEnv) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observeChat);
+  } else {
+    observeChat();
+  }
+}
+
+const ChatSignalRadarContent = {
+  extractYouTubeMessage,
+  extractTwitchMessage,
+  getSelector,
+  findChatContainer
+};
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.ChatSignalRadarContent = ChatSignalRadarContent;
 }

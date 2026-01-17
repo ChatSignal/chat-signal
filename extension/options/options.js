@@ -134,3 +134,15 @@ resetBtn.addEventListener('click', async () => {
 
 // Load settings on page load
 document.addEventListener('DOMContentLoaded', loadSettings);
+
+if (typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true) {
+  globalThis.ChatSignalRadarOptions = {
+    DEFAULT_SETTINGS,
+    updateDisplays,
+    setInputValues,
+    getInputValues,
+    loadSettings,
+    saveSettings,
+    resetToDefaults
+  };
+}
