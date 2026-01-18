@@ -168,7 +168,8 @@ Chat Signal Radar processes live chat messages locally inside your browser. It d
 
 **What is collected/stored:**
 - Recent chat messages are held in memory for live analysis (up to the most recent 100 messages).
-- Settings are stored in Chrome sync storage.
+- Session summaries (if saved) are stored in Chrome local storage (up to 50 sessions).
+- Settings and preferences are stored in Chrome sync storage.
 - If you enable AI summaries, the WebLLM model is downloaded and cached locally in IndexedDB for offline use.
 
 **What is *not* collected:**

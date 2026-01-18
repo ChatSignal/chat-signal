@@ -173,11 +173,18 @@ Sidebar renders:
 
 The extension supports optional AI-powered summaries using WebLLM (in-browser LLM). The feature gracefully degrades to a rule-based fallback if WebLLM is not available.
 
+### User Consent Flow
+
+On first run, users see a consent modal before any AI model download:
+- **Enable AI** - Downloads ~400MB model, stored locally in IndexedDB
+- **Skip** - Uses rule-based fallback (no download)
+- **Remember my choice** - Persists preference to chrome.storage.sync
+
 ### How it works
 
 1. `llm-adapter.js` attempts to load WebLLM from `libs/web-llm/index.js`
-2. If successful, uses Phi-2-q4f16_1-MLC model for summarization (~400MB download on first run)
-3. If bundle not found, falls back to rule-based summary extraction
+2. If user consented and bundle found, uses Phi-2-q4f16_1-MLC model for summarization
+3. If bundle not found or user declined, falls back to rule-based summary extraction
 4. Sidebar displays AI-generated summaries alongside cluster buckets
 
 ### Setup Options
