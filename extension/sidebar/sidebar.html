@@ -11,6 +11,10 @@
     <header>
       <h1>📡 Chat Signal Radar</h1>
       <p class="subtitle">Live chat insights</p>
+      <div class="tab-buttons">
+        <button id="live-tab" class="tab-btn active">Live</button>
+        <button id="history-tab" class="tab-btn">History</button>
+      </div>
     </header>
 
     <div id="status" class="status">
@@ -57,12 +61,50 @@
 
     <div id="error" class="error hidden"></div>
 
+    <!-- LLM Consent Modal -->
+    <div id="llm-consent-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content llm-consent-content">
+        <h3>AI Features Available</h3>
+        <p>Enable AI-powered summaries and mood analysis?</p>
+        <p class="modal-detail">This downloads a ~400MB model on first use. Processing happens locally - no data sent to servers.</p>
+        <div class="modal-actions">
+          <button id="llm-enable-btn" class="btn btn-primary">Enable AI</button>
+          <button id="llm-skip-btn" class="btn btn-secondary">Skip</button>
+        </div>
+        <label class="checkbox-small">
+          <input type="checkbox" id="llm-remember-choice"> Remember my choice
+        </label>
+      </div>
+    </div>
+
     <!-- First-run guidance -->
     <div id="first-run" class="first-run">
       <div class="first-run-icon">📺</div>
       <h3>Getting Started</h3>
       <p>Open a <strong>YouTube</strong> or <strong>Twitch</strong> live stream with active chat.</p>
       <p class="first-run-note">The dashboard will populate automatically as chat messages come in.</p>
+    </div>
+
+    <!-- History View -->
+    <div id="history-view" class="history-view hidden">
+      <div id="history-list" class="history-list"></div>
+      <div class="history-actions">
+        <button id="clear-history-btn" class="btn btn-secondary">Clear All History</button>
+      </div>
+      <div id="history-empty" class="history-empty">
+        <p>No saved sessions yet.</p>
+        <p class="history-empty-hint">Sessions are saved when you click "End Session" or when stream inactivity is detected.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stream Ended Prompt -->
+  <div id="stream-ended-prompt" class="toast stream-ended-toast hidden">
+    <p>Stream ended? Save your session summary.</p>
+    <div class="toast-actions">
+      <button id="save-session-btn" class="btn-small btn-primary">Save</button>
+      <button id="dismiss-prompt-btn" class="btn-small btn-secondary">Dismiss</button>
     </div>
   </div>
 

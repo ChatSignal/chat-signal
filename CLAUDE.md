@@ -67,7 +67,8 @@ There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 - `extension/manifest.json`: Extension permissions and configuration
 - `extension/content-script.js`: Platform-specific chat extraction (YouTube/Twitch selectors)
 - `extension/llm-adapter.js`: WebLLM integration for AI-powered sentiment analysis
-- `extension/sidebar/sidebar.js`: WASM loading, UI rendering, mood/topic display
+- `extension/sidebar/sidebar.js`: WASM loading, UI rendering, mood/topic display, session management
+- `extension/storage-manager.js`: Session history persistence using chrome.storage.local
 - `extension/WEBLLM_SETUP.md`: Detailed WebLLM setup instructions
 
 ## WASM Engine Functions
@@ -212,9 +213,13 @@ await resetLLM();  // Cleanup
 - [x] First-run guidance
 - [x] Extension icons
 
-### Next Up (Post-MVP)
-- [ ] **Smart Session Detection**: Auto-detect when messages stop for 2+ minutes and prompt "Stream ended? Save your session summary"
-- [ ] **Session History**: Persist summaries to chrome.storage, add "History" view of past sessions
+### Shipped (Post-MVP)
+- [x] **WebLLM Consent UX**: Prompt user before downloading ~400MB AI model, with "Remember my choice" option
+- [x] **Smart Session Detection**: Auto-detect when messages stop for 2+ minutes and prompt "Stream ended? Save your session summary"
+- [x] **Session History**: Persist summaries to chrome.storage.local, "History" tab to view past sessions
+- [x] **Session-wide Stats**: Accumulate questions, sentiment, and message counts across entire session (not just rolling window)
+
+### Next Up
 - [ ] **Export Options**: Download session data as JSON or Markdown files
 - [ ] **Platform Expansion**: Support for Kick, Facebook Gaming, and other streaming platforms
 - [ ] **Alerts**: Notify when sentiment spikes (positive or negative)

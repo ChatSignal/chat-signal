@@ -7,6 +7,8 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 - **Message Clustering**: Automatically categorizes messages into Questions, Issues/Bugs, Requests, and General Chat
 - **Sentiment Analysis**: Real-time mood indicator showing chat sentiment (excited, positive, angry, negative, confused, neutral)
 - **Trending Topics**: Word cloud of frequently mentioned terms, with special highlighting for emotes
+- **Session History**: Save and review past session summaries with full sentiment breakdown and captured questions
+- **Smart Session Detection**: Auto-prompts to save when stream chat goes inactive for 2+ minutes
 - **AI Summaries**: Optional WebLLM-powered chat summaries (works offline, falls back gracefully)
 
 ## 🏗️ Architecture
@@ -51,6 +53,8 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
      - 🎭 Mood indicator shows overall chat sentiment
      - 🏷️ Trending topics highlight what people are talking about
      - 📊 Message clusters organize chat by type
+   - Click **End Session** to see a full summary with sentiment breakdown
+   - Switch to the **History** tab to view past sessions
 
 ## 📁 Project Structure
 
@@ -64,10 +68,11 @@ chat-signal-radar/
 │   ├── background.js      # Service worker
 │   ├── content-script.js  # Chat DOM observer
 │   ├── llm-adapter.js     # WebLLM integration
+│   ├── storage-manager.js # Session history persistence
 │   ├── sidebar/
 │   │   ├── sidebar.html   # Dashboard UI
 │   │   ├── sidebar.css    # Styling (light/dark theme support)
-│   │   └── sidebar.js     # WASM loading, rendering
+│   │   └── sidebar.js     # WASM loading, rendering, session management
 │   └── wasm/              # (generated) WASM artifacts
 └── scripts/
     ├── build.sh           # Build Rust → WASM → Extension

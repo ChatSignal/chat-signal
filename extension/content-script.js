@@ -1,5 +1,6 @@
 // Content script for YouTube/Twitch live chat monitoring
 
+const DEBUG = false;
 const BATCH_INTERVAL = 5000; // 5 seconds
 let messageBatch = [];
 
@@ -17,9 +18,9 @@ const TWITCH_CHAT_SELECTOR = '.chat-line__message';
 function extractYouTubeMessage(element) {
   const authorElement = element.querySelector('#author-name');
   const messageElement = element.querySelector('#message');
-  
+
   if (!authorElement || !messageElement) return null;
-  
+
   return {
     text: messageElement.textContent.trim(),
     author: authorElement.textContent.trim(),
@@ -30,9 +31,9 @@ function extractYouTubeMessage(element) {
 function extractTwitchMessage(element) {
   const authorElement = element.querySelector('.chat-author__display-name');
   const messageElement = element.querySelector('.text-fragment');
-  
+
   if (!authorElement || !messageElement) return null;
-  
+
   return {
     text: messageElement.textContent.trim(),
     author: authorElement.textContent.trim(),
@@ -63,7 +64,9 @@ function startBatchTimer() {
       chrome.runtime.sendMessage({
         type: 'CHAT_MESSAGES',
         messages: messageBatch,
-        platform: isYouTube ? 'youtube' : 'twitch'
+        platform: isYouTube ? 'youtube' : 'twitch',
+        streamUrl: window.location.href,
+        streamTitle: document.title
       });
       messageBatch = [];
     }
@@ -131,7 +134,7 @@ function findChatContainer() {
           return iframeDoc.querySelector('#items');
         }
       } catch (error) {
-        console.warn('[Chat Signal Radar] Unable to access YouTube chat iframe:', error);
+        if (DEBUG) console.warn('[Chat Signal Radar] Unable to access YouTube chat iframe:', error);
       }
     }
     return document.querySelector('yt-live-chat-item-list-renderer #items');
@@ -148,7 +151,7 @@ function attachObserver(container) {
   resetObserver();
   currentContainer = container;
   const platform = isYouTube ? 'YouTube' : 'Twitch';
-  console.log(`[Chat Signal Radar] Started observing ${platform} chat`);
+  if (DEBUG) console.log(`[Chat Signal Radar] Started observing ${platform} chat`);
 
   currentObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {

@@ -1,5 +1,7 @@
 // LLM Adapter for WebLLM integration (MV3-safe, bundled version)
 
+const DEBUG = false;
+
 let engine = null;
 let isInitializing = false;
 let isInitialized = false;
@@ -37,7 +39,6 @@ async function initializeLLM(progressCallback = null) {
               text: report.text || 'Loading...'
             });
           }
-          console.log('[LLM] Loading:', report.text);
         },
         // Use extension storage for caching
         appConfig: {
@@ -46,7 +47,7 @@ async function initializeLLM(progressCallback = null) {
       });
 
       isInitialized = true;
-      console.log('[LLM] WebLLM engine initialized successfully');
+      if (DEBUG) console.log('[LLM] WebLLM engine initialized successfully');
 
     } catch (bundleError) {
       // If bundle doesn't exist, use fallback
@@ -418,7 +419,6 @@ async function resetLLM() {
     engine = null;
     isInitialized = false;
     isInitializing = false;
-    console.log('[LLM] Engine reset');
   }
 }
 
