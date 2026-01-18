@@ -843,21 +843,11 @@ h1 {
   margin-bottom: 20px !important;
 }
 
-.checkbox-small {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
+.modal-hint {
   font-size: 12px;
   color: var(--text-muted);
-  cursor: pointer;
-}
-
-.checkbox-small input {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
+  margin-top: 16px;
+  text-align: center;
 }
 
 /* ============================================================================

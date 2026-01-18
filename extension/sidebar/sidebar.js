@@ -8,7 +8,6 @@ const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_
 
 let wasmModule = null;
 let llmEnabled = false;
-let llmConsentAsked = false;
 
 // Default settings (must match options.js)
 const DEFAULT_SETTINGS = {
@@ -68,7 +67,6 @@ const copyToast = document.getElementById('copy-toast');
 const llmConsentModal = document.getElementById('llm-consent-modal');
 const llmEnableBtn = document.getElementById('llm-enable-btn');
 const llmSkipBtn = document.getElementById('llm-skip-btn');
-const llmRememberChoice = document.getElementById('llm-remember-choice');
 
 // Stream ended prompt elements
 const streamEndedPrompt = document.getElementById('stream-ended-prompt');
@@ -141,17 +139,17 @@ if (!isTestEnv) {
   // LLM consent modal handlers
   llmEnableBtn.addEventListener('click', async () => {
     llmConsentModal.classList.add('hidden');
-    if (llmRememberChoice.checked) {
-      await chrome.storage.sync.set({ llmConsent: true });
-    }
+    // Update the unified aiSummariesEnabled setting
+    const updatedSettings = { ...settings, aiSummariesEnabled: true };
+    settings = updatedSettings;
+    await chrome.storage.sync.set({ settings: updatedSettings, aiConsentShown: true });
     startLLMInitialization();
   });
 
   llmSkipBtn.addEventListener('click', async () => {
     llmConsentModal.classList.add('hidden');
-    if (llmRememberChoice.checked) {
-      await chrome.storage.sync.set({ llmConsent: false });
-    }
+    // Mark consent as shown, keep aiSummariesEnabled as false
+    await chrome.storage.sync.set({ aiConsentShown: true });
     llmEnabled = false;
     statusText.textContent = 'Ready! Waiting for chat messages...';
   });
@@ -221,8 +219,8 @@ async function initWasm() {
 
     wasmModule = { cluster_messages, analyze_chat, analyze_chat_with_settings };
 
-    // Check for LLM consent before initializing
-    await checkLLMConsent();
+    // Check AI settings and show consent modal if needed
+    await checkAISettings();
 
   } catch (error) {
     console.error('Failed to load WASM:', error);
@@ -232,25 +230,25 @@ async function initWasm() {
   }
 }
 
-// Check LLM consent and show modal if needed
-async function checkLLMConsent() {
+// Check AI settings and show consent modal if needed
+async function checkAISettings() {
   try {
-    const result = await chrome.storage.sync.get('llmConsent');
+    const result = await chrome.storage.sync.get('aiConsentShown');
 
-    if (result.llmConsent === true) {
-      // User previously consented, initialize LLM
+    if (settings.aiSummariesEnabled) {
+      // AI is enabled, initialize LLM
       startLLMInitialization();
-    } else if (result.llmConsent === false) {
-      // User previously declined
+    } else if (result.aiConsentShown) {
+      // User has seen consent modal before and chose not to enable
       llmEnabled = false;
       statusText.textContent = 'Ready! Waiting for chat messages...';
     } else {
-      // No preference saved, show consent modal
+      // First time - show consent modal
       statusText.textContent = 'Ready! Waiting for chat messages...';
       llmConsentModal.classList.remove('hidden');
     }
   } catch (error) {
-    console.warn('[Sidebar] Failed to check LLM consent:', error);
+    console.warn('[Sidebar] Failed to check AI settings:', error);
     statusText.textContent = 'Ready! Waiting for chat messages...';
   }
 }

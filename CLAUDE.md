@@ -176,9 +176,10 @@ The extension supports optional AI-powered summaries using WebLLM (in-browser LL
 ### User Consent Flow
 
 On first run, users see a consent modal before any AI model download:
-- **Enable AI** - Downloads ~400MB model, stored locally in IndexedDB
-- **Skip** - Uses rule-based fallback (no download)
-- **Remember my choice** - Persists preference to chrome.storage.sync
+- **Enable AI** - Sets `aiSummariesEnabled: true` in settings, downloads ~400MB model
+- **Skip** - Keeps `aiSummariesEnabled: false`, uses rule-based fallback
+
+The same `aiSummariesEnabled` setting is used by both the consent modal and the Settings page toggle, providing a single source of truth. A separate `aiConsentShown` flag tracks whether the user has seen the consent modal.
 
 ### How it works
 
