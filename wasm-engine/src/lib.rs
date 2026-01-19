@@ -119,6 +119,10 @@ pub struct SentimentSignals {
     pub neutral_count: usize,
     /// Aggregate sentiment score from -100 (very negative) to 100 (very positive)
     pub sentiment_score: i32,
+    /// Sample messages for each sentiment category (up to 3 each)
+    pub positive_samples: Vec<String>,
+    pub negative_samples: Vec<String>,
+    pub confused_samples: Vec<String>,
 }
 
 /// Combined analysis result including clusters, topics, and sentiment
@@ -274,6 +278,12 @@ fn analyze_sentiment_internal(messages: &[Message]) -> SentimentSignals {
     let mut confused = 0;
     let mut neutral = 0;
 
+    let mut positive_samples: Vec<String> = Vec::new();
+    let mut negative_samples: Vec<String> = Vec::new();
+    let mut confused_samples: Vec<String> = Vec::new();
+
+    const MAX_SAMPLES: usize = 3;
+
     for msg in messages.iter() {
         let text_lower = msg.text.to_lowercase();
         let mut msg_classified = false;
@@ -282,18 +292,27 @@ fn analyze_sentiment_internal(messages: &[Message]) -> SentimentSignals {
         if text_lower.contains('?') ||
            CONFUSED_INDICATORS.iter().any(|w| text_lower.contains(w)) {
             confused += 1;
+            if confused_samples.len() < MAX_SAMPLES {
+                confused_samples.push(msg.text.clone());
+            }
             msg_classified = true;
         }
 
         // Check for positive signals
         if !msg_classified && POSITIVE_WORDS.iter().any(|w| text_lower.contains(w)) {
             positive += 1;
+            if positive_samples.len() < MAX_SAMPLES {
+                positive_samples.push(msg.text.clone());
+            }
             msg_classified = true;
         }
 
         // Check for negative signals
         if !msg_classified && NEGATIVE_WORDS.iter().any(|w| text_lower.contains(w)) {
             negative += 1;
+            if negative_samples.len() < MAX_SAMPLES {
+                negative_samples.push(msg.text.clone());
+            }
             msg_classified = true;
         }
 
@@ -317,6 +336,9 @@ fn analyze_sentiment_internal(messages: &[Message]) -> SentimentSignals {
         confused_count: confused,
         neutral_count: neutral,
         sentiment_score: sentiment_score.clamp(-100, 100),
+        positive_samples,
+        negative_samples,
+        confused_samples,
     }
 }
 

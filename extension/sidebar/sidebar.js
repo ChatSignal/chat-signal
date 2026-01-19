@@ -51,6 +51,7 @@ const moodEmoji = document.getElementById('mood-emoji');
 const moodLabel = document.getElementById('mood-label');
 const moodConfidence = document.getElementById('mood-confidence');
 const moodSummary = document.getElementById('mood-summary');
+const sentimentSamples = document.getElementById('sentiment-samples');
 const topicsSection = document.getElementById('topics-section');
 const topicsCloud = document.getElementById('topics-cloud');
 const aiOptIn = document.getElementById('ai-opt-in');
@@ -488,8 +489,45 @@ async function updateMoodIndicator(messages, sentimentSignals, currentSettings) 
   moodConfidence.textContent = `${Math.round(sentimentResult.confidence * 100)}% confidence`;
   moodSummary.textContent = sentimentResult.summary || '';
 
+  // Display sentiment samples based on mood
+  updateSentimentSamples(sentimentResult.mood, sentimentSignals);
+
   // Track current mood for session saving
   currentMood = sentimentResult.mood;
+}
+
+// Display sentiment sample messages based on current mood
+function updateSentimentSamples(mood, signals) {
+  if (!sentimentSamples) return;
+
+  // Determine which samples to show based on mood
+  let samples = [];
+  let label = '';
+
+  if (mood === 'negative' || mood === 'angry') {
+    samples = signals.negative_samples || [];
+    label = 'Negative signals:';
+  } else if (mood === 'confused') {
+    samples = signals.confused_samples || [];
+    label = 'Confusion signals:';
+  } else if (mood === 'positive' || mood === 'excited') {
+    samples = signals.positive_samples || [];
+    label = 'Positive signals:';
+  }
+
+  // Only show if we have samples
+  if (samples.length === 0) {
+    sentimentSamples.classList.add('hidden');
+    return;
+  }
+
+  sentimentSamples.classList.remove('hidden');
+  sentimentSamples.innerHTML = `
+    <div class="samples-label">${label}</div>
+    <ul class="samples-list">
+      ${samples.map(s => `<li>${escapeHtml(s)}</li>`).join('')}
+    </ul>
+  `;
 }
 
 // Generate AI summary from buckets

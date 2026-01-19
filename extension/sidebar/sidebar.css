@@ -367,6 +367,50 @@ h1 {
 .mood-section.confused { border-color: #a855f7; }
 .mood-section.neutral { border-color: var(--border-color); }
 
+/* Sentiment samples display */
+.sentiment-samples {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.samples-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.samples-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.samples-list li {
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--accent-color);
+}
+
+.mood-section.negative .samples-list li,
+.mood-section.angry .samples-list li {
+  border-left-color: #ef4444;
+}
+
+.mood-section.confused .samples-list li {
+  border-left-color: #a855f7;
+}
+
+.mood-section.positive .samples-list li,
+.mood-section.excited .samples-list li {
+  border-left-color: #22c55e;
+}
+
 /* ============================================================================
    TRENDING TOPICS SECTION
    ============================================================================ */
