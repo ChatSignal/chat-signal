@@ -229,7 +229,10 @@ await resetLLM();  // Cleanup
 
 ### Next Up
 - [ ] **Export Options**: Download session data as JSON or Markdown files
-- [ ] **Platform Expansion**: Support for Kick, Facebook Gaming, and other streaming platforms
+- [ ] **Platform Expansion**: Add support for additional streaming platforms
+  - **Kick** - Best candidate, similar architecture to Twitch
+  - **Rumble** - Simpler DOM structure, growing audience
+  - *Note: X Spaces investigated but tabled due to audio-first model and Shadow DOM complexity*
 - [ ] **Alerts**: Notify when sentiment spikes (positive or negative)
 - [ ] **Historical Trends**: Graphs showing sentiment/engagement over time during a stream
 
