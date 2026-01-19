@@ -94,11 +94,12 @@ function createFallbackEngine() {
 
 /**
  * Generate fallback summary without LLM
+ * Returns a structured list format for easy display
  */
 function generateFallbackSummary(prompt) {
   const lines = prompt.split('\n');
   const buckets = [];
-  
+
   let currentBucket = null;
   for (const line of lines) {
     const match = line.match(/^\d+\.\s+(.+?)\s+\((\d+)\s+messages\)/);
@@ -107,30 +108,42 @@ function generateFallbackSummary(prompt) {
       buckets.push(currentBucket);
     }
   }
-  
+
   if (buckets.length === 0) {
     return 'No significant patterns detected in the chat.';
   }
-  
-  const topBucket = buckets.reduce((max, b) => b.count > max.count ? b : max, buckets[0]);
-  let summary = `📊 Main focus: ${topBucket.label} (${topBucket.count} messages)`;
-  
-  if (buckets.length > 1) {
-    const others = buckets.filter(b => b !== topBucket)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 2)
-      .map(b => `${b.label} (${b.count})`)
-      .join(', ');
-    summary += `\n\nAlso active: ${others}`;
-  }
-  
+
+  // Sort by count descending
+  buckets.sort((a, b) => b.count - a.count);
+
+  // Build structured list
+  const summaryLines = [];
+
+  buckets.forEach(bucket => {
+    const emoji = getCategoryEmoji(bucket.label);
+    summaryLines.push(`${emoji} ${bucket.label}: ${bucket.count} messages`);
+  });
+
   // Add engagement insight
   const totalMessages = buckets.reduce((sum, b) => sum + b.count, 0);
   if (totalMessages > 20) {
-    summary += `\n\n💬 High engagement with ${totalMessages} messages analyzed.`;
+    summaryLines.push(`💬 High engagement: ${totalMessages} total messages`);
   }
-  
-  return summary;
+
+  return summaryLines.join('\n');
+}
+
+/**
+ * Get emoji for category label
+ */
+function getCategoryEmoji(label) {
+  const emojiMap = {
+    'Questions': '❓',
+    'Issues/Bugs': '🐛',
+    'Requests': '🙏',
+    'General Chat': '💬'
+  };
+  return emojiMap[label] || '📌';
 }
 
 /**
@@ -158,7 +171,7 @@ async function summarizeBuckets(buckets) {
       messages: [
         {
           role: 'system',
-          content: 'You are analyzing live stream chat. Provide a concise 2-3 sentence summary highlighting key themes, questions, or concerns. Be specific and actionable.'
+          content: 'You are analyzing live stream chat. Provide a brief summary as a simple list with one line per category. Format: "emoji Category: insight". Use emojis: ❓ Questions, 🐛 Issues, 🙏 Requests, 💬 General. Be specific and actionable. Max 4 lines.'
         },
         {
           role: 'user',

@@ -533,11 +533,20 @@ function updateSentimentSamples(mood, signals) {
 // Generate AI summary from buckets
 async function generateAISummary(buckets) {
   try {
-    aiSummaryText.textContent = 'Generating AI summary...';
+    aiSummaryText.innerHTML = '<span class="loading">Generating AI summary...</span>';
     aiSummaryDiv.classList.remove('hidden');
 
     const summary = await summarizeBuckets(buckets);
-    aiSummaryText.textContent = summary.summary;
+
+    // Format summary as a list (split by newlines)
+    const lines = summary.summary.split('\n').filter(line => line.trim());
+    if (lines.length > 1) {
+      aiSummaryText.innerHTML = `<ul class="ai-summary-list">${lines.map(line =>
+        `<li>${escapeHtml(line)}</li>`
+      ).join('')}</ul>`;
+    } else {
+      aiSummaryText.textContent = summary.summary;
+    }
 
   } catch (error) {
     console.error('[Sidebar] AI summary failed:', error);
