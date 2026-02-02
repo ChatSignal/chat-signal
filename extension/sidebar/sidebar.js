@@ -297,6 +297,9 @@ function processMessages(messages) {
   }
 
   try {
+    // Validate input messages
+    validateMessages(messages);
+    
     // Use combined analysis function with settings for spam filtering
     const result = wasmModule.analyze_chat_with_settings(
       messages,
@@ -305,16 +308,8 @@ function processMessages(messages) {
       settings.duplicateWindow * 1000  // convert to milliseconds
     );
 
-    // Validate AnalysisResult shape
-    if (!result || typeof result !== 'object') {
-      throw new Error('Invalid result from analyze_chat');
-    }
-    if (!Array.isArray(result.buckets)) {
-      throw new Error('AnalysisResult.buckets must be an array');
-    }
-    if (typeof result.processed_count !== 'number') {
-      throw new Error('AnalysisResult.processed_count must be a number');
-    }
+    // Comprehensive validation of WASM output
+    validateAnalysisResult(result);
 
     // Update UI
     statusDiv.classList.add('active');
@@ -365,11 +360,7 @@ function processMessages(messages) {
     clustersDiv.innerHTML = '';
 
     if (result.buckets.length === 0) {
-      clustersDiv.innerHTML = `
-        <div class="empty-state">
-          <p>No clusters yet. Keep chatting!</p>
-        </div>
-      `;
+      safeSetHTML(clustersDiv, '<div class="empty-state"><p>No clusters yet. Keep chatting!</p></div>');
       return;
     }
 
@@ -383,17 +374,22 @@ function processMessages(messages) {
       const bucketEl = document.createElement('div');
       bucketEl.className = 'cluster-bucket';
 
-      bucketEl.innerHTML = `
-        <div class="cluster-header">
-          <div class="cluster-label">${escapeHtml(bucket.label)}</div>
-          <div class="cluster-count">${bucket.count}</div>
-        </div>
-        <div class="cluster-messages">
-          ${bucket.sample_messages.map(msg =>
-            `<div class="message-item">${escapeHtml(msg)}</div>`
-          ).join('')}
-        </div>
-      `;
+      // Build bucket content safely
+      const headerDiv = safeCreateElement('div', 'cluster-header');
+      const labelDiv = safeCreateElement('div', 'cluster-label', escapeHtml(bucket.label));
+      const countDiv = safeCreateElement('div', 'cluster-count', bucket.count.toString());
+      headerDiv.appendChild(labelDiv);
+      headerDiv.appendChild(countDiv);
+      
+      const messagesDiv = safeCreateElement('div', 'cluster-messages');
+      bucket.sample_messages.forEach(msg => {
+        const msgDiv = safeCreateElement('div', 'message-item', escapeHtml(msg));
+        messagesDiv.appendChild(msgDiv);
+      });
+      
+      bucketEl.innerHTML = '';
+      bucketEl.appendChild(headerDiv);
+      bucketEl.appendChild(messagesDiv);
 
       clustersDiv.appendChild(bucketEl);
     });
@@ -533,7 +529,9 @@ function updateSentimentSamples(mood, signals) {
 // Generate AI summary from buckets
 async function generateAISummary(buckets) {
   try {
-    aiSummaryText.innerHTML = '<span class="loading">Generating AI summary...</span>';
+    const loadingSpan = safeCreateElement('span', 'loading', 'Generating AI summary...');
+    aiSummaryText.innerHTML = '';
+    aiSummaryText.appendChild(loadingSpan);
     aiSummaryDiv.classList.remove('hidden');
 
     const summary = await summarizeBuckets(buckets);
@@ -541,9 +539,14 @@ async function generateAISummary(buckets) {
     // Format summary as a list (split by newlines)
     const lines = summary.summary.split('\n').filter(line => line.trim());
     if (lines.length > 1) {
-      aiSummaryText.innerHTML = `<ul class="ai-summary-list">${lines.map(line =>
-        `<li>${escapeHtml(line)}</li>`
-      ).join('')}</ul>`;
+      // Use safe DOM manipulation instead of innerHTML
+      const ul = safeCreateElement('ul', 'ai-summary-list');
+      lines.forEach(line => {
+        const li = safeCreateElement('li', '', escapeHtml(line));
+        ul.appendChild(li);
+      });
+      aiSummaryText.innerHTML = '';
+      aiSummaryText.appendChild(ul);
     } else {
       aiSummaryText.textContent = summary.summary;
     }
@@ -559,6 +562,118 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Safe DOM helpers to prevent XSS
+function safeCreateElement(tag, className, textContent = '') {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (textContent) element.textContent = textContent;
+  return element;
+}
+
+function safeSetHTML(element, htmlContent) {
+  // Only allow safe static HTML patterns
+  const safePatterns = [
+    /^<div class="empty-state"><p>No clusters yet\. Keep chatting!<\/p><\/div>$/,
+    /^<p class="summary-no-data">[^<]*<\/p>$/,
+    /^<span class="loading">[^<]*<\/span>$/
+  ];
+  
+  const isSafe = safePatterns.some(pattern => pattern.test(htmlContent));
+  if (isSafe) {
+    element.innerHTML = htmlContent;
+  } else {
+    console.error('Unsafe HTML blocked:', htmlContent);
+    element.textContent = 'Content blocked for security';
+  }
+}
+
+// Input validation for WASM data
+function validateAnalysisResult(result) {
+  if (!result || typeof result !== 'object') {
+    throw new Error('Invalid result: must be an object');
+  }
+  
+  // Validate buckets
+  if (!Array.isArray(result.buckets)) {
+    throw new Error('Invalid result: buckets must be an array');
+  }
+  result.buckets.forEach((bucket, index) => {
+    if (!bucket || typeof bucket !== 'object') {
+      throw new Error(`Invalid bucket at index ${index}: must be an object`);
+    }
+    if (typeof bucket.label !== 'string' || bucket.label.length > 100) {
+      throw new Error(`Invalid bucket at index ${index}: label must be a string <= 100 chars`);
+    }
+    if (typeof bucket.count !== 'number' || bucket.count < 0) {
+      throw new Error(`Invalid bucket at index ${index}: count must be a non-negative number`);
+    }
+    if (!Array.isArray(bucket.sample_messages)) {
+      throw new Error(`Invalid bucket at index ${index}: sample_messages must be an array`);
+    }
+    bucket.sample_messages.forEach((msg, msgIndex) => {
+      if (typeof msg !== 'string' || msg.length > 500) {
+        throw new Error(`Invalid message at bucket ${index}, message ${msgIndex}: must be string <= 500 chars`);
+      }
+    });
+  });
+  
+  // Validate topics
+  if (result.topics && !Array.isArray(result.topics)) {
+    throw new Error('Invalid result: topics must be an array if present');
+  }
+  if (result.topics) {
+    result.topics.forEach((topic, index) => {
+      if (!topic || typeof topic !== 'object') {
+        throw new Error(`Invalid topic at index ${index}: must be an object`);
+      }
+      if (typeof topic.term !== 'string' || topic.term.length > 50) {
+        throw new Error(`Invalid topic at index ${index}: term must be string <= 50 chars`);
+      }
+      if (typeof topic.count !== 'number' || topic.count <= 0) {
+        throw new Error(`Invalid topic at index ${index}: count must be positive number`);
+      }
+      if (typeof topic.is_emote !== 'boolean') {
+        throw new Error(`Invalid topic at index ${index}: is_emote must be boolean`);
+      }
+    });
+  }
+  
+  // Validate sentiment signals
+  if (result.sentiment_signals && typeof result.sentiment_signals !== 'object') {
+    throw new Error('Invalid result: sentiment_signals must be an object if present');
+  }
+  
+  // Validate processed_count
+  if (typeof result.processed_count !== 'number' || result.processed_count < 0) {
+    throw new Error('Invalid result: processed_count must be a non-negative number');
+  }
+  
+  return true;
+}
+
+function validateMessages(messages) {
+  if (!Array.isArray(messages)) {
+    throw new Error('Messages must be an array');
+  }
+  
+  messages.forEach((msg, index) => {
+    if (!msg || typeof msg !== 'object') {
+      throw new Error(`Message at index ${index} must be an object`);
+    }
+    if (typeof msg.text !== 'string' || msg.text.length > 1000) {
+      throw new Error(`Message at index ${index}: text must be string <= 1000 chars`);
+    }
+    if (typeof msg.timestamp !== 'number' || msg.timestamp <= 0) {
+      throw new Error(`Message at index ${index}: timestamp must be positive number`);
+    }
+    if (msg.author && (typeof msg.author !== 'string' || msg.author.length > 50)) {
+      throw new Error(`Message at index ${index}: author must be string <= 50 chars`);
+    }
+  });
+  
+  return true;
 }
 
 // Accumulate messages across batches for better clustering
@@ -674,15 +789,48 @@ function showSessionSummary() {
     sentimentContainer.innerHTML = '<p class="summary-no-data">No sentiment data</p>';
   }
 
-  // Update topics
-  const topicsContainer = document.getElementById('summary-topics');
-  if (result.topics && result.topics.length > 0) {
-    topicsContainer.innerHTML = result.topics.slice(0, 10).map(topic =>
-      `<span class="summary-topic ${topic.is_emote ? 'emote' : ''}">${escapeHtml(topic.term)} (${topic.count})</span>`
-    ).join('');
-  } else {
-    topicsContainer.innerHTML = '<p class="summary-no-data">No trending topics</p>';
-  }
+    // Update topics
+    const topicsContainer = document.getElementById('summary-topics');
+    if (result.topics && result.topics.length > 0) {
+      topicsContainer.innerHTML = '';
+      result.topics.slice(0, 10).forEach(topic => {
+        const span = safeCreateElement('span', `summary-topic ${topic.is_emote ? 'emote' : ''}`, 
+          `${escapeHtml(topic.term)} (${topic.count})`);
+        topicsContainer.appendChild(span);
+      });
+    } else {
+      safeSetHTML(topicsContainer, '<p class="summary-no-data">No trending topics</p>');
+    }
+
+    // Update clusters
+    const clustersContainer = document.getElementById('summary-clusters');
+    if (result.buckets && result.buckets.length > 0) {
+      clustersContainer.innerHTML = '';
+      result.buckets.forEach(bucket => {
+        const div = safeCreateElement('div', 'summary-cluster');
+        const labelSpan = safeCreateElement('span', 'summary-cluster-label', `${escapeHtml(bucket.label)}:`);
+        const countSpan = safeCreateElement('span', 'summary-cluster-count', bucket.count.toString());
+        div.appendChild(labelSpan);
+        div.appendChild(countSpan);
+        clustersContainer.appendChild(div);
+      });
+    } else {
+      safeSetHTML(clustersContainer, '<p class="summary-no-data">No clusters</p>');
+    }
+
+    // Update questions
+    const questionsContainer = document.getElementById('summary-questions');
+    const questionsBucket = result.buckets.find(b => b.label === 'Questions');
+    if (questionsBucket && questionsBucket.sample_messages.length > 0) {
+      const recentQuestions = questionsBucket.sample_messages.slice(0, 3);
+      questionsContainer.innerHTML = '';
+      recentQuestions.forEach(msg => {
+        const div = safeCreateElement('div', 'summary-question', escapeHtml(msg));
+        questionsContainer.appendChild(div);
+      });
+    } else {
+      safeSetHTML(questionsContainer, '<p class="summary-no-data">No questions captured</p>');
+    }
 
   // Update clusters
   const clustersContainer = document.getElementById('summary-clusters');
