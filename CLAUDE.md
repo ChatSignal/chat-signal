@@ -67,7 +67,14 @@ There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 - `extension/manifest.json`: Extension permissions and configuration
 - `extension/content-script.js`: Platform-specific chat extraction (YouTube/Twitch selectors)
 - `extension/llm-adapter.js`: WebLLM integration for AI-powered sentiment analysis
-- `extension/sidebar/sidebar.js`: WASM loading, UI rendering, mood/topic display, session management
+- `extension/sidebar/sidebar.js`: Main entry point, WASM loading, UI event handling
+- `extension/sidebar/modules/`: Modular components
+  - `SessionManager.js`: Session lifecycle, inactivity detection, persistence
+  - `StateManager.js`: Application state management and data accumulation
+- `extension/sidebar/utils/`: Utility modules
+  - `DOMHelpers.js`: Safe DOM manipulation with XSS protection
+  - `ValidationHelpers.js`: Input validation and sanitization
+  - `FormattingHelpers.js`: Text formatting and display utilities
 - `extension/storage-manager.js`: Session history persistence using chrome.storage.local
 - `extension/WEBLLM_SETUP.md`: Detailed WebLLM setup instructions
 
@@ -108,10 +115,12 @@ Analyzes sentiment using lexicon-based matching.
 
 ### JavaScript (extension)
 - Use ES6 modules with dynamic imports for WASM
-- Always escape HTML when rendering user content (use `escapeHtml()`)
+- **Security-First**: Always use safe DOM helpers from `DOMHelpers.js` instead of `innerHTML`
+- **Input Validation**: Validate all WASM output and user input with `ValidationHelpers.js`
 - Structure messages with `type` field for chrome message passing
 - Use `chrome.runtime.getURL()` for extension resource paths
 - LLM calls should have fallback behavior for when WebLLM is unavailable
+- Follow modular architecture: separate concerns into modules/ and utils/
 
 ### CSS (sidebar)
 - Use CSS variables for theming (defined in `:root`)

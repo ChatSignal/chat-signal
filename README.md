@@ -72,7 +72,14 @@ chat-signal-radar/
 │   ├── sidebar/
 │   │   ├── sidebar.html   # Dashboard UI
 │   │   ├── sidebar.css    # Styling (light/dark theme support)
-│   │   └── sidebar.js     # WASM loading, rendering, session management
+│   │   ├── sidebar.js     # Main entry point, WASM loading
+│   │   ├── modules/       # Modular components
+│   │   │   ├── SessionManager.js  # Session lifecycle & persistence
+│   │   │   └── StateManager.js    # Application state management
+│   │   └── utils/         # Utility modules
+│   │       ├── DOMHelpers.js         # Safe DOM manipulation
+│   │       ├── ValidationHelpers.js  # Input validation & sanitization
+│   │       └── FormattingHelpers.js  # Text formatting utilities
 │   └── wasm/              # (generated) WASM artifacts
 └── scripts/
     ├── build.sh           # Build Rust → WASM → Extension
@@ -97,6 +104,11 @@ chat-signal-radar/
    - Click reload icon on Chat Signal Radar extension
    - Refresh the stream page
 
+4. **Debugging:** 
+   - Check Chrome DevTools Console for validation errors and security warnings
+   - Session data and validation logs are prefixed with `[SessionManager]` or `[StateManager]`
+   - Security blocks are logged when unsafe content is detected
+
 ### Watch Mode (Auto-rebuild)
 
 Requires [cargo-watch](https://github.com/watchexec/cargo-watch):
@@ -113,6 +125,23 @@ Edit `wasm-engine/src/lib.rs` and rebuild. The engine includes:
 - **Sentiment Analysis**: Lexicon-based mood detection
 
 Word lists for emotes, stop words, and sentiment are defined at the top of `lib.rs`.
+
+### Extension Architecture
+
+The extension uses a modular architecture with clear separation of concerns:
+
+- **Security-First Design**: All DOM operations use safe helpers from `DOMHelpers.js` with XSS protection
+- **Input Validation**: Comprehensive validation of WASM data and user input via `ValidationHelpers.js`
+- **Session Management**: `SessionManager.js` handles session lifecycle, inactivity detection, and persistence
+- **State Management**: `StateManager.js` maintains application state and analysis results
+- **Type Safety**: All data structures are validated before processing to prevent runtime errors
+
+### Security Features
+
+- **XSS Prevention**: Replaces unsafe `innerHTML` with safe DOM manipulation
+- **Input Sanitization**: All user input and WASM output is validated and sanitized
+- **Data Validation**: Comprehensive validation for messages, analysis results, settings, and session data
+- **Safe Patterns**: Only allowed static HTML patterns are used for trusted content
 
 ### Run Tests
 
