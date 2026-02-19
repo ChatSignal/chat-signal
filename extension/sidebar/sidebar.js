@@ -583,7 +583,7 @@ function validateAnalysisResult(result) {
     if (typeof bucket.label !== 'string' || bucket.label.length > 100) {
       throw new Error(`Invalid bucket at index ${index}: label must be a string <= 100 chars`);
     }
-    if (typeof bucket.count !== 'number' || bucket.count < 0) {
+    if (!Number.isFinite(bucket.count) || bucket.count < 0) {
       throw new Error(`Invalid bucket at index ${index}: count must be a non-negative number`);
     }
     if (!Array.isArray(bucket.sample_messages)) {
@@ -608,7 +608,7 @@ function validateAnalysisResult(result) {
       if (typeof topic.term !== 'string' || topic.term.length > 50) {
         throw new Error(`Invalid topic at index ${index}: term must be string <= 50 chars`);
       }
-      if (typeof topic.count !== 'number' || topic.count <= 0) {
+      if (!Number.isFinite(topic.count) || topic.count <= 0) {
         throw new Error(`Invalid topic at index ${index}: count must be positive number`);
       }
       if (typeof topic.is_emote !== 'boolean') {
@@ -623,7 +623,7 @@ function validateAnalysisResult(result) {
   }
   
   // Validate processed_count
-  if (typeof result.processed_count !== 'number' || result.processed_count < 0) {
+  if (!Number.isFinite(result.processed_count) || result.processed_count < 0) {
     throw new Error('Invalid result: processed_count must be a non-negative number');
   }
   
@@ -642,7 +642,7 @@ function validateMessages(messages) {
     if (typeof msg.text !== 'string' || msg.text.length > 1000) {
       throw new Error(`Message at index ${index}: text must be string <= 1000 chars`);
     }
-    if (typeof msg.timestamp !== 'number' || msg.timestamp <= 0) {
+    if (!Number.isFinite(msg.timestamp) || msg.timestamp <= 0) {
       throw new Error(`Message at index ${index}: timestamp must be positive number`);
     }
     if (msg.author && (typeof msg.author !== 'string' || msg.author.length > 50)) {
