@@ -1,7 +1,9 @@
+// All innerHTML must use DOMPurify
 // Sidebar script - loads WASM and processes chat messages
 
 import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM } from '../llm-adapter.js';
 import { saveSession, loadSessions, deleteSession, clearAllSessions } from '../storage-manager.js';
+import { safeSetHTML, DOMPURIFY_CONFIG, escapeHtml, safeCreateElement } from './utils/DOMHelpers.js';
 
 const DEBUG = false;
 const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
@@ -561,38 +563,6 @@ async function generateAISummary(buckets) {
   } catch (error) {
     console.error('[Sidebar] AI summary failed:', error);
     aiSummaryDiv.classList.add('hidden');
-  }
-}
-
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Safe DOM helpers to prevent XSS
-function safeCreateElement(tag, className, textContent = '') {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (textContent) element.textContent = textContent;
-  return element;
-}
-
-function safeSetHTML(element, htmlContent) {
-  // Only allow safe static HTML patterns
-  const safePatterns = [
-    /^<div class="empty-state"><p>No clusters yet\. Keep chatting!<\/p><\/div>$/,
-    /^<p class="summary-no-data">[^<]*<\/p>$/,
-    /^<span class="loading">[^<]*<\/span>$/
-  ];
-  
-  const isSafe = safePatterns.some(pattern => pattern.test(htmlContent));
-  if (isSafe) {
-    element.innerHTML = htmlContent;
-  } else {
-    console.error('Unsafe HTML blocked:', htmlContent);
-    element.textContent = 'Content blocked for security';
   }
 }
 
