@@ -31,7 +31,11 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 
 ### Active
 
-(None — define in next milestone)
+- [ ] Permission justification and manifest review for CWS compliance
+- [ ] Disk space warnings before WebLLM model download (~400MB)
+- [ ] Privacy policy hosted on a public URL
+- [ ] Store listing screenshots (1280x800 or 640x400)
+- [ ] Incognito mode verification (chrome.storage, sidePanel, WASM)
 
 ### Out of Scope
 
@@ -39,7 +43,7 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 - Platform expansion (Kick, Rumble) — candidate for next milestone
 - Alerts on sentiment spikes — candidate for next milestone
 - Historical trend graphs — candidate for next milestone
-- Chrome Web Store publication — not part of current work
+- Chrome Web Store publication — NOW IN SCOPE for v1.1
 - Per-category sentiment sensitivity — high complexity, low payoff
 - Custom sentiment keyword lists — requires Rust changes, 5-10x complexity
 - Per-channel settings — storage namespace complexity
@@ -60,7 +64,7 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 
 - **Tech stack**: Rust/WASM + vanilla JS Chrome extension (MV3) — no framework changes
 - **Extension size**: DOMPurify (~60KB) acceptable; no other new dependencies
-- **Scope**: Working locally only — no Chrome Web Store submission this round
+- **Scope**: Preparing for Chrome Web Store submission
 - **Testing**: Rust unit tests must pass; existing test coverage maintained
 
 ## Key Decisions
@@ -75,5 +79,16 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 | DOMPurify as synchronous script tag | Must be available before ES module executes | ✓ Good — fail-fast if missing |
 | Input-time validation with save-blocking | Prevents invalid settings from persisting to storage | ✓ Good — immediate user feedback |
 
+## Current Milestone: v1.1 CWS Readiness
+
+**Goal:** Prepare the extension for Chrome Web Store submission — permissions compliance, privacy policy, LLM storage warnings, and store listing assets.
+
+**Target features:**
+- CWS-compliant manifest with permission justifications
+- Disk space warnings for WebLLM model download
+- Hosted privacy policy
+- Store listing screenshots
+- Incognito mode verification
+
 ---
-*Last updated: 2026-02-19 after v1.0 milestone*
+*Last updated: 2026-02-19 after v1.1 milestone start*
