@@ -42,7 +42,11 @@ Plans:
   2. Searching the sidebar JS for direct innerHTML assignments returns zero results after migration
   3. extension/libs/dompurify/purify.min.js exists and loads before the ES module in sidebar.html
   4. The old safeSetHTML regex implementation is removed from DOMHelpers.js
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Vendor DOMPurify 3.3.1, add script tag to sidebar.html, replace safeSetHTML internals in DOMHelpers.js with DOMPurify-backed implementation
+- [ ] 02-02-PLAN.md — Migrate all sidebar.js innerHTML assignments to DOMPurify, remove private safeSetHTML/escapeHtml/safeCreateElement copies, import from DOMHelpers.js
 
 ### Phase 3: Configurable Thresholds
 **Goal**: Users can tune inactivity timeout to avoid false "stream ended?" prompts, duplicateWindow is correctly passed to the WASM engine, and all numeric threshold validation rejects NaN inputs
@@ -63,5 +67,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Analysis Window | 2/2 | Complete | 2026-02-19 |
-| 2. DOMPurify Integration | 0/? | Not started | - |
+| 2. DOMPurify Integration | 0/2 | Not started | - |
 | 3. Configurable Thresholds | 0/? | Not started | - |
