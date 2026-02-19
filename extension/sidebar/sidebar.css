@@ -1150,3 +1150,14 @@ h1 {
 .container:has(.history-view:not(.hidden)) #first-run {
   display: none;
 }
+
+/* Window stats indicator in stats bar */
+.stats-separator {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+.window-stats {
+  font-size: inherit;
+  color: var(--text-muted);
+}
