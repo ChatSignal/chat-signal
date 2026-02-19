@@ -112,7 +112,6 @@ let sessionSentiment = {
 // Inactivity detection
 let lastMessageTime = null;
 let inactivityCheckInterval = null;
-const INACTIVITY_TIMEOUT = 120000; // 2 minutes
 
 // Current view state
 let currentView = 'live'; // 'live' or 'history'
@@ -946,7 +945,8 @@ function startInactivityCheck() {
   inactivityCheckInterval = setInterval(() => {
     if (lastMessageTime && sessionStartTime) {
       const timeSinceLastMessage = Date.now() - lastMessageTime;
-      if (timeSinceLastMessage >= INACTIVITY_TIMEOUT) {
+      const inactivityMs = (settings.inactivityTimeout || 120) * 1000;
+      if (timeSinceLastMessage >= inactivityMs) {
         showStreamEndedPrompt();
         stopInactivityCheck();
       }

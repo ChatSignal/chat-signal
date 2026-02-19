@@ -131,6 +131,13 @@ export function validateSettings(settings) {
     }
   }
 
+  // Validate inactivityTimeout
+  if (settings.inactivityTimeout !== undefined) {
+    if (!Number.isFinite(settings.inactivityTimeout) || settings.inactivityTimeout < 30 || settings.inactivityTimeout > 600) {
+      throw new Error('inactivityTimeout must be a number between 30 and 600 seconds');
+    }
+  }
+
   // Validate boolean settings
   const booleanSettings = ['aiSummariesEnabled', 'aiConsentShown'];
   booleanSettings.forEach(setting => {

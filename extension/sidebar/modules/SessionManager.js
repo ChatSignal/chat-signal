@@ -134,7 +134,8 @@ export class SessionManager {
       
       if (lastMessageTime && sessionStartTime) {
         const timeSinceLastMessage = Date.now() - lastMessageTime;
-        if (timeSinceLastMessage >= stateManager.INACTIVITY_TIMEOUT) {
+        const inactivityMs = (stateManager.settings.inactivityTimeout || 120) * 1000;
+        if (timeSinceLastMessage >= inactivityMs) {
           this.showStreamEndedPrompt();
           this.stopInactivityCheck();
         }

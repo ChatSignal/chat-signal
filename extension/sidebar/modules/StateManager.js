@@ -50,7 +50,6 @@ export class StateManager {
     // Constants
     this.MAX_MESSAGES = 500;
     this.MAX_SESSION_QUESTIONS = 50;
-    this.INACTIVITY_TIMEOUT = 120000; // 2 minutes
   }
   
   // Getters for commonly used state
