@@ -57,11 +57,12 @@ Plans:
   2. Clearing any numeric threshold field in options shows a validation error rather than silently writing NaN or 0 to storage
   3. The WASM analyze_chat call receives the user's duplicateWindow setting instead of a hardcoded value
   4. Both sidebar.js and SessionManager read inactivityTimeout from settings rather than a hardcoded constant
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Add inactivityTimeout setting to options UI and all DEFAULT_SETTINGS, replace hardcoded INACTIVITY_TIMEOUT constants with live settings reads, verify duplicateWindow wiring
-- [ ] 03-02-PLAN.md — Harden all numeric validation with Number.isFinite(), add missing sentimentSensitivity/moodUpgradeThreshold validation, add input-time validation with save-blocking to options page
+- [x] 03-01-PLAN.md — Add inactivityTimeout setting to options UI and all DEFAULT_SETTINGS, replace hardcoded INACTIVITY_TIMEOUT constants with live settings reads, verify duplicateWindow wiring
+- [x] 03-02-PLAN.md — Harden all numeric validation with Number.isFinite(), add missing sentimentSensitivity/moodUpgradeThreshold validation, add input-time validation with save-blocking to options page
+- [ ] 03-03-PLAN.md — [gap closure] Replace typeof number checks with Number.isFinite() in sidebar.js local validation functions
 
 ## Progress
 
