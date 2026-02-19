@@ -447,10 +447,10 @@ function updateTopics(topics) {
       tag.classList.add('size-small');
     }
 
-    tag.innerHTML = `
+    tag.innerHTML = DOMPurify.sanitize(`
       ${escapeHtml(topic.term)}
       <span class="topic-count">${topic.count}</span>
-    `;
+    `, DOMPURIFY_CONFIG);
 
     topicsCloud.appendChild(tag);
   });
@@ -527,12 +527,12 @@ function updateSentimentSamples(mood, signals) {
   }
 
   sentimentSamples.classList.remove('hidden');
-  sentimentSamples.innerHTML = `
+  sentimentSamples.innerHTML = DOMPurify.sanitize(`
     <div class="samples-label">${label}</div>
     <ul class="samples-list">
       ${samples.map(s => `<li>${escapeHtml(s)}</li>`).join('')}
     </ul>
-  `;
+  `, DOMPURIFY_CONFIG);
 }
 
 // Generate AI summary from buckets
@@ -751,77 +751,53 @@ function showSessionSummary() {
                 sessionSentiment.confused_count + sessionSentiment.neutral_count;
 
   if (total > 0) {
-    sentimentContainer.innerHTML = ['positive', 'negative', 'confused', 'neutral'].map(type => {
-      const count = sessionSentiment[`${type}_count`];
-      const percent = Math.round((count / total) * 100);
-      return `
-        <div class="sentiment-bar">
-          <span class="sentiment-bar-label">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
-          <div class="sentiment-bar-track">
-            <div class="sentiment-bar-fill ${type}" style="width: ${percent}%"></div>
+    sentimentContainer.innerHTML = DOMPurify.sanitize(
+      ['positive', 'negative', 'confused', 'neutral'].map(type => {
+        const count = sessionSentiment[`${type}_count`];
+        const percent = Math.round((count / total) * 100);
+        return `
+          <div class="sentiment-bar">
+            <span class="sentiment-bar-label">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+            <div class="sentiment-bar-track">
+              <div class="sentiment-bar-fill ${type}" style="width: ${percent}%"></div>
+            </div>
+            <span class="sentiment-bar-value">${count}</span>
           </div>
-          <span class="sentiment-bar-value">${count}</span>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
-    sentimentContainer.innerHTML = '<p class="summary-no-data">No sentiment data</p>';
+    safeSetHTML(sentimentContainer, '<p class="summary-no-data">No sentiment data</p>');
   }
 
-    // Update topics
-    const topicsContainer = document.getElementById('summary-topics');
-    if (result.topics && result.topics.length > 0) {
-      topicsContainer.innerHTML = '';
-      result.topics.slice(0, 10).forEach(topic => {
-        const span = safeCreateElement('span', `summary-topic ${topic.is_emote ? 'emote' : ''}`, 
-          `${escapeHtml(topic.term)} (${topic.count})`);
-        topicsContainer.appendChild(span);
-      });
-    } else {
-      safeSetHTML(topicsContainer, '<p class="summary-no-data">No trending topics</p>');
-    }
-
-    // Update clusters
-    const clustersContainer = document.getElementById('summary-clusters');
-    if (result.buckets && result.buckets.length > 0) {
-      clustersContainer.innerHTML = '';
-      result.buckets.forEach(bucket => {
-        const div = safeCreateElement('div', 'summary-cluster');
-        const labelSpan = safeCreateElement('span', 'summary-cluster-label', `${escapeHtml(bucket.label)}:`);
-        const countSpan = safeCreateElement('span', 'summary-cluster-count', bucket.count.toString());
-        div.appendChild(labelSpan);
-        div.appendChild(countSpan);
-        clustersContainer.appendChild(div);
-      });
-    } else {
-      safeSetHTML(clustersContainer, '<p class="summary-no-data">No clusters</p>');
-    }
-
-    // Update questions
-    const questionsContainer = document.getElementById('summary-questions');
-    const questionsBucket = result.buckets.find(b => b.label === 'Questions');
-    if (questionsBucket && questionsBucket.sample_messages.length > 0) {
-      const recentQuestions = questionsBucket.sample_messages.slice(0, 3);
-      questionsContainer.innerHTML = '';
-      recentQuestions.forEach(msg => {
-        const div = safeCreateElement('div', 'summary-question', escapeHtml(msg));
-        questionsContainer.appendChild(div);
-      });
-    } else {
-      safeSetHTML(questionsContainer, '<p class="summary-no-data">No questions captured</p>');
-    }
+  // Update topics
+  const topicsContainer = document.getElementById('summary-topics');
+  if (result.topics && result.topics.length > 0) {
+    topicsContainer.innerHTML = '';
+    result.topics.slice(0, 10).forEach(topic => {
+      const span = safeCreateElement('span', `summary-topic ${topic.is_emote ? 'emote' : ''}`,
+        `${escapeHtml(topic.term)} (${topic.count})`);
+      topicsContainer.appendChild(span);
+    });
+  } else {
+    safeSetHTML(topicsContainer, '<p class="summary-no-data">No trending topics</p>');
+  }
 
   // Update clusters
   const clustersContainer = document.getElementById('summary-clusters');
   if (result.buckets && result.buckets.length > 0) {
-    clustersContainer.innerHTML = result.buckets.map(bucket =>
-      `<div class="summary-cluster">
-        <span class="summary-cluster-label">${escapeHtml(bucket.label)}:</span>
-        <span class="summary-cluster-count">${bucket.count}</span>
-      </div>`
-    ).join('');
+    clustersContainer.innerHTML = DOMPurify.sanitize(
+      result.buckets.map(bucket =>
+        `<div class="summary-cluster">
+          <span class="summary-cluster-label">${escapeHtml(bucket.label)}:</span>
+          <span class="summary-cluster-count">${bucket.count}</span>
+        </div>`
+      ).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
-    clustersContainer.innerHTML = '<p class="summary-no-data">No clusters</p>';
+    safeSetHTML(clustersContainer, '<p class="summary-no-data">No clusters</p>');
   }
 
   // Update top questions - use session-accumulated questions
@@ -829,11 +805,14 @@ function showSessionSummary() {
   if (sessionQuestions.length > 0) {
     // Show most recent questions first (reverse order)
     const recentQuestions = [...sessionQuestions].reverse().slice(0, 5);
-    questionsContainer.innerHTML = recentQuestions.map(msg =>
-      `<div class="summary-question">${escapeHtml(msg)}</div>`
-    ).join('');
+    questionsContainer.innerHTML = DOMPurify.sanitize(
+      recentQuestions.map(msg =>
+        `<div class="summary-question">${escapeHtml(msg)}</div>`
+      ).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
-    questionsContainer.innerHTML = '<p class="summary-no-data">No questions captured</p>';
+    safeSetHTML(questionsContainer, '<p class="summary-no-data">No questions captured</p>');
   }
 
   // Show modal
@@ -1094,26 +1073,26 @@ function renderHistoryList(sessions) {
       minute: '2-digit'
     });
 
-    card.innerHTML = `
+    card.innerHTML = DOMPurify.sanitize(`
       <div class="session-card-header">
         <span class="session-card-date">${escapeHtml(dateStr)}</span>
         <span class="session-card-platform">${escapeHtml(session.platform)}</span>
       </div>
       <div class="session-card-stats">
         <span class="session-card-stat">
-          <span>${formatDuration(session.duration)}</span>
+          <span>${escapeHtml(formatDuration(session.duration))}</span>
         </span>
         <span class="session-card-stat">
-          <span>${session.messageCount} msgs</span>
+          <span>${escapeHtml(String(session.messageCount))} msgs</span>
         </span>
       </div>
       <div class="session-card-mood">
-        ${MOOD_EMOJIS[session.mood] || '😐'} ${session.mood}
+        ${escapeHtml(MOOD_EMOJIS[session.mood] || '😐')} ${escapeHtml(session.mood)}
       </div>
       <button class="session-card-delete" title="Delete session">
         <span>x</span>
       </button>
-    `;
+    `, DOMPURIFY_CONFIG);
 
     // Handle delete button separately
     const deleteBtn = card.querySelector('.session-card-delete');
@@ -1140,44 +1119,53 @@ function viewSessionDetail(session) {
   const total = signals.positive_count + signals.negative_count + signals.confused_count + signals.neutral_count;
 
   if (total > 0) {
-    sentimentContainer.innerHTML = ['positive', 'negative', 'confused', 'neutral'].map(type => {
-      const count = signals[`${type}_count`];
-      const percent = Math.round((count / total) * 100);
-      return `
-        <div class="sentiment-bar">
-          <span class="sentiment-bar-label">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
-          <div class="sentiment-bar-track">
-            <div class="sentiment-bar-fill ${type}" style="width: ${percent}%"></div>
+    sentimentContainer.innerHTML = DOMPurify.sanitize(
+      ['positive', 'negative', 'confused', 'neutral'].map(type => {
+        const count = signals[`${type}_count`];
+        const percent = Math.round((count / total) * 100);
+        return `
+          <div class="sentiment-bar">
+            <span class="sentiment-bar-label">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+            <div class="sentiment-bar-track">
+              <div class="sentiment-bar-fill ${type}" style="width: ${percent}%"></div>
+            </div>
+            <span class="sentiment-bar-value">${count}</span>
           </div>
-          <span class="sentiment-bar-value">${count}</span>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
-    sentimentContainer.innerHTML = '<p class="summary-no-data">No sentiment data</p>';
+    safeSetHTML(sentimentContainer, '<p class="summary-no-data">No sentiment data</p>');
   }
 
   // Update topics
   const topicsContainer = document.getElementById('summary-topics');
   if (session.topics && session.topics.length > 0) {
-    topicsContainer.innerHTML = session.topics.slice(0, 10).map(topic =>
-      `<span class="summary-topic ${topic.is_emote ? 'emote' : ''}">${escapeHtml(topic.term)} (${topic.count})</span>`
-    ).join('');
+    topicsContainer.innerHTML = DOMPurify.sanitize(
+      session.topics.slice(0, 10).map(topic =>
+        `<span class="summary-topic ${topic.is_emote ? 'emote' : ''}">${escapeHtml(topic.term)} (${topic.count})</span>`
+      ).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
-    topicsContainer.innerHTML = '<p class="summary-no-data">No trending topics</p>';
+    safeSetHTML(topicsContainer, '<p class="summary-no-data">No trending topics</p>');
   }
 
   // Update clusters
   const clustersContainer = document.getElementById('summary-clusters');
   if (session.buckets && session.buckets.length > 0) {
-    clustersContainer.innerHTML = session.buckets.map(bucket =>
-      `<div class="summary-cluster">
-        <span class="summary-cluster-label">${escapeHtml(bucket.label)}:</span>
-        <span class="summary-cluster-count">${bucket.count}</span>
-      </div>`
-    ).join('');
+    clustersContainer.innerHTML = DOMPurify.sanitize(
+      session.buckets.map(bucket =>
+        `<div class="summary-cluster">
+          <span class="summary-cluster-label">${escapeHtml(bucket.label)}:</span>
+          <span class="summary-cluster-count">${bucket.count}</span>
+        </div>`
+      ).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
-    clustersContainer.innerHTML = '<p class="summary-no-data">No clusters</p>';
+    safeSetHTML(clustersContainer, '<p class="summary-no-data">No clusters</p>');
   }
 
   // Update top questions - use saved session questions if available
@@ -1185,18 +1173,24 @@ function viewSessionDetail(session) {
   const savedQuestions = session.sessionQuestions || [];
   if (savedQuestions.length > 0) {
     const recentQuestions = [...savedQuestions].reverse().slice(0, 5);
-    questionsContainer.innerHTML = recentQuestions.map(msg =>
-      `<div class="summary-question">${escapeHtml(msg)}</div>`
-    ).join('');
+    questionsContainer.innerHTML = DOMPurify.sanitize(
+      recentQuestions.map(msg =>
+        `<div class="summary-question">${escapeHtml(msg)}</div>`
+      ).join(''),
+      DOMPURIFY_CONFIG
+    );
   } else {
     // Fallback to bucket sample messages for older sessions
     const questionsBucket = session.buckets?.find(b => b.label === 'Questions');
     if (questionsBucket && questionsBucket.sample_messages.length > 0) {
-      questionsContainer.innerHTML = questionsBucket.sample_messages.slice(0, 3).map(msg =>
-        `<div class="summary-question">${escapeHtml(msg)}</div>`
-      ).join('');
+      questionsContainer.innerHTML = DOMPurify.sanitize(
+        questionsBucket.sample_messages.slice(0, 3).map(msg =>
+          `<div class="summary-question">${escapeHtml(msg)}</div>`
+        ).join(''),
+        DOMPURIFY_CONFIG
+      );
     } else {
-      questionsContainer.innerHTML = '<p class="summary-no-data">No questions captured</p>';
+      safeSetHTML(questionsContainer, '<p class="summary-no-data">No questions captured</p>');
     }
   }
 
