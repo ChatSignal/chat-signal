@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 2 of 3 (DOMPurify Integration)
-Plan: 0 of ? in current phase
-Status: Phase 1 verified and complete. Phase 2 not yet planned.
-Last activity: 2026-02-19 — Phase 1 verified (4/4 success criteria passed)
+Plan: 1 of 2 in current phase
+Status: Phase 2 Plan 01 complete. Plan 02 (innerHTML migration in sidebar.js) is next.
+Last activity: 2026-02-19 — 02-01 complete (DOMPurify vendored, safeSetHTML rewritten)
 
-Progress: [███░░░░░░░] 33%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
@@ -28,10 +28,11 @@ Progress: [███░░░░░░░] 33%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-analysis-window | 2 | 3 min | 1.5 min |
+| 02-dompurify-integration | 1 | 1 min | 1 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 1 min
-- Trend: —
+- Last 5 plans: 2 min, 1 min, 1 min
+- Trend: Stable
 
 *Updated after each plan completion*
 
@@ -51,6 +52,9 @@ Recent decisions affecting current work:
 - [01-02]: 2x buffer cap on allMessages — retains history for smooth window expansion without unbounded memory growth
 - [01-02]: windowMessages sliced at call site before processMessages() — keeps processMessages() window-unaware; messages.length is the fill level
 - [01-02]: Fallback || 500 on settings.analysisWindowSize — guards race between settings load and first message batch
+- [02-01]: Use bare DOMPurify global (not window.DOMPurify) — fail-fast if script tag is missing
+- [02-01]: DOMPURIFY_CONFIG exported as empty object — single place to tighten config (FORCE_BODY, ALLOWED_TAGS) later
+- [02-01]: DOMPurify script tag synchronous (no defer/async) — must be available before ES module executes
 
 ### Pending Todos
 
@@ -63,5 +67,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 1 verified complete. Ready for Phase 2 (DOMPurify Integration) — discuss/plan/execute.
+Stopped at: Completed 02-01-PLAN.md (DOMPurify vendor + safeSetHTML rewrite). Ready for 02-02-PLAN.md (innerHTML migration in sidebar.js).
 Resume file: None
