@@ -57,7 +57,11 @@ Plans:
   2. Clearing any numeric threshold field in options shows a validation error rather than silently writing NaN or 0 to storage
   3. The WASM analyze_chat call receives the user's duplicateWindow setting instead of a hardcoded value
   4. Both sidebar.js and SessionManager read inactivityTimeout from settings rather than a hardcoded constant
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Add inactivityTimeout setting to options UI and all DEFAULT_SETTINGS, replace hardcoded INACTIVITY_TIMEOUT constants with live settings reads, verify duplicateWindow wiring
+- [ ] 03-02-PLAN.md — Harden all numeric validation with Number.isFinite(), add missing sentimentSensitivity/moodUpgradeThreshold validation, add input-time validation with save-blocking to options page
 
 ## Progress
 
@@ -68,4 +72,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Analysis Window | 2/2 | Complete | 2026-02-19 |
 | 2. DOMPurify Integration | 0/2 | Not started | - |
-| 3. Configurable Thresholds | 0/? | Not started | - |
+| 3. Configurable Thresholds | 0/2 | Not started | - |
