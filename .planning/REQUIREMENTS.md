@@ -15,7 +15,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Analysis Window
 
-- [ ] **WIN-01**: Add analysis window size setting (range 50-1000, default 500, step 50) to options page and wire to StateManager MAX_MESSAGES across all accumulation paths
+- [x] **WIN-01**: Add analysis window size setting (range 50-1000, default 500, step 50) to options page and wire to StateManager MAX_MESSAGES across all accumulation paths
 
 ### Thresholds
 
@@ -66,7 +66,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAN-01 | Phase 2 | Pending |
 | SAN-02 | Phase 2 | Pending |
 | SAN-03 | Phase 2 | Pending |
-| WIN-01 | Phase 1 | Pending |
+| WIN-01 | Phase 1 | Complete |
 | THR-01 | Phase 3 | Pending |
 | THR-02 | Phase 3 | Pending |
 | THR-03 | Phase 3 | Pending |
