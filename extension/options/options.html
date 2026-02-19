@@ -28,6 +28,21 @@
             <span class="value-display" id="topic-min-count-value">5</span>
           </div>
         </div>
+
+        <div class="setting-row">
+          <label for="analysis-window-size">
+            <span class="setting-name">Messages to analyze</span>
+            <span class="setting-description">How many recent messages the engine sees per analysis pass</span>
+            <span id="analysis-window-warning" class="setting-warning hidden">
+              At low values, topics and sentiment may be less accurate
+            </span>
+          </label>
+          <div class="input-group">
+            <input type="range" id="analysis-window-size" min="50" max="1000" step="50" value="500">
+            <span class="value-display" id="analysis-window-size-value">500</span>
+            <span class="value-estimate" id="analysis-window-size-estimate">~2m of active chat</span>
+          </div>
+        </div>
       </section>
 
       <!-- Spam Detection -->

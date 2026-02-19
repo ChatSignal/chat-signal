@@ -305,3 +305,21 @@ input[type="range"]:hover::-moz-range-thumb {
 .hidden {
   display: none;
 }
+
+/* ============================================================================
+   ANALYSIS WINDOW SETTING EXTRAS
+   ============================================================================ */
+
+.setting-warning {
+  font-size: 11px;
+  color: var(--warning-color);
+  margin-top: 2px;
+}
+
+.value-estimate {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 100px;
+  text-align: left;
+  white-space: nowrap;
+}
