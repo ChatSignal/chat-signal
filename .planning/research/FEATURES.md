@@ -1,179 +1,328 @@
-# Features Research: Configurable Analysis Thresholds
+# Feature Research: Chrome Web Store Compliance
 
-**Research type:** Project Research — Features dimension
-**Milestone context:** Subsequent milestone — improving analysis accuracy and user configurability
-**Date:** 2026-02-19
-**Question:** What features do chat analysis tools and Chrome extensions typically offer for user-configurable analysis parameters? What's table stakes vs differentiating?
-
----
-
-## Research Summary
-
-Chat Signal Radar already has a settings page with five configurable parameters: `topicMinCount` (default 5), `spamThreshold` (default 3), `duplicateWindow` (default 30s), `sentimentSensitivity` (default 3), and `moodUpgradeThreshold` (default 30). The inactivity timeout (2 minutes) and rolling window size (last 100 messages) are currently hardcoded constants. The question is which of the four proposed additions are table stakes, which are differentiators, and what to avoid.
-
-**Key finding:** The market for in-browser real-time chat analytics for small-to-mid streamers is sparse. Competitors (StreamsCharts, Ex Machina Chat Decoder) are enterprise or post-hoc tools aimed at brands, not individual creators sitting in a stream. The Chrome extension space has nothing directly comparable. This means the bar for "table stakes" is lower, but also that user expectations come from adjacent tools (chatbots, moderation tools) that do expose these controls.
+**Domain:** Chrome extension publication compliance
+**Milestone:** v1.1 CWS Readiness
+**Researched:** 2026-02-19
+**Confidence:** HIGH (all claims verified against official Chrome developer documentation)
 
 ---
 
-## Table Stakes (Must-Have or Users Leave)
+## Context
 
-These are features users expect to find or will be blocked without. Absence causes confusion or distrust in results.
+Chat Signal Radar is a fully functional MV3 Chrome extension with: real-time chat analysis (WASM/Rust), sentiment, topics, session history, WebLLM AI summaries (optional ~400MB model download), DOMPurify sanitization, and configurable thresholds. The existing manifest declares `sidePanel`, `storage`, `https://www.youtube.com/*`, and `https://www.twitch.tv/*` with a custom CSP that adds connect-src for Hugging Face CDN.
 
-### 1. Sentiment Sensitivity Threshold
-
-**What it is:** The minimum number of sentiment signals required before declaring a non-neutral mood. Currently `sentimentSensitivity: 3` (already shipped).
-
-**Expected behavior:** Low values (1-2) make the mood indicator reactive, good for slow chats. High values (5-10) require more evidence before flipping mood, good for fast chats where noise is high. Users with 50-viewer streams see fewer messages per minute and need lower thresholds to get any signal at all. Users with 50K-viewer streams need higher thresholds to prevent false positives from individual bad actors.
-
-**Why table stakes:** Without this, small streamers see "neutral" forever (too few messages to hit threshold) or large streamers see wild mood swings from 3 messages in a 50K-message window. Either outcome breaks trust in the tool. Moderation tool research confirms: "adjust your auto-mod thresholds by channel, as a livestream with hundreds of messages per minute may need stricter filters than a private 1:1 chat."
-
-**Current state:** Already exists as `sentimentSensitivity` in settings. The `moodUpgradeThreshold` (score required to upgrade to excited/angry) also ships.
-
-**Complexity:** Low. Parameter already threads through the codebase to `computeFallbackSentiment`. No new code paths needed for the parameter itself; only UX/documentation work remains.
-
-**Dependencies:** None. Independent parameter.
+This research answers: what CWS compliance features are needed to pass review and publish?
 
 ---
 
-### 2. Topic Minimum Count
+## Table Stakes (Required to Pass Review)
 
-**What it is:** How many times a word must appear before it shows in the Trending Topics section. Currently `topicMinCount: 5` (already shipped).
+These are not optional. Missing any of these results in rejection or suspension.
 
-**Expected behavior:** Small streams (50 viewers) might generate only 20 messages per analysis window. A min-count of 5 means a word needs 25% frequency to appear — nearly impossible. A min-count of 2 or 3 is more useful. Large streams (50K viewers) generate hundreds of messages; min-count of 5 might surface noise. A min-count of 10-15 filters better.
+### 1. Privacy Policy — Publicly Hosted URL
 
-**Why table stakes:** If topics are always empty for small streamers, or always full of single-character emotes for large streamers, the panel is useless and users close it. Competing tools like StreamsCharts allow keyword filtering as a core feature. The WASM function `extract_topics` already accepts `min_count` as a parameter.
+**Why required:** CWS policy mandates a privacy policy if the extension handles any user data. Chat Signal Radar uses `chrome.storage.local` for session history and settings, and optionally caches a ~400MB AI model via IndexedDB. This qualifies as user data handling. A privacy policy URL must be entered in the Developer Dashboard before submission.
 
-**Current state:** Already exists as `topicMinCount` in settings, already passed to `analyze_chat_with_settings`. This is shipped.
+**What the policy must cover:**
+- What data is stored locally (`chrome.storage.local`: session summaries, user settings)
+- What the AI model download stores (IndexedDB cache via WebLLM, ~400MB)
+- That no data is transmitted to remote servers (except model download from HuggingFace CDN, which is one-directional and user-initiated)
+- That browsing activity (YouTube/Twitch URLs) is accessed only to power the stated feature
+- How users can clear stored data (Chrome extension management → Clear data, or the "Clear All History" button)
+- Data retention: session history capped at 50 sessions in local storage
 
-**Complexity:** Low. Already fully implemented.
+**Where to host:** GitHub Pages is acceptable. The URL must be stable (not a raw GitHub blob). A dedicated `privacy-policy.md` rendered via GitHub Pages or a simple HTML file at a permanent URL works. The CWS does not restrict hosting platforms.
 
-**Dependencies:** Analysis window size (below). These two parameters interact: a larger window with a fixed min-count means more messages, so topics appear more easily. If you make window size configurable, the effective behavior of min-count changes.
+**Complexity:** LOW. Writing the document is the main work. Hosting on GitHub Pages is straightforward. No code changes.
 
----
-
-### 3. Inactivity Timeout
-
-**What it is:** How long without new messages before prompting "Stream ended? Save your session?" Currently hardcoded at `INACTIVITY_TIMEOUT = 120000` (2 minutes) in both `sidebar.js` and `StateManager.js`.
-
-**Expected behavior:** 2 minutes is right for active streams. But scheduled breaks, ad breaks, or "BRB screens" are typically 3-10 minutes on Twitch/YouTube. Streamers frequently go to AFK for longer. A hardcoded 2-minute timeout means false "stream ended?" prompts during every bathroom break, annoying users and training them to dismiss the prompt — defeating its purpose.
-
-**Standard industry practice:** Live chat applications default to 10-minute session timeouts. Hybrid approaches (idle timeout + absolute timeout) are common. For streaming context, 5 minutes as default with user range of 1-15 minutes covers nearly all real cases.
-
-**Why table stakes:** Frequent false positives from a too-short timeout erode trust in the prompt. When it fires at the wrong time repeatedly, users stop responding to it when it fires correctly. This makes the "Smart Session Detection" feature (already shipped as a roadmap item) unreliable.
-
-**Current state:** Hardcoded constant. Not exposed in settings. This is the primary gap.
-
-**Complexity:** Low-Medium. Two code locations need to read from settings instead of a constant: `sidebar.js` line 111 (`INACTIVITY_TIMEOUT = 120000`) and `StateManager.js` line 53 (`this.INACTIVITY_TIMEOUT = 120000`). Must add field to `DEFAULT_SETTINGS` in both `options.js` and `sidebar.js`, add UI slider to options page, and validate the setting is read before `startInactivityCheck()` is called. The synchronization between `sidebar.js` and `StateManager.js` is a mild risk — both currently define the constant independently.
-
-**Dependencies:** Must be loaded from settings before session starts. Settings load is already async on startup (line 208-209 in `sidebar.js`). No new async patterns needed.
+**Dependencies:** None. Independent deliverable.
 
 ---
 
-## Differentiators (Competitive Advantage)
+### 2. Permission Justifications — Developer Dashboard Form
 
-These features go beyond what the adjacent market offers. Building them well creates clear differentiation. Building them poorly adds confusion.
+**Why required:** The CWS Developer Dashboard has a mandatory "Permissions Justification" section where each declared permission must be explained. Reviewers use this to verify the minimum-permissions principle. Without justifications, the extension may be rejected.
 
-### 4. Analysis Window Size
+**Current permissions that need justifications:**
 
-**What it is:** How many recent messages are included in each analysis pass. Currently hardcoded at `MAX_MESSAGES = 100` in `StateManager.js` line 51.
+| Permission | Justification to Write |
+|------------|------------------------|
+| `sidePanel` | Displays the chat analysis dashboard in Chrome's native side panel. The extension's entire UI lives here. |
+| `storage` | Persists user settings (analysis thresholds, AI consent choice) and session history (up to 50 past sessions) using `chrome.storage.local`. |
+| `https://www.youtube.com/*` | Content script reads the YouTube live chat DOM to extract messages for analysis. No data is sent remotely. |
+| `https://www.twitch.tv/*` | Content script reads the Twitch live chat DOM to extract messages for analysis. No data is sent remotely. |
 
-**Expected behavior:**
-- **Time-based window** (e.g., "analyze the last 60 seconds of messages"): Matches how humans experience a conversation. Intuitive to describe. Hard to implement in WASM because timestamps must be compared, and message arrival rate is variable. Already somewhat addressed via `duplicate_window_ms` parameter.
-- **Count-based window** (e.g., "analyze the last N messages"): Already how the codebase works (`MAX_MESSAGES = 100`). Simpler to implement but unintuitive to users — "100 messages" means very different things at different chat velocities.
+**Complexity:** LOW. Text-only form fields in the dashboard. No code changes.
 
-**Why differentiating:** No comparable Chrome extension exposes this. StreamsCharts and Ex Machina use server-side processing with fixed windows suited to enterprise workloads, not per-user tuning. Offering count-based tuning (50/100/200/500 messages) gives streamers a vocabulary for matching tool behavior to their chat velocity. A 200-person stream and a 20K-person stream need fundamentally different windows.
-
-**Interaction with topic min-count:** These two settings interact directly. A larger window means more messages, so a fixed `topicMinCount` of 5 is relatively less selective. If both are configurable, users must understand the relationship. This is a UX complexity cost.
-
-**Complexity:** Medium. `StateManager.js` `MAX_MESSAGES` is used in the message accumulation slice (line 158-159). Needs to read from settings. Also impacts session-wide stats accumulation (separate from rolling analysis window — need to be careful not to conflate them). The WASM `analyze_chat_with_settings` function already accepts the messages array, so no Rust changes needed. The main work is:
-1. Add `analysisWindowSize` to `DEFAULT_SETTINGS`
-2. Pass it to `StateManager` at settings load time
-3. Add UI slider to options page
-4. Test that session-wide sentiment accumulation (which uses a different path) is not accidentally affected
-
-**Recommendation:** Build this, but expose it with preset labels ("Small stream (50 msgs)", "Medium (100 msgs)", "Large (200 msgs)") rather than a raw number slider. This prevents users from setting 5 and getting empty topics permanently.
-
-**Dependencies:** Depends on settings infrastructure being solid. Interacts with topic min-count (see above).
+**Dependencies:** None. Written during dashboard submission.
 
 ---
 
-## Anti-Features (Deliberately Not Build)
+### 3. Privacy Dashboard Certification — Data Usage Checkboxes
 
-These are features that look attractive but would harm the product, user experience, or maintainability.
+**Why required:** The CWS Developer Dashboard requires checking which data types the extension collects. Incomplete or inaccurate data disclosure results in suspension after 30 days. The dashboard has checkboxes for: Personally Identifiable Information, Financial/Payment info, Health info, Authentication credentials, Website content, Web browsing activity, User activity, Website content, Personal communications, and Location.
 
-### A. Time-Based Analysis Window (Seconds)
+**For Chat Signal Radar, the accurate disclosures are:**
+- **Website content:** The content script reads chat message text from YouTube/Twitch DOM. This counts as website content access.
+- **Web browsing activity:** Accessing chat on specific YouTube/Twitch URLs technically qualifies, even though the extension only operates on those sites and the data stays local.
+- All other categories: Not collected.
 
-**Why not:** A time-based window (e.g., "analyze the last 60 seconds") requires the sidebar to track message arrival timestamps relative to wall clock time and trim the array on each analysis pass by time rather than count. This works fine in Apache Flink or Kafka Streams (which have native windowing primitives) but in a Chrome extension service worker context, it adds meaningful complexity for minimal user benefit. Users cannot calibrate "60 seconds of messages" mentally — they think in terms of chat velocity, not absolute time. The count-based window already in the codebase (`MAX_MESSAGES`) is more practically useful and simpler to expose.
+**The certification must also state:** "This product does not sell or transfer user data to third parties outside of the approved use cases." This is true — the extension is fully local.
 
-**Exception:** The `duplicateWindow` (already configurable, operates in ms) is time-based and is fine for its narrow spam-detection purpose. That purpose requires time because the same user spamming at 5-second intervals is different from 5 identical messages from 5 users.
+**Complexity:** LOW. Checkboxes in the dashboard. No code changes required, but requires careful reading of the data type definitions to avoid over- or under-disclosing.
 
----
-
-### B. Per-Category Sensitivity (Questions vs. Issues vs. Requests)
-
-**Why not:** Each cluster bucket (Questions, Issues/Bugs, Requests) uses keyword lists in the Rust WASM engine. Exposing per-bucket sensitivity would require: (a) exposing those keyword lists to users, (b) per-bucket threshold settings, and (c) significant UI to explain what each threshold means. This is a power-user feature with high explanation cost and low payoff for the target user (a streamer glancing at a sidebar). Moderator-specific tools are already flagged in the roadmap as a "Future Ideas" item, which is the correct placement.
-
----
-
-### C. Custom Sentiment Keyword Lists
-
-**Why not:** The roadmap already explicitly lists "User-configurable sentiment keywords" as a future idea, not a next-up feature. Building this now requires:
-- A UI for managing arbitrary keyword lists
-- Validation that lists are non-empty and don't conflict
-- Rebuilding or parameterizing the WASM engine to accept dynamic word lists (currently `POSITIVE_WORDS`, `NEGATIVE_WORDS`, `CONFUSED_INDICATORS` are compile-time constants in Rust)
-- Storage for potentially large user-defined lists
-
-This is 5-10x the complexity of any other setting on this list and targets a different user archetype (power users who understand NLP) than the target user (streamers who want a dashboard that works). Build it later, behind a "Custom keywords" section that is clearly labeled as advanced.
+**Dependencies:** Privacy policy must exist first (provides the document that backs up the certification).
 
 ---
 
-### D. Separate Settings per Stream/Channel
+### 4. Disk Space Warning Before WebLLM Model Download
 
-**Why not:** Storing per-channel settings (e.g., "use sensitivity=2 on my small alt account, sensitivity=6 on my main") requires keying settings by channel URL or channel ID. `chrome.storage.sync` has a 100KB quota and per-item limits. Managing a settings namespace per channel adds significant state management complexity and a settings UI that must know which channel is active. The value is real but the implementation cost is high. The correct stepping stone is a "preset" system (Small/Medium/Large stream profile) that the user applies manually.
+**Why required:** Chrome developer documentation explicitly calls out that extensions must "alert the user to the time required to perform these downloads" for large model files. The existing LLM consent modal says "~400MB model" but does not warn about disk space requirements or that the download is stored persistently. This is a UX requirement backed by policy guidance, not a hard policy rule — but failing to disclose it clearly is a user data handling gap.
+
+**What the existing modal already covers (already built):**
+- Consent before download
+- Size disclosure (~400MB)
+- Local processing disclosure ("no data sent to servers")
+- Opt-out path ("Skip for now")
+
+**What is missing:**
+- No explicit disk space requirement statement (e.g., "requires ~500MB free disk space")
+- No statement that the model persists after download and is not re-downloaded on extension updates
+- No progress indicator that surfaces during the actual download sequence (the consent modal disappears before download starts; what happens next is unclear in the UI)
+
+**What to add:** One sentence added to the consent modal: "Requires ~500MB free disk space. The model is cached and not re-downloaded on extension updates." A download progress bar or status in the sidebar during the initialization sequence (WebLLM already has a progress callback — it just needs to be surfaced).
+
+**Complexity:** LOW-MEDIUM. The consent modal text change is trivial. Surfacing the existing `initProgressCallback` in the sidebar UI requires connecting an existing callback to a progress indicator element. The `initializeLLM` function in `llm-adapter.js` already accepts a `progressCallback` parameter and the sidebar already calls it — the callback output just needs to display somewhere visible during loading.
+
+**Dependencies:** None. Independent of other compliance work.
 
 ---
 
-## Feature Interaction Map
+### 5. Store Listing Assets — Screenshots and Promotional Image
+
+**Why required:** CWS requires at minimum 1 screenshot (1280x800 or 640x400 px) and 1 small promotional image (440x280 px). Extensions with no screenshots or a blank description are rejected at upload.
+
+**What is needed:**
+- **1-5 screenshots** at 1280x800 px (preferred) or 640x400 px. PNG format, full bleed (no padding or device frames required by policy, though device frames are common for aesthetics). Screenshots of the sidebar with live chat data: mood indicator active, trending topics populated, cluster buckets with messages, and the session history tab.
+- **1 small promotional image** at 440x280 px. A branded graphic (not a screenshot) showing the extension name and purpose. Required for listing display.
+- **1 marquee promotional image** at 1400x560 px (optional, required only if seeking featured placement — skip for initial submission).
+- **Extension icon** at 128x128 px PNG. The existing icons (16px, 48px, 128px) appear to already exist per `manifest.json`. The 128px icon must work on both light and dark backgrounds.
+
+**Complexity:** LOW. Image creation/capture work. No code changes. Requires taking screenshots with realistic-looking data in the sidebar.
+
+**Dependencies:** The extension must be running with populated data to take good screenshots. This is the last step.
+
+---
+
+### 6. Manifest Version Number Increment
+
+**Why required:** The current manifest has `"version": "0.1.0"`. CWS requires the version field to be a standard Chrome extension version format (1-4 dot-separated integers, e.g., `"1.1.0"`). Using `"0.1.0"` is technically valid but starting at `1.1.0` for the CWS submission establishes a sensible public version baseline. Each subsequent submission must increment.
+
+**Complexity:** TRIVIAL. One field in manifest.json.
+
+**Dependencies:** None. Do last, right before zipping for submission.
+
+---
+
+### 7. Incognito Mode Behavior — Verification and Documentation
+
+**Why required:** Not a hard submission requirement, but a known failure mode. If the extension behaves incorrectly in incognito (crashes, fails silently, loses state) and users report it, reviews can result in suspension. The CWS does not require incognito compatibility, but the default incognito behavior for this extension needs to be understood and documented.
+
+**How the extension behaves in incognito (based on Chrome documentation):**
+
+The extension does not declare an `incognito` key in the manifest, so it defaults to `"spanning"` mode. In spanning mode, the extension runs in a single shared process. `chrome.storage.local` and `chrome.storage.sync` are always shared between regular and incognito processes — session history persists and settings are shared.
+
+**Specific risks to verify:**
+- **sidePanel in incognito:** The sidePanel API works in incognito if the extension is allowed. Since the extension uses spanning mode, the same sidebar process serves both regular and incognito tabs. Verify the sidebar opens correctly on an incognito YouTube/Twitch tab.
+- **Content script in incognito:** Content scripts run in incognito if the user has enabled the extension in incognito. The `all_frames: true` setting applies. This should work without changes.
+- **WebLLM/IndexedDB in incognito:** IndexedDB in incognito is isolated per-session (cleared when the incognito window closes). If the user enabled AI in a normal window, the IndexedDB cache will not be available in incognito — the model will need re-initializing or the fallback will be used. This is expected behavior and acceptable.
+- **WASM loading in incognito:** WASM loaded from extension resources (`chrome.runtime.getURL`) works in incognito with no changes.
+
+**What to do:** Manual verification pass (open incognito, navigate to YouTube/Twitch live stream, open sidebar, verify clustering and sentiment work, verify session history is accessible, verify AI gracefully falls back). No code changes expected, but document findings.
+
+**Complexity:** LOW. Manual testing, no code changes unless a bug is found.
+
+**Dependencies:** Requires the extension to be in a testable state.
+
+---
+
+### 8. CSP and connect-src Review — Hugging Face CDN Risk
+
+**Why required:** The current CSP in manifest.json includes:
+```
+connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;
+```
+
+In MV3, `connect-src` (as a fetch/XHR directive, not script-src) is permitted for external URLs. The restriction that caused MV3 confusion was on `script-src` loading remote code — `connect-src` for data fetching is allowed. The WebLLM model download fetches model weights from Hugging Face CDN; this is a data fetch, not remote code execution. This pattern is used by other published extensions (WebextLLM is live on the CWS using a similar pattern).
+
+**Risk assessment:** LOW. The CSP is valid. However, during the permissions justification step, the dashboard may surface `connect-src` origins as network access. Be prepared to justify: "Model weights (~400MB) are fetched from Hugging Face CDN on first AI feature use. Download is user-initiated, gated by consent modal. No user data is transmitted — the fetch is one-directional (download only)."
+
+**Complexity:** TRIVIAL. No code changes. Prepare the written justification.
+
+**Dependencies:** None.
+
+---
+
+## Differentiators (Strengthen Review Outcome, Not Required)
+
+These go beyond bare minimums and make the listing more compelling or reduce review friction.
+
+### A. Privacy Policy Link Inside the Extension UI
+
+**Value:** CWS policy requires prominent disclosure when handling data not "closely related to the extension's described functionality." Linking to the privacy policy from inside the extension sidebar or options page reduces reviewer friction and demonstrates transparency. Other extensions that include in-UI privacy links rarely face suspension for disclosure issues.
+
+**What to add:** A "Privacy Policy" link in the sidebar footer next to the existing "Feedback" and "Settings" links.
+
+**Complexity:** LOW. One anchor tag in `sidebar.html`, one URL.
+
+**Dependencies:** Privacy policy URL must exist (Table Stakes #1).
+
+---
+
+### B. Single Purpose Description Optimized for Review
+
+**Value:** The CWS policy requires a "single purpose" that is "narrow and easy to understand." The current manifest description is: "Clusters YouTube/Twitch live chat messages into top questions, issues, and requests." This is accurate but incomplete (omits sentiment, topics, session history). A reviewer seeing features not mentioned in the description can flag them as beyond scope.
+
+**Better description (under 132 chars):** "Real-time live chat analysis for YouTube and Twitch streams: clusters messages, tracks sentiment, and highlights trending topics."
+
+This frames all features as expressions of one purpose (chat analysis), satisfying the single-purpose rule. Clustering, sentiment, topics, and session history are all facets of chat analysis — not separate unrelated functions.
+
+**Complexity:** TRIVIAL. One field in manifest.json and the dashboard.
+
+**Dependencies:** None.
+
+---
+
+### C. Test Instructions for Reviewers
+
+**Value:** The CWS submission includes a "Test Instructions" field where you explain how reviewers can exercise the extension. Extensions requiring specific site configurations (live stream active, chat messages flowing) are hard for reviewers to test. Providing a test YouTube stream URL or instructions prevents rejection due to "unable to verify functionality."
+
+**What to write:** Point to a YouTube live stream that is reliably active (e.g., a 24/7 news channel or a major gaming streamer). Explain that the sidebar populates after ~10 chat messages arrive. Note that AI features are optional and require enabling in the modal.
+
+**Complexity:** TRIVIAL. Text field in dashboard.
+
+**Dependencies:** None.
+
+---
+
+## Anti-Features (Do Not Build for This Milestone)
+
+### X. In-Extension Privacy Policy Page
+
+**Why not:** Building a custom HTML privacy policy page within the extension itself (a separate `privacy.html`) is unnecessary. The CWS requires a publicly accessible URL — an internal extension page cannot be linked from the dashboard. Host externally on GitHub Pages. An extension-internal page adds zero compliance value and duplicates content.
+
+---
+
+### Y. unlimitedStorage Permission
+
+**Why not:** `unlimitedStorage` would allow bypassing Chrome's default storage quota. The extension does not need it: `chrome.storage.local` has a 10MB default (sufficient for 50 sessions of text data), and the WebLLM model uses IndexedDB which operates under browser quota management, not extension storage quota. Requesting `unlimitedStorage` would be a red flag for reviewers (over-permissioning) and would require explicit justification that the extension cannot provide honestly.
+
+---
+
+### Z. Remote Code Execution / Dynamic Import from External URLs
+
+**Why not:** MV3 prohibits executing remotely hosted code. The current architecture is correct (WASM compiled from Rust, bundled in the extension). The WebLLM model weights are data, not code, which is permissible. Do not add any pattern that fetches JavaScript from an external URL and executes it (`eval`, `new Function`, or dynamic `import()` from a non-extension URL). This would trigger rejection.
+
+---
+
+## Feature Dependencies
 
 ```
-analysisWindowSize (new)
-    ↕ interacts (larger window = easier to hit threshold)
-topicMinCount (existing, shipped)
+Privacy Policy URL (hosted externally)
+    └──required by──> Dashboard Privacy Certification
+    └──required by──> Privacy Policy Link in UI (differentiator)
 
-sentimentSensitivity (existing, shipped)
-    ↕ interacts (more messages in window = more signals available)
-analysisWindowSize (new)
+Permission Justifications
+    └──written during──> Dashboard submission (no code dependency)
 
-inactivityTimeout (new — expose existing constant)
-    → independent of all analysis parameters
+Disk Space Warning (consent modal text update)
+    └──enhances──> WebLLM Download Progress (surfacing existing callback)
 
-duplicateWindow (existing, shipped)
-    → operates in time domain, independent of count-based window
+Store Listing Screenshots
+    └──requires──> Extension in working state with populated data
+
+Manifest Version Increment
+    └──final step before──> ZIP packaging for submission
 ```
+
+### Dependency Notes
+
+- **Privacy policy before dashboard certification:** The certification form asks for the URL — write the policy first, deploy it, then fill in the dashboard.
+- **Screenshots last:** Take screenshots after all compliance changes are in, so the UI reflects the final state reviewers will see.
+- **Version increment is irreversible:** Once submitted, the version cannot be reused. Increment only on the final submission build.
 
 ---
 
-## Implementation Priority Order
+## MVP Definition (This Milestone)
 
-Given the interactions and complexity assessments:
+### Must Ship for Submission
 
-1. **Inactivity Timeout** — expose hardcoded constant, zero new logic, immediate user value for streamers with breaks/BRB screens. Low complexity, no dependencies.
-2. **Analysis Window Size** — medium complexity, clear differentiator, use preset labels not raw slider. Depends on settings infrastructure (already solid).
-3. **Sentiment Sensitivity** and **Topic Min Count** — already shipped. Documentation and default value tuning only.
+- [ ] Privacy policy written and hosted at a public URL — blocks dashboard submission
+- [ ] Permission justifications written (sidePanel, storage, host_permissions) — blocks submission
+- [ ] Dashboard data usage checkboxes filled accurately — blocks submission
+- [ ] Store listing description updated (132 chars, accurate single-purpose framing) — blocks submission
+- [ ] Screenshots captured (at least 1 at 1280x800) — blocks submission
+- [ ] Promotional image created (440x280 px) — blocks submission
+- [ ] Disk space warning added to WebLLM consent modal — CWS policy-adjacent requirement
+- [ ] WebLLM download progress surfaced in sidebar UI — disclosure best practice
+- [ ] Incognito mode verified manually — prevents post-launch suspension
+- [ ] Manifest version incremented to 1.1.0 — required before ZIP
 
-The four settings proposed in the milestone context map cleanly to: two already shipped (sensitivity, topic min count), one needing exposure (inactivity timeout), one differentiating and worth building (window size).
+### Add If Time Allows
+
+- [ ] Privacy policy link in sidebar footer (differentiator A) — reduces review friction
+- [ ] Test instructions written for reviewers (differentiator C) — reduces review friction for reviewers who hit an idle stream
+
+### Explicit Deferrals
+
+- Marquee promotional image (1400x560) — only needed if seeking featured placement; skip for initial submission
+- In-extension privacy page — unnecessary overhead
+- unlimitedStorage permission — not needed, would trigger over-permissioning concern
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Privacy policy (hosted) | Required for legal compliance | LOW (writing + deploy) | P1 |
+| Permission justifications | Required for submission | LOW (text only) | P1 |
+| Data usage certification | Required for submission | LOW (checkboxes) | P1 |
+| Store listing description fix | Required; reduces rejection risk | TRIVIAL | P1 |
+| Screenshots (1 minimum) | Required for submission | LOW (capture) | P1 |
+| Promotional image 440x280 | Required for submission | LOW (design) | P1 |
+| Disk space warning in modal | Policy-adjacent; user trust | LOW (text change) | P1 |
+| WebLLM progress in UI | User transparency; policy guidance | MEDIUM (connect callback to UI) | P1 |
+| Manifest version 1.1.0 | Required (wrong format blocks) | TRIVIAL | P1 |
+| Incognito verification | Prevents post-launch suspension | LOW (testing) | P1 |
+| Privacy link in UI | Reduces reviewer friction | LOW (one anchor) | P2 |
+| Test instructions for reviewers | Reduces rejection from untestable state | LOW (text) | P2 |
+
+**Priority key:**
+- P1: Required for publication — extension cannot be submitted without it
+- P2: Strongly recommended — reduces rejection risk and post-launch issues
+- P3: Future consideration — not relevant for this milestone
 
 ---
 
 ## Sources
 
-- [Chat Analyzer: Track Twitch, YouTube & Kick Mentions - Streams Charts](https://streamscharts.com/tools/chat-analyzer)
-- [Understanding Twitch Chat: Analyzing Hype and Sentiment with Ex Machina's Chat Decoder](https://www.exmachinagroup.com/case-study/twitch-chat-decoder)
-- [10 Essential Chat Moderation Tools - GetStream](https://getstream.io/blog/chat-moderation-tools/)
-- [A guide to windowing in stream processing - Quix](https://quix.io/blog/windowing-stream-processing-guide)
-- [How to Build Window Functions - OneUptime](https://oneuptime.com/blog/post/2026-01-30-stream-processing-window-functions/view)
-- [Real-time Twitch chat sentiment analysis with Apache Flink - Towards Data Science](https://towardsdatascience.com/real-time-twitch-chat-sentiment-analysis-with-apache-flink-e165ac1a8dcf/)
-- [Session Window - RisingWave](https://risingwave.com/glossary/session-window/)
-- [Idle Session Timeout Best Practice - TIMIFY](https://blog.timify.com/session-timeout-set-up-best-practice-protection-with-timify/)
-- [Twitch-Chat-Analyzer (GitHub - wredan)](https://github.com/wredan/Twitch-Chat-Analyzer)
-- [Feature Creep Anti-Pattern - Develpreneur](https://develpreneur.com/the-feature-creep-anti-pattern/)
+- [Chrome Web Store Program Policies](https://developer.chrome.com/docs/webstore/program-policies/policies)
+- [Fill Out Privacy Fields — CWS Dashboard](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy)
+- [Privacy Policies — CWS Program Policy](https://developer.chrome.com/docs/webstore/program-policies/privacy)
+- [Updated Privacy & Secure Handling — Developer FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
+- [Manifest — Incognito Key](https://developer.chrome.com/docs/extensions/reference/manifest/incognito)
+- [Supplying Images — CWS](https://developer.chrome.com/docs/webstore/images)
+- [Prepare Your Extension](https://developer.chrome.com/docs/webstore/prepare)
+- [Publish in the Chrome Web Store](https://developer.chrome.com/docs/webstore/publish)
+- [Extensions and AI](https://developer.chrome.com/docs/extensions/ai)
+- [Inform Users of Model Download](https://developer.chrome.com/docs/ai/inform-users-of-model-download)
+- [Manifest — Content Security Policy](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy)
+- [Quality Guidelines FAQ — Single Purpose](https://developer.chrome.com/docs/webstore/program-policies/quality-guidelines-faq)
+- [Best Practices and Guidelines](https://developer.chrome.com/docs/webstore/program-policies/best-practices)
+- [CWS Policy Updates 2025](https://developer.chrome.com/blog/cws-policy-updates-2025)
+- [WebextLLM — Published CWS extension using large model](https://chromewebstore.google.com/detail/webextllm/chbepdchbogmcmhilpfgijbkfpplgnoh)
+
+---
+*Feature research for: Chrome Web Store compliance — Chat Signal Radar v1.1*
+*Researched: 2026-02-19*

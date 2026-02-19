@@ -1,270 +1,380 @@
-# Stack Research — Chat Signal Radar Improvements
+# Stack Research — CWS Publication Readiness
 
-**Date:** 2026-02-19
-**Milestone:** Subsequent — targeted improvements to existing Chrome MV3 + Rust/WASM extension
-**Scope:** DOMPurify integration, WASM message buffer sizing, options page configurable thresholds
-
----
-
-## Research Areas
-
-Three improvements are in scope. Each section covers: what to use, what version, the rationale, what not to use, and a confidence level.
+**Domain:** Chrome Web Store submission for an existing MV3 Chrome extension
+**Researched:** 2026-02-19
+**Milestone:** v1.1 — CWS Readiness (subsequent milestone, not greenfield)
+**Confidence:** HIGH
 
 ---
 
-## 1. DOMPurify Integration
+## Scope
 
-### What to Use
+The existing extension stack (Rust/WASM, vanilla JS, MV3) is frozen. This research covers only what is
+needed to get the extension through Chrome Web Store review and published:
 
-**DOMPurify 3.3.1** — vendored as a standalone `purify.min.js` file placed at `extension/libs/dompurify/purify.min.js`.
+1. Privacy policy generation and hosting
+2. Store listing assets (screenshots, promotional images)
+3. Manifest permission review tooling
+4. CWS developer dashboard requirements
+5. Disk-space warning before WebLLM model download
 
-- Current version: **3.3.1** ("Oriana"), published late 2024.
-- Minified size: approximately **20 KB** (gzipped). Well within the project's stated ~60 KB budget.
-- Source: download `dist/purify.min.js` directly from [github.com/cure53/DOMPurify](https://github.com/cure53/DOMPurify) releases. No npm or build step required — it is a self-contained IIFE/UMD bundle.
-
-### Why This Approach
-
-**CSP compatibility.** The existing manifest CSP is:
-
-```
-"extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; ..."
-```
-
-MV3 extension pages cannot include `'unsafe-eval'` in `script-src`. DOMPurify resolved its historical eval dependency (the `Function(...)` pattern documented in issue #249 and issue #107) by DOMPurify 2.x. Version 3.x has no eval dependency and operates entirely through DOM APIs (`createElement`, `createTreeWalker`, attribute enumeration). It is safe to run inside extension pages with the project's existing strict CSP without any CSP change.
-
-**No npm, no build step.** The project constraint is "no framework changes, vanilla JS." Vendoring the pre-built `purify.min.js` is identical to how WebLLM is handled (`extension/libs/web-llm/`). Load it with a `<script src="...">` tag in `sidebar.html` and `options.html`, or import it dynamically. Because DOMPurify is an IIFE/UMD, it attaches `DOMPurify` to the global scope when loaded as a script tag — no ES module wiring required.
-
-**Why better than the current `safeSetHTML`.** The existing `safeSetHTML` in `DOMHelpers.js` uses a hardcoded allowlist of four regex patterns. It silently replaces any HTML that does not match with `'Content blocked for security'`. This creates false negatives (safe HTML blocked) and is not a sanitizer — it is a strict validator. `sidebar.js` has 18+ `innerHTML` assignments that bypass it entirely. DOMPurify strips dangerous elements and attributes from arbitrary HTML while preserving safe markup, which is the correct approach for display of chat-derived strings.
-
-**Replacement surface.** The current `safeSetHTML` function has only four patterns. Replacing `safeSetHTML` with `DOMPurify.sanitize()` covers not just those four call sites but all the unprotected `innerHTML` assignments in `sidebar.js` that currently bypass validation entirely.
-
-### Integration Pattern
-
-```javascript
-// In sidebar.html and options.html, before sidebar.js loads:
-// <script src="../libs/dompurify/purify.min.js"></script>
-
-// Replace all unguarded innerHTML assignments:
-element.innerHTML = DOMPurify.sanitize(untrustedString);
-
-// For the specific case of plain text (no HTML needed):
-// Prefer textContent — DOMPurify is for cases where limited markup is acceptable
-element.textContent = untrustedString;
-
-// Sanitize with an explicit allowlist when only basic formatting is needed:
-element.innerHTML = DOMPurify.sanitize(untrustedString, {
-  ALLOWED_TAGS: ['ul', 'li', 'span', 'div', 'p'],
-  ALLOWED_ATTR: ['class']
-});
-```
-
-**DOMHelpers.js change:** Remove the regex-based `safeSetHTML` body. Replace with `DOMPurify.sanitize()`. Keep the function signature so call sites do not need to be updated immediately.
-
-### What NOT to Use
-
-- **Sanitizer API (Web Sanitizer API / `setHTML()`):** Still experimental as of February 2026. Available only in Firefox Nightly and Chrome Canary behind flags — not in stable Chrome. Do not use for a production extension.
-- **Trusted Types API:** Supported in Chrome 83+, but requires significant scaffolding (policy objects, wrapper functions). Not justified for this project scope when DOMPurify is simpler and directly handles the XSS class.
-- **isomorphic-dompurify or dompurify wrappers:** Not needed. The browser-native DOMPurify (not the Node.js variant) is correct for extension pages, which always have a DOM.
-- **CDN-loaded DOMPurify:** Chrome extension CSP blocks external script sources (`connect-src` is separate from `script-src`). The library must be bundled inside the extension.
-
-### Confidence: HIGH
-
-DOMPurify 3.3.1 is a well-established library actively maintained by security researchers (cure53). The no-eval constraint has been resolved for years. The file-size constraint (20 KB minified) is far below the project's 60 KB budget. The vendoring pattern matches the project's existing approach for WebLLM.
+No new runtime dependencies. No framework changes. No build pipeline changes.
 
 ---
 
-## 2. WASM Message Buffer Size
+## Recommended Stack
 
-### What to Use
+### Core Technologies (new for this milestone)
 
-Increase `MAX_MESSAGES` from 100 to **500** as the primary rolling window, with a configurable upper bound exposed in the options page (see Section 3).
+| Technology | Version/Cost | Purpose | Why Recommended |
+|------------|-------------|---------|-----------------|
+| GitHub Pages | Free | Privacy policy hosting | Permanent HTTPS URL at no cost; same GitHub org as the repo; no third-party service dependency; markdown-to-HTML trivially |
+| Chrome Web Store Developer Account | $5 one-time | Publishing account | Required to publish; one-time fee covers all future extensions; 2-step verification mandatory |
+| `navigator.storage.estimate()` | Web API (no version) | Disk space check before WebLLM download | Built-in browser API; no permission required; returns `quota` and `usage` in bytes; correct approach for checking available space |
 
-### Why 500 Is the Right Target
+### Supporting Libraries (none new at runtime)
 
-**Current analysis quality is severely limited at 100 messages.** At the project's default 5-second batch interval (`BATCH_INTERVAL = 5000` in `content-script.js`), a busy Twitch stream can deliver 50–200 messages per 5-second window. A 100-message cap means the oldest messages in that window are immediately evicted. Topic detection requires a minimum of 5 mentions (`topicMinCount` default) — with only 100 messages, terms must appear in 5% of all messages to surface, which is a very high bar in diverse chats.
+No new runtime libraries are needed. The existing stack (DOMPurify 3.3.1, chrome.storage.sync,
+wasm-bindgen) already satisfies all technical requirements.
 
-**500 messages represents roughly 25–50 seconds of high-volume chat.** At 10–20 messages per second (a mid-tier Twitch stream), 500 messages is a 25–50 second window. This window is long enough for genuine trending topics to emerge and for sentiment to reflect the chat's actual emotional state rather than a noisy recent sample.
+`navigator.storage.estimate()` is a standard Web Storage API available in all Chromium-based
+browsers — no npm install, no vendoring.
 
-**WASM serialization cost does not prohibit 500 messages.** The JS-to-WASM boundary crossing (via `serde-wasm-bindgen`) serializes the entire message array on each call. Key data points:
+### Development Tools
 
-- Each message object is approximately 100–300 bytes of JSON (text up to 1000 chars, author up to 50 chars, timestamp).
-- A 500-message array is at most ~150 KB of data.
-- `serde-wasm-bindgen` 0.6 (already in use) directly manipulates JavaScript values without an intermediate JSON stringify/parse step. Serialization of 500 small objects is in the low single-digit milliseconds range in Chrome.
-- The WASM analysis itself (clustering, topic extraction, sentiment counting) is O(n) in message count and extremely fast in native-speed WASM code.
-- The analysis runs every 5 seconds, not on every message. A single 500-message analysis every 5 seconds adds negligible CPU overhead.
-
-**Memory impact is bounded and acceptable.** 500 messages × 300 bytes average = ~150 KB in the JS heap for the `allMessages` array. This is immaterial for a browser extension running in a side panel.
-
-**Do not go above 1000 without incremental analysis.** At very high message volumes (1000+ msg/min, rare major Twitch events), re-analyzing the entire 1000-message window every 5 seconds starts to consume meaningful CPU time and the WASM call overhead increases. The CONCERNS.md notes an incremental delta approach as the correct fix for hyper-active chats — but that is architectural work outside this milestone's scope. 500 is the practical limit for a full-window re-analysis approach.
-
-### Recommended Configuration
-
-```javascript
-// extension/sidebar/sidebar.js — current:
-const MAX_MESSAGES = 100;
-
-// Change to:
-const MAX_MESSAGES = 500; // Default; overridable via settings
-```
-
-Expose this as a settings key `analysisWindowSize` with:
-- Min: 50
-- Max: 1000
-- Default: 500
-- Step: 50
-
-The WASM functions `analyze_chat` and `analyze_chat_with_settings` already accept a `Vec<Message>` of arbitrary length — no Rust changes are required to support 500 messages.
-
-### What NOT to Do
-
-- **Do not increase to 1000 as the fixed default.** The current architecture does full re-analysis on every batch. 1000-message batches are safe at 5-second intervals for most streams, but create unnecessary memory pressure and slightly higher CPU cost for no analytical benefit (topic quality improves marginally above ~500 messages with the current keyword-based approach).
-- **Do not implement a circular ring buffer in Rust.** The JS-side `allMessages.slice(-MAX_MESSAGES)` pattern is simple and correct. Moving the buffer into WASM would require a stateful WASM module (global mutable state), which complicates testing and makes the WASM harder to reason about. Keep WASM purely functional (stateless analysis of an input array).
-- **Do not use SharedArrayBuffer.** This requires `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers, which are not applicable to extension sidebar pages. Standard JSON serialization through serde-wasm-bindgen is the correct approach.
-
-### Confidence: HIGH
-
-The 500-message recommendation is grounded in:
-1. The existing code already works correctly for arbitrary input sizes.
-2. The JS-to-WASM serialization cost scales linearly and benignly for this data size.
-3. The project's CONCERNS.md explicitly calls out 500 messages as a target for the sliding window (section "Scaling Limits").
-4. No Rust changes are needed — only a constant change in `sidebar.js`.
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| CRXcavator (crxcavator.io) | Automated permission risk scoring before submission | Scans extension ZIP and reports permission risk, vulnerable JS libs, weak CSP; run before submitting to catch issues reviewers flag |
+| Chrome DevTools — Extension unpacked load | Manual incognito verification | Load extension in incognito window via `chrome://extensions` → verify side panel opens, storage works, WASM loads |
+| Hotpot.ai / appscreenshots.net | Screenshot framing templates | Free browser-based tools; produce 1280x800 PNGs with device frames and annotation text without Figma or Photoshop |
+| Playwright or Puppeteer (local, no install needed via `npx`) | Automated screenshot capture at exact 1280x800 | `npx playwright screenshot` with `--viewport-size=1280,800`; no global install required; captures real extension UI |
 
 ---
 
-## 3. Options Page — Configurable Thresholds
+## CWS Developer Dashboard Requirements
 
-### What to Use
+### Account Setup (one-time)
 
-Extend the existing `extension/options/` page (plain HTML + vanilla JS + `chrome.storage.sync`) with four additional settings:
+- **Registration fee:** $5 USD one-time. Covers up to 20 extensions permanently.
+- **2-Step Verification:** Mandatory before any publish action. Enable on the Google Account used for the developer dashboard.
+- **Dedicated email recommended:** Official docs suggest an address you check frequently; alerts about policy violations go here.
+- **Limit:** 20 extensions per account.
 
-| Setting Key | UI Label | Type | Min | Max | Default | Step |
-|---|---|---|---|---|---|---|
-| `analysisWindowSize` | Analysis window size (messages) | range slider | 50 | 1000 | 500 | 50 |
-| `inactivityTimeout` | Stream inactivity timeout (seconds) | range slider | 30 | 600 | 120 | 30 |
-| `sentimentSensitivity` | Sentiment sensitivity (min signals) | range slider | 1 | 10 | 3 | 1 |
-| `topicMinCount` | Topic min mentions | range slider | 1 | 20 | 5 | 1 |
+### Store Listing — Required Fields
 
-Note: `sentimentSensitivity` and `topicMinCount` already exist in the options page. Confirm their existing ranges and defaults remain consistent with defaults in `sidebar.js`. Only `analysisWindowSize` and `inactivityTimeout` are genuinely new.
+| Field | Requirement | Notes |
+|-------|------------|-------|
+| Extension name | Must match `manifest.json` `"name"` | "Chat Signal Radar" — already set |
+| Short description | Max 132 characters | Displayed in search results and category pages; write this separately from the manifest description |
+| Detailed description | No published hard limit; plain text only (no markdown, no HTML) | Newlines rendered as line breaks; write for humans not search engines |
+| Category | Single selection from Google's list | "Productivity" is the correct category for this extension |
+| Language | Primary language | "English" |
+| Screenshots | Minimum 1, maximum 5; 1280x800 px preferred (640x400 also accepted); square corners, no padding | At least 1 required; PNG or JPEG |
+| Small promotional tile | 440x280 px, PNG or JPEG | Required for listing to go live |
+| Marquee promotional tile | 1400x560 px, PNG or JPEG | Optional; only relevant if Google features the extension |
+| Store icon | 128x128 px PNG (already in manifest) | Already exists as `icons/icon-128.png` |
+| Privacy policy URL | Public HTTPS URL | Required because the extension handles user data (chat messages, session history, AI model consent) |
 
-### Why the Existing Pattern Is Correct
+### Privacy Tab — Required Fields
 
-**`chrome.storage.sync` is the right store for these settings.** These are user preferences (not session data, not large blobs). The entire settings object for this extension is under 200 bytes — far below the 8 KB per-item and 100 KB total quotas. Sync storage means settings roam across the user's Chrome-signed-in devices automatically, which is the desirable behavior for user preferences.
+| Field | What to Enter |
+|-------|--------------|
+| Single purpose description | One sentence. Example: "Analyzes YouTube and Twitch live chat in real-time to surface top questions, issues, requests, sentiment, and trending topics." |
+| Permissions justification — `sidePanel` | "Required to display the analysis dashboard in Chrome's built-in side panel while the user browses YouTube or Twitch." |
+| Permissions justification — `storage` | "Required to persist user settings (analysis thresholds, AI preferences) via chrome.storage.sync and to store session history via chrome.storage.local." |
+| Permissions justification — `host_permissions` (youtube.com, twitch.tv) | "Required for the content script to observe the chat DOM on YouTube and Twitch live streams. No data is sent to external servers from this observation." |
+| Remote code declaration | Declare that `connect-src` allows huggingface.co and cdn-lfs.huggingface.co; justify as: "WebLLM optionally downloads an AI model (~400MB) from Hugging Face CDN only after explicit user consent. This is a model file download, not executable code." |
+| Data use checkboxes | Check: "User activity" (chat messages are read for analysis); check "Website content" (DOM is observed). Do NOT check financial data, health data, authentication info. |
 
-**Do not switch to `chrome.storage.local` for settings.** `local` is appropriate for the session history data (large, device-specific). Settings should remain in `sync` per the existing pattern and Chrome's official guidance.
+### Distribution Tab
 
-**The existing pattern for real-time propagation works correctly.** `sidebar.js` already listens to `chrome.storage.onChanged` (line 196–203) and applies new settings immediately. New settings added to the same `settings` object key will be picked up automatically without any architectural change.
+| Field | Setting |
+|-------|---------|
+| Visibility | Public |
+| Geographic distribution | All regions (no restrictions needed) |
+| Pricing | Free |
 
-### Implementation Pattern
+---
 
-The existing pattern in `options.js` is idiomatic and correct:
+## Privacy Policy
 
-```javascript
-// options.js — add new inputs following existing pattern:
-const DEFAULT_SETTINGS = {
-  topicMinCount: 5,
-  spamThreshold: 3,
-  duplicateWindow: 30,
-  sentimentSensitivity: 3,
-  moodUpgradeThreshold: 30,
-  aiSummariesEnabled: false,
-  analysisWindowSize: 500,   // NEW
-  inactivityTimeout: 120     // NEW (seconds)
-};
+### What to Write
+
+The extension handles these data categories — all must be disclosed:
+
+| Data | Collection | Storage | Sharing |
+|------|-----------|---------|---------|
+| Chat messages (YouTube/Twitch) | Read from DOM in real-time for analysis | Not persisted; analyzed in-memory and discarded | Never; all analysis is local (WASM) |
+| Session summaries | Generated from analyzed messages | Stored in `chrome.storage.local` on user's device | Never |
+| User settings | Set by user in options page | Stored in `chrome.storage.sync` (syncs across user's Chrome devices) | Never |
+| AI model consent preference | User's choice to enable/disable WebLLM | Stored in `chrome.storage.sync` | Never |
+| WebLLM model files | Downloaded from Hugging Face CDN only if user consents | Cached by browser; not accessed by extension developers | Not shared; downloaded directly from Hugging Face |
+
+**No personal data is collected by the extension developer.** No analytics, no telemetry, no external server calls (except the optional user-initiated Hugging Face model download).
+
+### Hosting — Use GitHub Pages
+
+**Why GitHub Pages over privacy policy generators:**
+
+Policy generator services (TermsFeed, Termly, privacypolicies.com) produce generic policies with boilerplate about services this extension does not use (cookies, third-party analytics, advertising). They also often add branding and links back to their own service. A hand-written policy hosted on GitHub Pages is shorter, more accurate, and more credible to CWS reviewers.
+
+**Implementation:**
+
+1. Create `docs/privacy-policy.md` in the repository root (or a `gh-pages` branch).
+2. Enable GitHub Pages in the repo settings: source = `docs/` folder or `gh-pages` branch.
+3. The policy URL becomes `https://[username].github.io/chat-signal-radar/privacy-policy` (permanent, HTTPS, no expiry).
+4. Link this URL in the CWS developer dashboard privacy policy field.
+
+**What NOT to use for hosting:**
+
+- TermsFeed / Termly / privacypolicies.com — generic boilerplate, third-party branding, may add clauses about data collection that don't apply
+- Google Sites — works but less credible than a project's own domain
+- Notion / Google Docs public link — these have been rejected by CWS reviewers for being mutable and requiring a Google login; HTTPS static URL is required
+- Pastebin / Gist — not appropriate for a legal policy document
+
+---
+
+## Screenshot Requirements
+
+### Dimensions and Format
+
+- **Required:** 1280x800 px (preferred) or 640x400 px
+- **Format:** PNG or JPEG; square corners; no padding; full bleed
+- **Quantity:** Minimum 1, maximum 5
+- **Small promotional tile:** 440x280 px (required separately from screenshots)
+
+### What to Capture
+
+The extension is a Chrome side panel — not a popup or new tab. Screenshots must show the actual UI:
+
+| Screenshot | Content | Why |
+|-----------|---------|-----|
+| 1 (required) | Side panel open on a YouTube live stream, showing cluster buckets (Questions/Issues/Requests/General) with real content | Shows the core value proposition immediately |
+| 2 | Trending topics section + sentiment mood indicator | Shows analysis depth |
+| 3 | Session history tab with past sessions listed | Shows persistence feature |
+| 4 | Options page with configurable threshold sliders | Shows configurability |
+| 5 (optional) | WebLLM AI summary card (if WebLLM is set up) | Shows AI feature |
+
+### How to Capture
+
+**Option A — Manual (simplest):** Open a YouTube or Twitch live stream, activate the side panel, resize Chrome to approximately 1600px wide so the side panel fills the right ~400px, take a full-browser screenshot, then crop to 1280x800. Use Chrome's built-in screenshot (`Ctrl+Shift+P` → "Capture screenshot") or OS screenshot tools.
+
+**Option B — Automated with Playwright (reproducible):**
+
+```bash
+npx playwright screenshot \
+  --browser chromium \
+  --viewport-size 1280,800 \
+  [url] \
+  screenshot.png
 ```
 
-The corresponding `DEFAULT_SETTINGS` block in `sidebar.js` must be kept in sync — this is the most fragile part of the existing architecture (duplication, no single source of truth). Consider adding a comment marking this as "must match options.js".
+Playwright can load the unpacked extension and navigate to the side panel HTML directly:
+`chrome-extension://[id]/sidebar/sidebar.html` — this produces a clean 1280x800 capture of
+the sidebar UI in isolation, which is acceptable for store screenshots.
 
-### Validation
+**Option C — Framing tools:** Hotpot.ai and appscreenshots.net provide free Chrome-device-frame
+templates at 1280x800 with text annotation. Upload a raw sidebar screenshot and export a
+framed marketing version. These are suitable for the promotional tiles.
 
-Add to `ValidationHelpers.js`:
+---
+
+## Manifest Permission Review
+
+### Current Manifest Analysis
+
+```json
+"permissions": ["sidePanel", "storage"],
+"host_permissions": ["https://www.youtube.com/*", "https://www.twitch.tv/*"]
+```
+
+**Assessment: Minimal and well-justified.** This permission set is among the smallest possible for
+a content-reading extension. No broad `<all_urls>`, no `tabs`, no `history`, no `cookies`,
+no `webRequest`, no `scripting` — all high-risk permissions that trigger extended review.
+
+### CSP Concern — connect-src External Domains
+
+The current `content_security_policy` in `manifest.json`:
+
+```json
+"extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;"
+```
+
+**Risk:** The `connect-src` directive allowing `huggingface.co` and `cdn-lfs.huggingface.co` will
+be scrutinized by reviewers. The key distinction: `connect-src` controls `fetch()`/`XMLHttpRequest`
+connections (data downloads), while `script-src` controls code execution. Downloading model weights
+from Hugging Face is a data download, not remote code execution — so it does not violate the MV3
+remote code policy. However, reviewers may ask for justification.
+
+**In the permissions justification field, explicitly state:** "The `connect-src` directive allows
+downloading the optional WebLLM AI model (~400MB) from Hugging Face CDN only after explicit user
+consent (consent modal on first run). No code is fetched or executed remotely — only binary model
+weight files are downloaded. All extension logic is self-contained in the package."
+
+**`raw.githubusercontent.com` in connect-src:** This is riskier from a reviewer's perspective than
+Hugging Face because GitHub raw content could theoretically contain scripts. If this URL is unused
+(no fetch to raw.githubusercontent.com in the extension code), remove it from `connect-src`.
+Verify by grepping: `grep -r "raw.githubusercontent" extension/`.
+
+### Permission Review Tooling
+
+**Primary: Manual review against the policy.** The most reliable check is reading the
+[Chrome Web Store Program Policies](https://developer.chrome.com/docs/webstore/program-policies/policies)
+and the [MV3 requirements page](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements)
+against the actual manifest.
+
+**Secondary: CRXcavator.** Upload the extension ZIP at [crxcavator.io](https://crxcavator.io/) for
+an automated risk score before submitting. It checks permission risk level, CSP weaknesses, and
+third-party JS library vulnerabilities. Run this before each submission attempt.
+
+**What NOT to use:** There is no official Google tool for pre-submission manifest validation.
+Browser-based linters like "Extension Auditor Pro" or "CRX Inspector" inspect installed extensions,
+not pre-submission ZIPs — they are not useful for validation before upload.
+
+---
+
+## Disk Space Warning — WebLLM Model Download
+
+### Current State
+
+The extension already has a user consent modal before the WebLLM model downloads. The active
+requirement is to add a **disk space warning** (showing the ~400MB size) before the download begins.
+
+### Recommended Approach
+
+Use `navigator.storage.estimate()` — no new permission required.
 
 ```javascript
-// Already present for topicMinCount, spamThreshold, duplicateWindow — add:
-if (typeof settings.analysisWindowSize !== 'number' ||
-    settings.analysisWindowSize < 50 || settings.analysisWindowSize > 1000) {
-  throw new Error('analysisWindowSize must be between 50 and 1000');
+// In llm-adapter.js or the consent modal handler, before triggering download:
+async function checkDiskSpaceBeforeDownload() {
+  const MODEL_SIZE_BYTES = 420 * 1024 * 1024; // ~420MB conservative estimate
+
+  if ('storage' in navigator && 'estimate' in navigator.storage) {
+    const { quota, usage } = await navigator.storage.estimate();
+    const available = quota - usage;
+
+    if (available < MODEL_SIZE_BYTES) {
+      const availableMB = Math.round(available / (1024 * 1024));
+      return {
+        sufficient: false,
+        availableMB,
+        requiredMB: 420,
+      };
+    }
+  }
+
+  // Storage API unavailable or space is sufficient
+  return { sufficient: true };
 }
-
-if (typeof settings.inactivityTimeout !== 'number' ||
-    settings.inactivityTimeout < 30 || settings.inactivityTimeout > 600) {
-  throw new Error('inactivityTimeout must be between 30 and 600 seconds');
-}
 ```
 
-### Options Page UX Guidance
+Show the result in the consent modal:
 
-The existing pattern (range slider + numeric display span) is appropriate for all new settings. Two notes:
+- If space is sufficient: "This will download approximately 400MB. Proceed?"
+- If space is insufficient: "This requires approximately 400MB. You have approximately {N}MB available. Free up disk space before enabling AI features."
 
-1. **Pair sliders with a live value display.** The existing `<span class="value-display">` pattern already does this. For `analysisWindowSize`, display as "500 messages"; for `inactivityTimeout`, display as "120s".
-2. **Group new settings logically.** Place `analysisWindowSize` in a new "Analysis" section. Place `inactivityTimeout` in a new "Session" section (or expand "Spam Detection" to a broader "Processing" section).
+**Why `navigator.storage.estimate()` over `chrome.system.storage`:**
 
-### Applying Settings at Runtime
+`chrome.system.storage` requires adding `"system.storage"` to the manifest permissions array.
+Adding any new permission to an already-approved extension triggers re-review. `navigator.storage.estimate()`
+is a standard Web API available in extension pages without any permission declaration. The tradeoff
+is that `navigator.storage.estimate()` returns browser-quota headroom (Chrome caps quota at 60% of
+disk, reports that as the maximum), not raw OS free disk space — but it is conservative and safe:
+if the API says there's 400MB of quota space available, the download will succeed.
 
-`inactivityTimeout` currently hardcodes `INACTIVITY_TIMEOUT = 120000` ms in `sidebar.js`. Change it to read from settings:
-
-```javascript
-// sidebar.js — derive from settings (already loaded):
-const inactivityMs = (settings.inactivityTimeout ?? 120) * 1000;
-```
-
-`analysisWindowSize` controls `MAX_MESSAGES`:
-
-```javascript
-const MAX_MESSAGES = settings.analysisWindowSize ?? 500;
-```
-
-Both values are read once at startup and updated when `chrome.storage.onChanged` fires — the existing listener at lines 196–203 handles this automatically for the `settings` object.
-
-### What NOT to Do
-
-- **Do not add a separate options page file.** The existing `extension/options/options.html` + `options.js` is sufficient. Adding a second page increases surface area without benefit.
-- **Do not use `open_in_tab: true`** for the options page. The current manifest uses `"open_in_tab": false` (embedded panel). This is the correct UX for settings that users adjust rarely — no need to change it.
-- **Do not use `IndexedDB` for settings.** It is not accessible from extension service workers without additional wrappers, and is inappropriate for small, frequently-read preference data.
-- **Do not expose `moodUpgradeThreshold` for the first time in this milestone** unless already planned — it is already in the options page, so no action needed.
-
-### Confidence: HIGH
-
-The existing options page pattern is idiomatic Chrome MV3. `chrome.storage.sync` is explicitly recommended by Chrome documentation for user preferences. The real-time propagation mechanism (`onChanged` listener) is already wired in `sidebar.js`. No new architecture is needed — only adding fields to existing data structures.
+**Note:** The estimate is not exact physical disk space. For a ~400MB model, the error margin is
+acceptable. The UX goal is preventing a failed download that corrupts the cache, not auditing exact
+disk geometry.
 
 ---
 
-## Summary Table
+## Incognito Mode Verification
 
-| Topic | Recommendation | Version / Value | Confidence |
-|---|---|---|---|
-| DOM Sanitization library | DOMPurify, vendored as `purify.min.js` | 3.3.1 (~20 KB min) | HIGH |
-| DOMPurify loading method | `<script>` tag in sidebar.html / options.html | n/a (IIFE/UMD, no import) | HIGH |
-| CSP impact | None — no manifest.json changes required | `'unsafe-eval'` not needed | HIGH |
-| Sanitizer API (`setHTML`) | Do NOT use — experimental only in Canary/Nightly | n/a | HIGH |
-| WASM buffer size (default) | Increase `MAX_MESSAGES` to 500 | 500 (from 100) | HIGH |
-| WASM buffer max (configurable) | Up to 1000 via options page | 1000 upper bound | MEDIUM |
-| Buffer location | JS-side `allMessages.slice()` — keep as-is | n/a | HIGH |
-| SharedArrayBuffer | Do NOT use — requires COOP/COEP headers | n/a | HIGH |
-| New settings store | `chrome.storage.sync` — existing pattern | n/a | HIGH |
-| New settings: window size | `analysisWindowSize`, range 50–1000, default 500 | chrome.storage.sync | HIGH |
-| New settings: inactivity | `inactivityTimeout`, range 30–600s, default 120s | chrome.storage.sync | HIGH |
-| Options page architecture | Extend existing `options.js` / `options.html` | n/a | HIGH |
-| Options page display style | `open_in_tab: false` — keep existing | n/a | HIGH |
+### Current Manifest Setting
 
----
+The manifest does not declare an `"incognito"` key, which defaults to `"spanning"` mode.
 
-## Sources Consulted
+**Spanning mode implications:**
+- The background service worker runs in a single shared process
+- `chrome.storage.sync` and `chrome.storage.local` are shared between regular and incognito contexts (confirmed in Chrome docs)
+- The side panel can be opened in incognito tabs when the user enables the extension for incognito
 
-- [DOMPurify GitHub repository (cure53/DOMPurify)](https://github.com/cure53/DOMPurify)
-- [DOMPurify npm package](https://www.npmjs.com/package/dompurify)
-- [DOMPurify Issue #249 — unsafe-eval CSP](https://github.com/cure53/DOMPurify/issues/249)
-- [DOMPurify Issue #107 — Chrome unsafe-eval complaint](https://github.com/cure53/DOMPurify/issues/107)
-- [Chrome Extensions — Content Security Policy (MV3)](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy)
-- [Chrome Extensions — Improve Extension Security (MV3)](https://developer.chrome.com/docs/extensions/develop/migrate/improve-security)
-- [wasm-bindgen — Arbitrary Data with Serde](https://rustwasm.github.io/docs/wasm-bindgen/reference/arbitrary-data-with-serde.html)
-- [serde-wasm-bindgen docs.rs](https://docs.rs/serde-wasm-bindgen/latest/serde_wasm_bindgen/)
-- [chrome.storage API reference](https://developer.chrome.com/docs/extensions/reference/api/storage)
-- [HTML Sanitizer API (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API)
-- [Sanitizer API — Can I Use](https://caniuse.com/mdn-api_sanitizer)
-- [wasm-bindgen performance discussion — HN](https://news.ycombinator.com/item?id=45664341)
-- [WebAssembly Performance — OpenReplay blog](https://blog.openreplay.com/running-high-performance-code-wasm/)
-- [chrome.storage.sync best practices — Chromium Extensions group](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/ACVyerzOjus)
+### What to Verify Manually
+
+| Component | What to Check | Expected Result |
+|-----------|--------------|-----------------|
+| `chrome.storage.sync` | Open options page in incognito, change a setting, verify it persists | Settings save and load correctly |
+| `chrome.storage.local` | Open sidebar in incognito, start a session, end it, check history | Session saves to history |
+| WASM loading | Open sidebar in incognito | WASM initializes without CSP errors |
+| Side panel | Navigate to YouTube in incognito, click extension icon | Side panel opens and displays UI |
+| Content script | Open a YouTube live stream in incognito | Chat messages flow into the sidebar |
+
+**How to enable the extension in incognito for testing:**
+`chrome://extensions` → Chat Signal Radar → Details → toggle "Allow in incognito" → ON.
+
+### Do NOT Change the Manifest Incognito Setting
+
+Leaving `"incognito"` unset (defaulting to `"spanning"`) is correct for this extension. The
+extension does not need separate state for incognito vs. regular windows — user settings should
+roam across both. Changing to `"split"` or `"not_allowed"` would provide no benefit and would
+require re-justification to CWS reviewers.
 
 ---
 
-*Research completed: 2026-02-19*
+## Alternatives Considered
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| GitHub Pages (privacy policy hosting) | TermsFeed / Termly generators | Generators produce boilerplate with inapplicable clauses (cookies, analytics, ads); adds third-party branding; less accurate for a no-telemetry extension |
+| GitHub Pages | Google Sites | Works but no custom path; less professional for an open-source project |
+| `navigator.storage.estimate()` (disk warning) | `chrome.system.storage` | Requires adding `"system.storage"` permission to manifest, triggering extended CWS re-review; `navigator.storage.estimate()` requires no new permission |
+| Manual + Playwright screenshots | Hotpot.ai / screenshot generator services | Services add device-frame marketing chrome that may obscure actual UI; plain 1280x800 captures are more credible to reviewers |
+| Crxcavator (pre-submission scan) | No tooling | Catches permission risks before submission; reduces rejection cycles |
+
+---
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `chrome.system.storage` for disk space | Adds a new permission to the manifest, triggering CWS re-review | `navigator.storage.estimate()` — no new permission |
+| Privacy policy generator services (TermsFeed, Termly) | Generic boilerplate includes clauses for cookies/analytics/advertising that don't apply to this extension; may confuse reviewers | Hand-written policy on GitHub Pages |
+| Notion / Google Docs / Pastebin for privacy policy URL | These URLs require logins or are mutable; CWS reviewers require a stable, public HTTPS static page | GitHub Pages static HTML |
+| `raw.githubusercontent.com` in connect-src (if unused) | Reviewers may flag this as a potential remote-code fetch vector | Remove if not needed; grep to confirm before deciding |
+| Adding `"tabs"`, `"history"`, or `"<all_urls>"` permissions | These permissions trigger extended manual review and are not needed for this extension's functionality | Keep the current minimal permission set |
+| Uploading a ZIP with test/dev artifacts | CWS scans ZIP contents; `.map` files, local test HTML, or dev-only scripts increase review time | Build a clean production ZIP from `extension/` excluding dev files |
+
+---
+
+## Version Compatibility
+
+| Component | Requirement | Notes |
+|-----------|------------|-------|
+| `navigator.storage.estimate()` | Chrome 52+ | Available in all current Chromium builds; no compatibility concern |
+| Side panel API (`sidePanel` permission) | Chrome 114+ | Already in use; no change |
+| WASM + `wasm-unsafe-eval` CSP | Chrome 95+ (MV3) | Already in manifest; no change |
+| GitHub Pages | N/A (hosting, not runtime) | Stable permanent HTTPS; no version concern |
+
+---
+
+## Sources
+
+- [Chrome Web Store — Publish your extension](https://developer.chrome.com/docs/webstore/publish) — publishing steps confirmed
+- [Chrome Web Store — Supplying Images](https://developer.chrome.com/docs/webstore/images) — screenshot and promotional tile dimensions confirmed (HIGH confidence)
+- [Chrome Web Store — Complete your listing information](https://developer.chrome.com/docs/webstore/cws-dashboard-listing) — dashboard field requirements confirmed (HIGH confidence)
+- [Chrome Web Store — Fill out the privacy fields](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) — permissions justification field requirements confirmed (HIGH confidence)
+- [Chrome Web Store — Privacy Policies policy](https://developer.chrome.com/docs/webstore/program-policies/privacy) — privacy policy trigger conditions confirmed (HIGH confidence)
+- [Chrome Web Store — MV3 additional requirements](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements) — remote code policy confirmed (HIGH confidence)
+- [Chrome Web Store — Register your developer account](https://developer.chrome.com/docs/webstore/register) — account requirements confirmed (HIGH confidence)
+- [Chrome Web Store — Program Policies](https://developer.chrome.com/docs/webstore/program-policies/policies) — single purpose policy confirmed (HIGH confidence)
+- [Chrome Web Store — Policy updates 2025](https://developer.chrome.com/blog/cws-policy-updates-2025) — 2025 policy changes reviewed; no AI-download or permission changes (HIGH confidence)
+- [Chrome Extensions — Manifest: Incognito](https://developer.chrome.com/docs/extensions/reference/manifest/incognito) — spanning mode storage behavior confirmed (HIGH confidence)
+- [chrome.system.storage API](https://developer.chrome.com/docs/extensions/reference/api/system/storage) — permission requirement confirmed (HIGH confidence)
+- [StorageManager.estimate() — MDN](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/estimate) — API availability and behavior confirmed (HIGH confidence)
+- [CRXcavator documentation](https://crxcavator.io/docs) — automated permission scanning tool (MEDIUM confidence — third-party tool)
+- [Extension Radar Blog — CWS developer fee 2026](https://www.extensionradar.com/blog/chrome-web-store-developer-fee-2026) — $5 fee confirmed (MEDIUM confidence — third-party, consistent with official sources)
+
+---
+
+*Stack research for: CWS Publication Readiness (v1.1 milestone)*
+*Researched: 2026-02-19*
