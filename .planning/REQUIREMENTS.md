@@ -10,7 +10,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Sanitization
 
 - [x] **SAN-01**: Vendor DOMPurify 3.3.1 as `extension/libs/dompurify/purify.min.js` and load via script tag in sidebar.html before ES module
-- [ ] **SAN-02**: Migrate all innerHTML assignments in sidebar to use DOMPurify.sanitize() via updated DOMHelpers
+- [x] **SAN-02**: Migrate all innerHTML assignments in sidebar to use DOMPurify.sanitize() via updated DOMHelpers
 - [x] **SAN-03**: Remove old regex-based safeSetHTML implementation after migration
 
 ### Analysis Window
@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SAN-01 | Phase 2 | Complete |
-| SAN-02 | Phase 2 | Pending |
+| SAN-02 | Phase 2 | Complete |
 | SAN-03 | Phase 2 | Complete |
 | WIN-01 | Phase 1 | Complete |
 | THR-01 | Phase 3 | Pending |
