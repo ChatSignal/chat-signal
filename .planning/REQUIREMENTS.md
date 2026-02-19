@@ -63,19 +63,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAN-01 | — | Pending |
-| SAN-02 | — | Pending |
-| SAN-03 | — | Pending |
-| WIN-01 | — | Pending |
-| THR-01 | — | Pending |
-| THR-02 | — | Pending |
-| THR-03 | — | Pending |
+| SAN-01 | Phase 2 | Pending |
+| SAN-02 | Phase 2 | Pending |
+| SAN-03 | Phase 2 | Pending |
+| WIN-01 | Phase 1 | Pending |
+| THR-01 | Phase 3 | Pending |
+| THR-02 | Phase 3 | Pending |
+| THR-03 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
