@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 2 of 3 (DOMPurify Integration) — COMPLETE
-Plan: 2 of 2 in current phase — COMPLETE
-Status: Phase 2 complete. All innerHTML in sidebar.js migrated to DOMPurify. Ready for Phase 3.
-Last activity: 2026-02-19 — 02-02 complete (innerHTML migration in sidebar.js)
+Phase: 3 of 3 (Configurable Thresholds) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE
+Status: Phase 3, Plan 1 complete. inactivityTimeout exposed as configurable setting. Plan 2 next.
+Last activity: 2026-02-19 — 03-01 complete (inactivity timeout setting + INACTIVITY_TIMEOUT constant removal)
 
-Progress: [██████░░░░] 57%
+Progress: [████████░░] 71%
 
 ## Performance Metrics
 
@@ -30,8 +30,16 @@ Progress: [██████░░░░] 57%
 | 01-analysis-window | 2 | 3 min | 1.5 min |
 | 02-dompurify-integration | 2 | 4 min | 2 min |
 
+**By Phase (updated):**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 01-analysis-window | 2 | 3 min | 1.5 min |
+| 02-dompurify-integration | 2 | 4 min | 2 min |
+| 03-configurable-thresholds | 1/2 | 2 min | 2 min |
+
 **Recent Trend:**
-- Last 5 plans: 2 min, 1 min, 1 min, 3 min
+- Last 5 plans: 2 min, 1 min, 1 min, 3 min, 2 min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -57,6 +65,10 @@ Recent decisions affecting current work:
 - [02-01]: DOMPurify script tag synchronous (no defer/async) — must be available before ES module executes
 - [Phase 02-02]: Remove duplicate const declarations in showSessionSummary() — pre-existing SyntaxError bug fixed, merged logic uses session-accumulated sessionQuestions
 - [Phase 02-02]: escapeHtml() added to formatDuration/messageCount/mood in card.innerHTML for defense-in-depth coverage
+- [03-01]: Display raw seconds with "s" suffix (e.g. '120s') for inactivity timeout — consistent with duplicateWindow pattern
+- [03-01]: || 120 fallback on settings.inactivityTimeout — guards startup race before settings load
+- [03-01]: inactivityTimeout stored as seconds in settings, converted to ms at read site (* 1000) — settings are human-readable
+- [03-01]: THR-02 (duplicateWindow) confirmed pre-existing wired at both analyze_chat_with_settings call sites — no code change needed
 
 ### Pending Todos
 
@@ -64,10 +76,10 @@ None.
 
 ### Blockers/Concerns
 
-- duplicateWindow gap: options page may already have a slider but it has not been confirmed wired to the WASM call site. Verify during Phase 3.
+None. (duplicateWindow wiring confirmed in 03-01 — sidebar.js lines 311 and 685 both pass settings.duplicateWindow * 1000.)
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-02-PLAN.md (innerHTML migration in sidebar.js). Phase 2 complete. Ready for Phase 3.
+Stopped at: Completed 03-01-PLAN.md (inactivity timeout setting). Phase 3 Plan 1 complete. Ready for Phase 3 Plan 2.
 Resume file: None
