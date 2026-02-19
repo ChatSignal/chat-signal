@@ -7,7 +7,8 @@ const DEFAULT_SETTINGS = {
   sentimentSensitivity: 3,
   moodUpgradeThreshold: 30,
   aiSummariesEnabled: false,
-  analysisWindowSize: 500
+  analysisWindowSize: 500,
+  inactivityTimeout: 120
 };
 
 // DOM elements
@@ -23,7 +24,8 @@ const inputs = {
   sentimentSensitivity: document.getElementById('sentiment-sensitivity'),
   moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold'),
   aiSummariesEnabled: document.getElementById('ai-summaries-enabled'),
-  analysisWindowSize: document.getElementById('analysis-window-size')
+  analysisWindowSize: document.getElementById('analysis-window-size'),
+  inactivityTimeout: document.getElementById('inactivity-timeout')
 };
 
 // Value display elements
@@ -32,7 +34,8 @@ const displays = {
   spamThreshold: document.getElementById('spam-threshold-value'),
   duplicateWindow: document.getElementById('duplicate-window-value'),
   sentimentSensitivity: document.getElementById('sentiment-sensitivity-value'),
-  moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold-value')
+  moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold-value'),
+  inactivityTimeout: document.getElementById('inactivity-timeout-value')
 };
 
 // Time estimate for analysis window slider
@@ -50,6 +53,7 @@ function updateDisplays(settings) {
   displays.duplicateWindow.textContent = `${settings.duplicateWindow}s`;
   displays.sentimentSensitivity.textContent = settings.sentimentSensitivity;
   displays.moodUpgradeThreshold.textContent = settings.moodUpgradeThreshold;
+  displays.inactivityTimeout.textContent = `${settings.inactivityTimeout}s`;
 
   const windowVal = settings.analysisWindowSize;
   const windowDisplay = document.getElementById('analysis-window-size-value');
@@ -69,6 +73,7 @@ function setInputValues(settings) {
   inputs.moodUpgradeThreshold.value = settings.moodUpgradeThreshold;
   inputs.aiSummariesEnabled.checked = Boolean(settings.aiSummariesEnabled);
   if (inputs.analysisWindowSize) inputs.analysisWindowSize.value = settings.analysisWindowSize;
+  if (inputs.inactivityTimeout) inputs.inactivityTimeout.value = settings.inactivityTimeout;
   updateDisplays(settings);
 }
 
@@ -81,7 +86,8 @@ function getInputValues() {
     sentimentSensitivity: parseInt(inputs.sentimentSensitivity.value, 10),
     moodUpgradeThreshold: parseInt(inputs.moodUpgradeThreshold.value, 10),
     aiSummariesEnabled: inputs.aiSummariesEnabled.checked,
-    analysisWindowSize: parseInt(inputs.analysisWindowSize.value, 10)
+    analysisWindowSize: parseInt(inputs.analysisWindowSize.value, 10),
+    inactivityTimeout: parseInt(inputs.inactivityTimeout.value, 10)
   };
 }
 

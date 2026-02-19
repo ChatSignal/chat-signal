@@ -19,7 +19,8 @@ const DEFAULT_SETTINGS = {
   sentimentSensitivity: 3,
   moodUpgradeThreshold: 30,
   aiSummariesEnabled: false,
-  analysisWindowSize: 500
+  analysisWindowSize: 500,
+  inactivityTimeout: 120
 };
 
 let settings = { ...DEFAULT_SETTINGS };

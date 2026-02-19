@@ -274,7 +274,8 @@ const DEFAULT_SETTINGS = {
   duplicateWindow: 30,
   aiSummariesEnabled: false,
   aiConsentShown: false,
-  analysisWindowSize: 500
+  analysisWindowSize: 500,
+  inactivityTimeout: 120
 };
 
 // Export singleton instance
