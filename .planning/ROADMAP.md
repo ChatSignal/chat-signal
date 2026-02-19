@@ -12,7 +12,7 @@ Three targeted improvements to an already-shipped Chrome extension: increase the
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Analysis Window** - Raise MAX_MESSAGES from 100 to 500 across all accumulation paths and expose analysisWindowSize as a user setting
+- [x] **Phase 1: Analysis Window** - Raise MAX_MESSAGES from 100 to 500 across all accumulation paths and expose analysisWindowSize as a user setting
 - [ ] **Phase 2: DOMPurify Integration** - Replace custom safeSetHTML with DOMPurify for robust XSS protection in the sidebar
 - [ ] **Phase 3: Configurable Thresholds** - Wire inactivityTimeout and duplicateWindow to settings and harden numeric validation
 
@@ -30,8 +30,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Add analysisWindowSize to all three DEFAULT_SETTINGS copies, wire full options pipeline (slider, time estimate, low-value warning), add ValidationHelpers validation
-- [ ] 01-02-PLAN.md — Replace MAX_MESSAGES constant with dynamic windowing in sidebar.js, add "X/N in window" stats indicator to sidebar.html and sidebar.css
+- [x] 01-01-PLAN.md — Add analysisWindowSize to all three DEFAULT_SETTINGS copies, wire full options pipeline (slider, time estimate, low-value warning), add ValidationHelpers validation
+- [x] 01-02-PLAN.md — Replace MAX_MESSAGES constant with dynamic windowing in sidebar.js, add "X/N in window" stats indicator to sidebar.html and sidebar.css
 
 ### Phase 2: DOMPurify Integration
 **Goal**: All innerHTML assignments in the sidebar pass through DOMPurify, eliminating the XSS risk class from WASM-originated strings, with the old regex-based sanitizer removed
@@ -62,6 +62,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Analysis Window | 1/2 | In Progress|  |
+| 1. Analysis Window | 2/2 | Complete | 2026-02-19 |
 | 2. DOMPurify Integration | 0/? | Not started | - |
 | 3. Configurable Thresholds | 0/? | Not started | - |
