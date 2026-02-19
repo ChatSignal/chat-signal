@@ -3,6 +3,12 @@
  * Replaces scattered DOM operations throughout the codebase
  */
 
+// All innerHTML must use DOMPurify
+
+// Centralized DOMPurify configuration — one place to tighten later
+// DOMPurify is loaded as a global via <script> tag in sidebar.html
+export const DOMPURIFY_CONFIG = {};
+
 // HTML escaping utility
 export function escapeHtml(text) {
   const div = document.createElement('div');
@@ -18,23 +24,9 @@ export function safeCreateElement(tag, className = '', textContent = '') {
   return element;
 }
 
-// Safe HTML setter with pattern validation
+// Safe HTML setter — DOMPurify-backed (replaces old regex implementation)
 export function safeSetHTML(element, htmlContent) {
-  // Only allow safe static HTML patterns
-  const safePatterns = [
-    /^<div class="empty-state"><p>No clusters yet\. Keep chatting!<\/p><\/div>$/,
-    /^<p class="summary-no-data">[^<]*<\/p>$/,
-    /^<span class="loading">[^<]*<\/span>$/,
-    /^<div class="empty-state"><p>Waiting for chat messages...<\/p><\/div>$/
-  ];
-  
-  const isSafe = safePatterns.some(pattern => pattern.test(htmlContent));
-  if (isSafe) {
-    element.innerHTML = htmlContent;
-  } else {
-    console.error('Unsafe HTML blocked:', htmlContent);
-    element.textContent = 'Content blocked for security';
-  }
+  element.innerHTML = DOMPurify.sanitize(htmlContent, DOMPURIFY_CONFIG);
 }
 
 // Utility for creating list items safely
