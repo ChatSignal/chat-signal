@@ -6,7 +6,8 @@ const DEFAULT_SETTINGS = {
   duplicateWindow: 30,
   sentimentSensitivity: 3,
   moodUpgradeThreshold: 30,
-  aiSummariesEnabled: false
+  aiSummariesEnabled: false,
+  analysisWindowSize: 500
 };
 
 // DOM elements
@@ -21,7 +22,8 @@ const inputs = {
   duplicateWindow: document.getElementById('duplicate-window'),
   sentimentSensitivity: document.getElementById('sentiment-sensitivity'),
   moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold'),
-  aiSummariesEnabled: document.getElementById('ai-summaries-enabled')
+  aiSummariesEnabled: document.getElementById('ai-summaries-enabled'),
+  analysisWindowSize: document.getElementById('analysis-window-size')
 };
 
 // Value display elements
@@ -33,6 +35,14 @@ const displays = {
   moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold-value')
 };
 
+// Time estimate for analysis window slider
+function getTimeEstimate(msgCount) {
+  const msgsPerSec = 3;
+  const seconds = Math.round(msgCount / msgsPerSec);
+  if (seconds < 60) return `~${seconds}s of active chat`;
+  return `~${Math.round(seconds / 60)}m of active chat`;
+}
+
 // Update value displays when sliders change
 function updateDisplays(settings) {
   displays.topicMinCount.textContent = settings.topicMinCount;
@@ -40,6 +50,14 @@ function updateDisplays(settings) {
   displays.duplicateWindow.textContent = `${settings.duplicateWindow}s`;
   displays.sentimentSensitivity.textContent = settings.sentimentSensitivity;
   displays.moodUpgradeThreshold.textContent = settings.moodUpgradeThreshold;
+
+  const windowVal = settings.analysisWindowSize;
+  const windowDisplay = document.getElementById('analysis-window-size-value');
+  if (windowDisplay) windowDisplay.textContent = windowVal;
+  const estimateEl = document.getElementById('analysis-window-size-estimate');
+  if (estimateEl) estimateEl.textContent = getTimeEstimate(windowVal);
+  const warningEl = document.getElementById('analysis-window-warning');
+  if (warningEl) warningEl.classList.toggle('hidden', windowVal > 50);
 }
 
 // Set input values from settings
@@ -50,6 +68,7 @@ function setInputValues(settings) {
   inputs.sentimentSensitivity.value = settings.sentimentSensitivity;
   inputs.moodUpgradeThreshold.value = settings.moodUpgradeThreshold;
   inputs.aiSummariesEnabled.checked = Boolean(settings.aiSummariesEnabled);
+  if (inputs.analysisWindowSize) inputs.analysisWindowSize.value = settings.analysisWindowSize;
   updateDisplays(settings);
 }
 
@@ -61,7 +80,8 @@ function getInputValues() {
     duplicateWindow: parseInt(inputs.duplicateWindow.value, 10),
     sentimentSensitivity: parseInt(inputs.sentimentSensitivity.value, 10),
     moodUpgradeThreshold: parseInt(inputs.moodUpgradeThreshold.value, 10),
-    aiSummariesEnabled: inputs.aiSummariesEnabled.checked
+    aiSummariesEnabled: inputs.aiSummariesEnabled.checked,
+    analysisWindowSize: parseInt(inputs.analysisWindowSize.value, 10)
   };
 }
 

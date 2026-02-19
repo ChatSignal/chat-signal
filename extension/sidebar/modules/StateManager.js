@@ -48,7 +48,7 @@ export class StateManager {
     };
     
     // Constants
-    this.MAX_MESSAGES = 100;
+    this.MAX_MESSAGES = 500;
     this.MAX_SESSION_QUESTIONS = 50;
     this.INACTIVITY_TIMEOUT = 120000; // 2 minutes
   }
@@ -162,6 +162,10 @@ export class StateManager {
     this.state.totalMessageCount++;
   }
   
+  setMaxMessages(n) {
+    this.MAX_MESSAGES = Math.max(50, Math.min(1000, parseInt(n, 10) || 500));
+  }
+
   addQuestion(question) {
     if (!this.state.sessionQuestions.includes(question)) {
       this.state.sessionQuestions.push(question);
@@ -269,7 +273,8 @@ const DEFAULT_SETTINGS = {
   spamThreshold: 3,
   duplicateWindow: 30,
   aiSummariesEnabled: false,
-  aiConsentShown: false
+  aiConsentShown: false,
+  analysisWindowSize: 500
 };
 
 // Export singleton instance

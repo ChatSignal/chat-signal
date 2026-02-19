@@ -120,7 +120,17 @@ export function validateSettings(settings) {
   if (typeof settings.duplicateWindow !== 'number' || settings.duplicateWindow < 5 || settings.duplicateWindow > 300) {
     throw new Error('duplicateWindow must be a number between 5 and 300 seconds');
   }
-  
+
+  // Validate analysisWindowSize
+  if (settings.analysisWindowSize !== undefined) {
+    if (typeof settings.analysisWindowSize !== 'number' ||
+        !Number.isInteger(settings.analysisWindowSize) ||
+        settings.analysisWindowSize < 50 ||
+        settings.analysisWindowSize > 1000) {
+      throw new Error('analysisWindowSize must be an integer between 50 and 1000');
+    }
+  }
+
   // Validate boolean settings
   const booleanSettings = ['aiSummariesEnabled', 'aiConsentShown'];
   booleanSettings.forEach(setting => {

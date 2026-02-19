@@ -16,7 +16,8 @@ const DEFAULT_SETTINGS = {
   duplicateWindow: 30,
   sentimentSensitivity: 3,
   moodUpgradeThreshold: 30,
-  aiSummariesEnabled: false
+  aiSummariesEnabled: false,
+  analysisWindowSize: 500
 };
 
 let settings = { ...DEFAULT_SETTINGS };
