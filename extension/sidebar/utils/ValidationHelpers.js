@@ -16,7 +16,7 @@ export function validateMessages(messages) {
     if (typeof msg.text !== 'string' || msg.text.length > 1000) {
       throw new Error(`Message at index ${index}: text must be string <= 1000 chars`);
     }
-    if (typeof msg.timestamp !== 'number' || msg.timestamp <= 0) {
+    if (!Number.isFinite(msg.timestamp) || msg.timestamp <= 0) {
       throw new Error(`Message at index ${index}: timestamp must be positive number`);
     }
     if (msg.author && (typeof msg.author !== 'string' || msg.author.length > 50)) {
@@ -44,7 +44,7 @@ export function validateAnalysisResult(result) {
     if (typeof bucket.label !== 'string' || bucket.label.length > 100) {
       throw new Error(`Invalid bucket at index ${index}: label must be a string <= 100 chars`);
     }
-    if (typeof bucket.count !== 'number' || bucket.count < 0) {
+    if (!Number.isFinite(bucket.count) || bucket.count < 0) {
       throw new Error(`Invalid bucket at index ${index}: count must be a non-negative number`);
     }
     if (!Array.isArray(bucket.sample_messages)) {
@@ -69,7 +69,7 @@ export function validateAnalysisResult(result) {
       if (typeof topic.term !== 'string' || topic.term.length > 50) {
         throw new Error(`Invalid topic at index ${index}: term must be string <= 50 chars`);
       }
-      if (typeof topic.count !== 'number' || topic.count <= 0) {
+      if (!Number.isFinite(topic.count) || topic.count <= 0) {
         throw new Error(`Invalid topic at index ${index}: count must be positive number`);
       }
       if (typeof topic.is_emote !== 'boolean') {
@@ -86,14 +86,14 @@ export function validateAnalysisResult(result) {
   if (result.sentiment_signals) {
     const sentimentFields = ['positive_count', 'negative_count', 'confused_count', 'neutral_count'];
     sentimentFields.forEach(field => {
-      if (typeof result.sentiment_signals[field] !== 'number' || result.sentiment_signals[field] < 0) {
+      if (!Number.isFinite(result.sentiment_signals[field]) || result.sentiment_signals[field] < 0) {
         throw new Error(`Invalid sentiment_signals.${field}: must be non-negative number`);
       }
     });
   }
   
   // Validate processed_count
-  if (typeof result.processed_count !== 'number' || result.processed_count < 0) {
+  if (!Number.isFinite(result.processed_count) || result.processed_count < 0) {
     throw new Error('Invalid result: processed_count must be a non-negative number');
   }
   
@@ -107,23 +107,23 @@ export function validateSettings(settings) {
   }
   
   // Validate topicMinCount
-  if (typeof settings.topicMinCount !== 'number' || settings.topicMinCount < 1 || settings.topicMinCount > 100) {
+  if (!Number.isFinite(settings.topicMinCount) || settings.topicMinCount < 1 || settings.topicMinCount > 100) {
     throw new Error('topicMinCount must be a number between 1 and 100');
   }
-  
+
   // Validate spamThreshold
-  if (typeof settings.spamThreshold !== 'number' || settings.spamThreshold < 1 || settings.spamThreshold > 10) {
+  if (!Number.isFinite(settings.spamThreshold) || settings.spamThreshold < 1 || settings.spamThreshold > 10) {
     throw new Error('spamThreshold must be a number between 1 and 10');
   }
-  
+
   // Validate duplicateWindow
-  if (typeof settings.duplicateWindow !== 'number' || settings.duplicateWindow < 5 || settings.duplicateWindow > 300) {
+  if (!Number.isFinite(settings.duplicateWindow) || settings.duplicateWindow < 5 || settings.duplicateWindow > 300) {
     throw new Error('duplicateWindow must be a number between 5 and 300 seconds');
   }
 
   // Validate analysisWindowSize
   if (settings.analysisWindowSize !== undefined) {
-    if (typeof settings.analysisWindowSize !== 'number' ||
+    if (!Number.isFinite(settings.analysisWindowSize) ||
         !Number.isInteger(settings.analysisWindowSize) ||
         settings.analysisWindowSize < 50 ||
         settings.analysisWindowSize > 1000) {
@@ -135,6 +135,20 @@ export function validateSettings(settings) {
   if (settings.inactivityTimeout !== undefined) {
     if (!Number.isFinite(settings.inactivityTimeout) || settings.inactivityTimeout < 30 || settings.inactivityTimeout > 600) {
       throw new Error('inactivityTimeout must be a number between 30 and 600 seconds');
+    }
+  }
+
+  // Validate sentimentSensitivity
+  if (settings.sentimentSensitivity !== undefined) {
+    if (!Number.isFinite(settings.sentimentSensitivity) || settings.sentimentSensitivity < 1 || settings.sentimentSensitivity > 10) {
+      throw new Error('sentimentSensitivity must be a number between 1 and 10');
+    }
+  }
+
+  // Validate moodUpgradeThreshold
+  if (settings.moodUpgradeThreshold !== undefined) {
+    if (!Number.isFinite(settings.moodUpgradeThreshold) || settings.moodUpgradeThreshold < 10 || settings.moodUpgradeThreshold > 50) {
+      throw new Error('moodUpgradeThreshold must be a number between 10 and 50');
     }
   }
 
@@ -164,10 +178,10 @@ export function validateSessionData(sessionData) {
   });
   
   // Validate timestamps
-  if (typeof sessionData.startTime !== 'number' || sessionData.startTime <= 0) {
+  if (!Number.isFinite(sessionData.startTime) || sessionData.startTime <= 0) {
     throw new Error('Session startTime must be a positive number');
   }
-  if (typeof sessionData.endTime !== 'number' || sessionData.endTime <= 0) {
+  if (!Number.isFinite(sessionData.endTime) || sessionData.endTime <= 0) {
     throw new Error('Session endTime must be a positive number');
   }
   if (sessionData.endTime < sessionData.startTime) {
@@ -180,7 +194,7 @@ export function validateSessionData(sessionData) {
   }
   
   // Validate message count
-  if (typeof sessionData.totalMessages !== 'number' || sessionData.totalMessages < 0) {
+  if (!Number.isFinite(sessionData.totalMessages) || sessionData.totalMessages < 0) {
     throw new Error('Session totalMessages must be a non-negative number');
   }
   
