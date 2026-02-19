@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 1 of 3 (Analysis Window)
-Plan: 1 of ? in current phase
-Status: In progress
-Last activity: 2026-02-19 — Completed 01-01 (analysisWindowSize settings foundation)
+Plan: 2 of 2 in current phase
+Status: Phase 1 complete
+Last activity: 2026-02-19 — Completed 01-02 (dynamic analysis windowing in sidebar)
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2 min
-- Total execution time: 0.03 hours
+- Total plans completed: 2
+- Average duration: 1.5 min
+- Total execution time: 0.05 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-analysis-window | 1 | 2 min | 2 min |
+| 01-analysis-window | 2 | 3 min | 1.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min
+- Last 5 plans: 2 min, 1 min
 - Trend: —
 
 *Updated after each plan completion*
@@ -48,6 +48,9 @@ Recent decisions affecting current work:
 - [01-01]: step=50 on analysis window slider — makes min=50 reachable while keeping all 100-aligned values accessible
 - [01-01]: ValidationHelpers undefined guard for analysisWindowSize — legacy settings objects accepted without error
 - [01-01]: StateManager.MAX_MESSAGES raised from 100 to 500 immediately with setMaxMessages(n) added for runtime adjustment
+- [01-02]: 2x buffer cap on allMessages — retains history for smooth window expansion without unbounded memory growth
+- [01-02]: windowMessages sliced at call site before processMessages() — keeps processMessages() window-unaware; messages.length is the fill level
+- [01-02]: Fallback || 500 on settings.analysisWindowSize — guards race between settings load and first message batch
 
 ### Pending Todos
 
@@ -60,5 +63,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 01-01-PLAN.md — analysisWindowSize settings foundation wired
+Stopped at: Completed 01-02-PLAN.md — dynamic analysis windowing behavior complete; Phase 1 done
 Resume file: None
