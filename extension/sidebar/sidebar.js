@@ -318,6 +318,12 @@ function processMessages(messages) {
     statsDiv.classList.remove('hidden');
     processedCount.textContent = totalMessageCount;
 
+    // Update window stats indicator
+    const windowCurrentEl = document.getElementById('window-current');
+    const windowMaxEl = document.getElementById('window-max');
+    if (windowCurrentEl) windowCurrentEl.textContent = messages.length;
+    if (windowMaxEl) windowMaxEl.textContent = settings.analysisWindowSize || 500;
+
     // Hide first-run guidance once we have messages
     firstRunDiv.classList.add('hidden');
 
@@ -679,7 +685,6 @@ function validateMessages(messages) {
 
 // Accumulate messages across batches for better clustering
 let allMessages = [];
-const MAX_MESSAGES = 100; // Keep last 100 messages
 
 // Listen for messages from content script
 if (!isTestEnv) {
@@ -723,13 +728,16 @@ if (!isTestEnv) {
       // Add new messages to accumulator
       allMessages.push(...message.messages);
 
-      // Keep only recent messages
-      if (allMessages.length > MAX_MESSAGES) {
-        allMessages = allMessages.slice(-MAX_MESSAGES);
+      // Cap buffer at 2x window size to prevent unbounded growth
+      // (keeping 2x allows smooth window expansion without data loss)
+      const windowSize = settings.analysisWindowSize || 500;
+      if (allMessages.length > windowSize * 2) {
+        allMessages = allMessages.slice(-(windowSize * 2));
       }
 
-      // Process all accumulated messages
-      processMessages(allMessages);
+      // Slice to analysis window and process
+      const windowMessages = allMessages.slice(-windowSize);
+      processMessages(windowMessages);
     }
   });
 
