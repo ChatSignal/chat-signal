@@ -91,12 +91,66 @@ function getInputValues() {
   };
 }
 
+// Validate input values — returns object of field -> error message (empty = valid)
+function validateInputValues(values) {
+  const errors = {};
+  if (!Number.isFinite(values.topicMinCount) || values.topicMinCount < 1 || values.topicMinCount > 20) {
+    errors.topicMinCount = 'Must be 1-20';
+  }
+  if (!Number.isFinite(values.spamThreshold) || values.spamThreshold < 1 || values.spamThreshold > 10) {
+    errors.spamThreshold = 'Must be 1-10';
+  }
+  if (!Number.isFinite(values.duplicateWindow) || values.duplicateWindow < 10 || values.duplicateWindow > 120) {
+    errors.duplicateWindow = 'Must be 10-120';
+  }
+  if (!Number.isFinite(values.sentimentSensitivity) || values.sentimentSensitivity < 1 || values.sentimentSensitivity > 10) {
+    errors.sentimentSensitivity = 'Must be 1-10';
+  }
+  if (!Number.isFinite(values.moodUpgradeThreshold) || values.moodUpgradeThreshold < 10 || values.moodUpgradeThreshold > 50) {
+    errors.moodUpgradeThreshold = 'Must be 10-50';
+  }
+  if (!Number.isFinite(values.analysisWindowSize) || values.analysisWindowSize < 50 || values.analysisWindowSize > 1000) {
+    errors.analysisWindowSize = 'Must be 50-1000';
+  }
+  if (!Number.isFinite(values.inactivityTimeout) || values.inactivityTimeout < 30 || values.inactivityTimeout > 600) {
+    errors.inactivityTimeout = 'Must be 30-600';
+  }
+  return errors;
+}
+
+// Show/hide inline validation errors using existing .setting-warning class
+function showValidationErrors(errors) {
+  Object.keys(inputs).forEach(key => {
+    if (key === 'aiSummariesEnabled') return; // Skip non-numeric toggle
+    const input = inputs[key];
+    const warningId = `${input.id}-warning`;
+    let warningEl = document.getElementById(warningId);
+    if (errors[key]) {
+      if (!warningEl) {
+        warningEl = document.createElement('span');
+        warningEl.id = warningId;
+        warningEl.className = 'setting-warning';
+        input.closest('.input-group').appendChild(warningEl);
+      }
+      warningEl.textContent = errors[key];
+      warningEl.classList.remove('hidden');
+    } else if (warningEl) {
+      warningEl.textContent = '';
+      warningEl.classList.add('hidden');
+    }
+  });
+}
+
 // Load settings from chrome.storage
 async function loadSettings() {
   try {
     const result = await chrome.storage.sync.get('settings');
     const settings = { ...DEFAULT_SETTINGS, ...result.settings };
     setInputValues(settings);
+    // Validate on load to catch corrupt stored data
+    const errors = validateInputValues(getInputValues());
+    showValidationErrors(errors);
+    document.getElementById('save-btn').disabled = Object.keys(errors).length > 0;
   } catch (error) {
     console.error('Failed to load settings:', error);
     setInputValues(DEFAULT_SETTINGS);
@@ -106,8 +160,13 @@ async function loadSettings() {
 // Save settings to chrome.storage
 async function saveSettings() {
   try {
-    const settings = getInputValues();
-    await chrome.storage.sync.set({ settings });
+    const values = getInputValues();
+    const errors = validateInputValues(values);
+    if (Object.keys(errors).length > 0) {
+      showStatus('Fix validation errors before saving', 'error');
+      return;
+    }
+    await chrome.storage.sync.set({ settings: values });
     showStatus('Settings saved!', 'success');
   } catch (error) {
     console.error('Failed to save settings:', error);
@@ -120,6 +179,8 @@ async function resetToDefaults() {
   try {
     await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
     setInputValues(DEFAULT_SETTINGS);
+    showValidationErrors({});
+    document.getElementById('save-btn').disabled = false;
     showStatus('Reset to defaults', 'success');
   } catch (error) {
     console.error('Failed to reset settings:', error);
@@ -139,11 +200,14 @@ function showStatus(message, type) {
   }, 2000);
 }
 
-// Event listeners for real-time value display updates
+// Event listeners for real-time value display updates and validation
 Object.keys(inputs).forEach(key => {
   inputs[key].addEventListener('input', () => {
-    const settings = getInputValues();
-    updateDisplays(settings);
+    const values = getInputValues();
+    updateDisplays(values);
+    const errors = validateInputValues(values);
+    showValidationErrors(errors);
+    document.getElementById('save-btn').disabled = Object.keys(errors).length > 0;
   });
 });
 
@@ -167,6 +231,8 @@ if (typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ =
     updateDisplays,
     setInputValues,
     getInputValues,
+    validateInputValues,
+    showValidationErrors,
     loadSettings,
     saveSettings,
     resetToDefaults
