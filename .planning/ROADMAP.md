@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Analysis Window** - Raise MAX_MESSAGES from 100 to 500 across all accumulation paths and expose analysisWindowSize as a user setting
 - [ ] **Phase 2: DOMPurify Integration** - Replace custom safeSetHTML with DOMPurify for robust XSS protection in the sidebar
-- [ ] **Phase 3: Configurable Thresholds** - Wire inactivityTimeout and duplicateWindow to settings and harden numeric validation
+- [x] **Phase 3: Configurable Thresholds** - Wire inactivityTimeout and duplicateWindow to settings and harden numeric validation (completed 2026-02-19)
 
 ## Phase Details
 
@@ -72,4 +72,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Analysis Window | 2/2 | Complete | 2026-02-19 |
 | 2. DOMPurify Integration | 0/2 | Not started | - |
-| 3. Configurable Thresholds | 1/2 | In Progress|  |
+| 3. Configurable Thresholds | 2/2 | Complete   | 2026-02-19 |

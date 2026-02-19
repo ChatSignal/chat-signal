@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 3 of 3 (Configurable Thresholds) — IN PROGRESS
-Plan: 1 of 2 in current phase — COMPLETE
-Status: Phase 3, Plan 1 complete. inactivityTimeout exposed as configurable setting. Plan 2 next.
-Last activity: 2026-02-19 — 03-01 complete (inactivity timeout setting + INACTIVITY_TIMEOUT constant removal)
+Phase: 3 of 3 (Configurable Thresholds) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Phase 3 complete. All 3 phases done. Number.isFinite hardening and options input validation finished.
+Last activity: 2026-02-19 — 03-02 complete (Number.isFinite guards + options.js input-time validation)
 
-Progress: [████████░░] 71%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -36,7 +36,7 @@ Progress: [████████░░] 71%
 |-------|-------|-------|----------|
 | 01-analysis-window | 2 | 3 min | 1.5 min |
 | 02-dompurify-integration | 2 | 4 min | 2 min |
-| 03-configurable-thresholds | 1/2 | 2 min | 2 min |
+| 03-configurable-thresholds | 2/2 | 4 min | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 2 min, 1 min, 1 min, 3 min, 2 min
@@ -69,6 +69,10 @@ Recent decisions affecting current work:
 - [03-01]: || 120 fallback on settings.inactivityTimeout — guards startup race before settings load
 - [03-01]: inactivityTimeout stored as seconds in settings, converted to ms at read site (* 1000) — settings are human-readable
 - [03-01]: THR-02 (duplicateWindow) confirmed pre-existing wired at both analyze_chat_with_settings call sites — no code change needed
+- [03-02]: Number.isFinite() replaces typeof x !== 'number' everywhere — typeof NaN === 'number' is true, old guards silently accepted NaN
+- [03-02]: sentimentSensitivity and moodUpgradeThreshold use undefined guard for legacy settings compatibility
+- [03-02]: validateInputValues ranges match HTML slider min/max attributes — options UI is sole source
+- [03-02]: Reuse .setting-warning CSS class for inline validation errors — no new CSS needed
 
 ### Pending Todos
 
@@ -81,5 +85,5 @@ None. (duplicateWindow wiring confirmed in 03-01 — sidebar.js lines 311 and 68
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 03-01-PLAN.md (inactivity timeout setting). Phase 3 Plan 1 complete. Ready for Phase 3 Plan 2.
+Stopped at: Completed 03-02-PLAN.md (Number.isFinite hardening + options input validation). Phase 3 complete. All phases done.
 Resume file: None

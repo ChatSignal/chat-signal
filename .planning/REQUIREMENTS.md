@@ -21,7 +21,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **THR-01**: Expose inactivity timeout setting (range 30-600s, default 120s, step 30) in options page and wire to SessionManager and sidebar inactivity detection
 - [x] **THR-02**: Fix duplicateWindow — pass `settings.duplicateWindow` to WASM `analyze_chat_with_settings()` call sites instead of hardcoded value
-- [ ] **THR-03**: Harden all numeric threshold validation with `Number.isFinite()` replacing `typeof` checks in ValidationHelpers.js and options.js
+- [x] **THR-03**: Harden all numeric threshold validation with `Number.isFinite()` replacing `typeof` checks in ValidationHelpers.js and options.js
 
 ## v2 Requirements
 
@@ -69,7 +69,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WIN-01 | Phase 1 | Complete |
 | THR-01 | Phase 3 | Complete |
 | THR-02 | Phase 3 | Complete |
-| THR-03 | Phase 3 | Pending |
+| THR-03 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 7 total
