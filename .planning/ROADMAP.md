@@ -27,7 +27,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The options page has an Analysis Window field (range 50-1000, default 500) that persists across browser restarts
   3. Changing the analysis window size in options takes effect in the sidebar without requiring extension reload
   4. All three DEFAULT_SETTINGS copies (sidebar.js, StateManager.js, options.js) agree on the default value of 500
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Add analysisWindowSize to all three DEFAULT_SETTINGS copies, wire full options pipeline (slider, time estimate, low-value warning), add ValidationHelpers validation
+- [ ] 01-02-PLAN.md — Replace MAX_MESSAGES constant with dynamic windowing in sidebar.js, add "X/N in window" stats indicator to sidebar.html and sidebar.css
 
 ### Phase 2: DOMPurify Integration
 **Goal**: All innerHTML assignments in the sidebar pass through DOMPurify, eliminating the XSS risk class from WASM-originated strings, with the old regex-based sanitizer removed
