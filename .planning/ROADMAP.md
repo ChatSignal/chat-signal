@@ -63,7 +63,10 @@ Plans:
   1. Store description copy uses approved trademark patterns (e.g., "works with YouTube" not "YouTube extension") and accurately describes all features within the character limit
   2. At least one screenshot exists at exactly 1280x800 px showing the sidebar with populated data (cluster buckets, mood indicator, and trending topics visible — not a loading or empty state)
   3. A promotional image exists at 440x280 px suitable for upload to the CWS dashboard
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 06-01-PLAN.md — Store listing copy and promotional image (440x280)
+- [ ] 06-02-PLAN.md — Automated Playwright screenshots (3x 1280x800)
 
 ### Phase 7: Verification and Submission
 **Goal**: The extension is manually verified in incognito mode, a clean submission ZIP is built and scanned, and the extension is submitted to the Chrome Web Store
@@ -83,5 +86,5 @@ Plans:
 | 3. Configurable Thresholds | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Privacy and Dashboard Compliance | 2/2 | Complete    | 2026-02-20 | - |
 | 5. Manifest Audit and Disclosure UI | 2/2 | Complete    | 2026-02-20 | - |
-| 6. Store Listing Assets | v1.1 | 0/? | Not started | - |
+| 6. Store Listing Assets | v1.1 | 0/2 | Planned | - |
 | 7. Verification and Submission | v1.1 | 0/? | Not started | - |
