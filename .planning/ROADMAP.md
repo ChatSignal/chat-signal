@@ -86,5 +86,5 @@ Plans:
 | 3. Configurable Thresholds | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Privacy and Dashboard Compliance | 2/2 | Complete    | 2026-02-20 | - |
 | 5. Manifest Audit and Disclosure UI | 2/2 | Complete    | 2026-02-20 | - |
-| 6. Store Listing Assets | 2/2 | Complete   | 2026-02-20 | - |
+| 6. Store Listing Assets | 2/2 | Complete    | 2026-02-20 | - |
 | 7. Verification and Submission | v1.1 | 0/? | Not started | - |
