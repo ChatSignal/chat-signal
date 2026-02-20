@@ -3,15 +3,15 @@ title: Privacy Policy
 permalink: /privacy-policy
 ---
 
-# Privacy Policy for Chat Signal Radar
+# Privacy Policy for Chat Signal
 
 **Last updated: February 2026**
 
-Chat Signal Radar is a Chrome extension that analyzes live chat on YouTube and Twitch. Here is a plain-English explanation of what happens with your data when you use it.
+Chat Signal is a Chrome extension that analyzes live chat on YouTube and Twitch. Here is a plain-English explanation of what happens with your data when you use it.
 
-## What Chat Signal Radar does with chat messages
+## What Chat Signal does with chat messages
 
-When you have a YouTube or Twitch stream open, Chat Signal Radar reads the live chat messages that are already visible on the page. It processes them locally in your browser to cluster questions, flag common issues, surface trending topics, and track the overall mood of chat.
+When you have a YouTube or Twitch stream open, Chat Signal reads the live chat messages that are already visible on the page. It processes them locally in your browser to cluster questions, flag common issues, surface trending topics, and track the overall mood of chat.
 
 Chat messages are processed entirely on your device. They are never sent to any server.
 
@@ -27,9 +27,9 @@ If you choose to enable AI-powered summaries, the extension downloads a language
 
 If you do not enable AI summaries, the extension makes no external network requests at all. Everything works offline.
 
-## What Chat Signal Radar does not collect
+## What Chat Signal does not collect
 
-Chat Signal Radar does not collect personal information. It does not track you across sites, run analytics, or share anything with third parties.
+Chat Signal does not collect personal information. It does not track you across sites, run analytics, or share anything with third parties.
 
 ## Changes to this policy
 
