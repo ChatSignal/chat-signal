@@ -42,6 +42,51 @@
 }
 
 /* ============================================================================
+   ENCODER PROGRESS BAR
+   ============================================================================ */
+
+.encoder-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.encoder-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.encoder-progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.encoder-progress-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.encoder-progress.fade-out {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.encoder-progress.error .encoder-progress-text {
+  color: var(--error-color);
+}
+
+/* ============================================================================
    BASE STYLES
    ============================================================================ */
 

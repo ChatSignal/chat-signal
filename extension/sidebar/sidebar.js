@@ -4,6 +4,7 @@
 import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM } from '../llm-adapter.js';
 import { saveSession, loadSessions, deleteSession, clearAllSessions } from '../storage-manager.js';
 import { safeSetHTML, DOMPURIFY_CONFIG, escapeHtml, safeCreateElement } from './utils/DOMHelpers.js';
+import { initEncoderWithRetry, scheduleEncode, getEncoderState, getBackendInfo, resetEncoder } from './encoder-adapter.js';
 
 const DEBUG = false;
 const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
@@ -85,6 +86,14 @@ const historyView = document.getElementById('history-view');
 const historyList = document.getElementById('history-list');
 const historyEmpty = document.getElementById('history-empty');
 const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+// Encoder progress bar elements
+const encoderProgress = document.getElementById('encoder-progress');
+const encoderProgressFill = document.getElementById('encoder-progress-fill');
+const encoderProgressText = document.getElementById('encoder-progress-text');
+
+// Encoder state
+let encoderReady = false;
 
 // Session tracking
 let sessionStartTime = null;
@@ -222,6 +231,85 @@ if (!isTestEnv) {
   });
 }
 
+// Initialize encoder pipeline with stage-aware progress bar
+async function initEncoderOnStartup() {
+  // Show progress bar
+  encoderProgress.classList.remove('hidden');
+
+  const onProgress = (event) => {
+    if (!event || !event.status) return;
+
+    const progress = event.progress ?? 0;
+
+    switch (event.status) {
+      case 'initiate':
+      case 'download':
+        encoderProgressText.textContent = 'Downloading model...';
+        encoderProgressFill.style.width = '0%';
+        break;
+      case 'progress':
+        encoderProgressText.textContent = 'Downloading model...';
+        encoderProgressFill.style.width = `${Math.round(progress)}%`;
+        break;
+      case 'done':
+        encoderProgressText.textContent = 'Initializing encoder...';
+        encoderProgressFill.style.width = '95%';
+        break;
+      case 'ready':
+        encoderProgressText.textContent = 'Warming up...';
+        encoderProgressFill.style.width = '99%';
+        break;
+      default:
+        break;
+    }
+  };
+
+  const onError = (message) => {
+    encoderProgress.classList.add('error');
+    encoderProgressText.textContent = message;
+
+    // Final failure: brief error display then hide and continue in WASM-only fallback
+    if (message.includes('unavailable')) {
+      setTimeout(() => {
+        encoderProgress.classList.add('fade-out');
+      }, 4000);
+      setTimeout(() => {
+        encoderProgress.classList.add('hidden');
+      }, 5000);
+      encoderReady = false;
+    }
+  };
+
+  const result = await initEncoderWithRetry(onProgress, onError);
+
+  if (result !== null) {
+    // Success — fill to 100%, fade out progress bar
+    encoderProgressFill.style.width = '100%';
+    encoderProgressText.textContent = '';
+
+    setTimeout(() => {
+      encoderProgress.classList.add('fade-out');
+    }, 500);
+    setTimeout(() => {
+      encoderProgress.classList.add('hidden');
+    }, 1300);
+
+    encoderReady = true;
+
+    // Store backend info for Settings page display
+    chrome.storage.local.set({ encoderBackend: getBackendInfo() });
+    console.log(`[Encoder] Ready, backend: ${getBackendInfo().backend}`);
+
+    // Catch-up: encode messages that arrived during the loading window
+    if (allMessages && allMessages.length > 0) {
+      console.log(`[Encoder] Catch-up: encoding ${allMessages.length} buffered messages`);
+      scheduleEncode(allMessages, (batch, embeddings) => {
+        console.log(`[Encoder] Catch-up batch encoded: ${batch.length} messages`);
+      });
+    }
+  }
+}
+
 // Initialize WASM module
 async function initWasm() {
   try {
@@ -239,6 +327,10 @@ async function initWasm() {
     await init(wasmBinaryPath);
 
     wasmModule = { cluster_messages, analyze_chat, analyze_chat_with_settings };
+
+    // Start encoder loading in background — non-blocking, does not delay WASM analysis
+    // Messages arriving before encoder is ready are processed normally by WASM keyword clustering
+    initEncoderOnStartup();
 
     // Check AI settings and show consent modal if needed
     await checkAISettings();
@@ -366,6 +458,15 @@ function processMessages(messages) {
     // Store latest analysis result for summary
     lastAnalysisResult = result;
 
+    // Gate analysis UI rendering on encoder readiness
+    // While encoder is loading, only stats update — analysis sections stay hidden
+    // When encoder errors, fall through to normal WASM rendering (fallback mode)
+    if (!encoderReady && getEncoderState() === 'loading') {
+      // Encoder still initializing — defer analysis rendering
+      // Messages continue to accumulate in allMessages for catch-up encoding
+      return;
+    }
+
     // Accumulate questions for the session summary
     const questionsBucket = result.buckets?.find(b => b.label === 'Questions');
     if (questionsBucket && questionsBucket.sample_messages) {
@@ -432,6 +533,13 @@ function processMessages(messages) {
     // Generate AI summary if enabled
     if (llmEnabled && isLLMReady() && result.buckets.length > 0) {
       generateAISummary(result.buckets);
+    }
+
+    // Feed messages to encoder batch queue for Phase 10 cosine routing
+    if (encoderReady) {
+      scheduleEncode(messages, (batch, embeddings) => {
+        console.log(`[Encoder] Batch encoded: ${batch.length} messages, ${embeddings ? embeddings.length : 0} embeddings`);
+      });
     }
 
   } catch (error) {
