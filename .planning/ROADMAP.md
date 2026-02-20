@@ -50,7 +50,10 @@ Plans:
   3. `unlimitedStorage` permission is present in manifest.json for WebLLM IndexedDB model cache
   4. Consent modal shows disk usage disclosure (approximate size and HuggingFace CDN source) before the user clicks "Enable AI"
   5. "Enable AI" button is disabled with an explanatory message when `navigator.storage.estimate()` reports insufficient available quota
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Manifest audit: version bump, unlimitedStorage, description, CSP verification and documentation
+- [ ] 05-02-PLAN.md — Consent modal disclosure UI: enhanced copy, storage availability check, button gating
 
 ### Phase 6: Store Listing Assets
 **Goal**: All required store listing assets exist and store copy complies with CWS trademark and single-purpose requirements
@@ -79,6 +82,6 @@ Plans:
 | 2. DOMPurify Integration | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 3. Configurable Thresholds | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Privacy and Dashboard Compliance | 2/2 | Complete    | 2026-02-20 | - |
-| 5. Manifest Audit and Disclosure UI | v1.1 | 0/? | Not started | - |
+| 5. Manifest Audit and Disclosure UI | v1.1 | 0/2 | Not started | - |
 | 6. Store Listing Assets | v1.1 | 0/? | Not started | - |
 | 7. Verification and Submission | v1.1 | 0/? | Not started | - |
