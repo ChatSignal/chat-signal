@@ -7,7 +7,7 @@
  * - Dark gradient background matching extension dark mode (#111827 to #1f2937, diagonal)
  * - Extension icon embedded as base64 PNG (avoids emoji font dependency in libvips)
  * - Product name "Chat Signal" in white (#f9fafb), 22px, weight 600
- * - Tagline "See what your chat is saying" in muted gray (#9ca3af), 14px
+ * - Tagline "AI-powered live chat intelligence" in muted gray (#9ca3af), 14px
  *
  * Usage:
  *   node scripts/promo-image.mjs
@@ -82,7 +82,7 @@ const svg = `<svg width="${WIDTH}" height="${HEIGHT}" xmlns="http://www.w3.org/2
     font-size="14"
     text-anchor="middle"
     fill="#9ca3af"
-  >See what your chat is saying</text>
+  >AI-powered live chat intelligence</text>
 </svg>`;
 
 // Ensure output directory exists

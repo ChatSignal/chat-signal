@@ -7,23 +7,25 @@ Copy-paste reference for Chrome Web Store dashboard. Keep in sync with actual CW
 ## ITEM SUMMARY
 
 ```
-Real-time chat analysis for streamers and moderators. Works with YouTube and Twitch live streams.
+See what live chat is really saying. AI-powered message clustering, sentiment, and trending topics. 100% local.
 ```
 
-Character count: 97 (limit: 132)
+Character count: 112 (limit: 132)
 
 ---
 
 ## ITEM DESCRIPTION
 
-Built for streamers and moderators who want to understand what their community is talking about in real time — without leaving their stream.
+See what live chat is really saying — without losing it in the scroll.
 
-Chat Signal analyzes live chat and shows you:
+Chat Signal analyzes YouTube and Twitch live chat in real-time and shows you:
 
-- **Questions from your audience** — nothing gets lost in the scroll
-- **Chat mood** — see whether your stream is excited, positive, confused, or negative
-- **Trending topics** — the words and emotes your community keeps repeating
-- **Session history** — review what your chat talked about after the stream ends
+- **Questions people are asking** — surfaced instantly so nothing gets buried
+- **Chat mood** — is the room excited, positive, confused, or frustrated?
+- **Trending topics** — the words and emotes that keep coming up
+- **Session history** — review what chat talked about after the stream ends
+
+**For creators and moderators:** Spot audience questions in real time, catch sentiment shifts early, and get an AI-generated summary of what happened during the stream.
 
 Free. No account needed. All processing happens locally in your browser — no chat data ever leaves your computer.
 

@@ -4,7 +4,7 @@ This file provides guidance for Claude Code (or any AI assistant) when working w
 
 ## Project Overview
 
-Chat Signal Radar is a Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It provides content creators with a real-time dashboard showing:
+Chat Signal Radar is a Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It provides a real-time dashboard showing:
 
 - **Message Clustering**: Questions, Issues/Bugs, Requests, and General Chat
 - **Sentiment Analysis**: Overall chat mood (excited, positive, angry, negative, confused, neutral)

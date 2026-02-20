@@ -14,7 +14,7 @@ Chat Signal Radar analyzes YouTube and Twitch live chat in real-time, clustering
 
 ### sidePanel
 
-Shows the real-time chat analysis dashboard alongside the stream page so creators can monitor chat while watching.
+Shows the real-time chat analysis dashboard alongside the stream page so users can monitor chat insights while watching.
 
 ### storage
 
