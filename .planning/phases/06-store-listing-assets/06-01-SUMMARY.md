@@ -75,7 +75,7 @@ Each task was committed atomically:
 1. **Task 1: Write store listing copy and install npm dependencies** - `c343e61` (feat)
 2. **Task 2: Create promo image generation script and generate 440x280 PNG** - `1e47bf2` (feat)
 
-**Plan metadata:** (pending final commit)
+**Plan metadata:** `793e97d` (docs: complete plan)
 
 ## Files Created/Modified
 
