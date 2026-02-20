@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
-**Current focus:** v1.2 Semantic AI Pipeline — Phase 10: Semantic Cosine Routing
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 10: Semantic Cosine Routing (complete), Phase 11: Qwen Summarization (next)
 
 ## Current Position
 
-Phase: 10 of 12 (Semantic Cosine Routing)
-Plan: 1 of 2 complete in current phase
-Status: In progress
-Last activity: 2026-02-20 — 10-01-PLAN.md complete (cosine routing config + router module + encoder durationMs timing)
+Phase: 10 of 12 (Semantic Cosine Routing) — COMPLETE
+Plan: 2 of 2 complete in current phase
+Status: Phase 10 done, advancing to Phase 11
+Last activity: 2026-02-20 — 10-02-PLAN.md complete (cosine router wired into sidebar.js, mode badge, semantic bucket rendering)
 
-Progress: [█░░░░░░░░░] ~25% (v1.2, 4/16 plans complete)
+Progress: [█░░░░░░░░░] ~31% (v1.2, 5/16 plans complete)
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Progress: [█░░░░░░░░░] ~25% (v1.2, 4/16 plans complete)
 - 08-02: ~5 min — 2 tasks, 5 files (sidebar encoder progress bar, analysis gating, settings backend info)
 - 09-01: ~2 min — 2 tasks, 3 files (GPU scheduler module, encoder-adapter wiring, sidebar event listener)
 - 10-01: ~2 min — 2 tasks, 3 files (routing-config.js, cosine-router.js, encoder-adapter durationMs)
+- 10-02: ~2 min — 2 tasks, 3 files (cosine router wired into sidebar.js, clustering mode badge, semantic bucket rendering)
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Decisions from 09-01 execution:
 - [Phase 10-semantic-cosine-routing]: Threshold 0.30 (not 0.35) for all named categories — stream chat is noisier than literature domain (support tickets)
 - [Phase 10-semantic-cosine-routing]: General Chat excluded from ROUTING_CONFIG.categories array — only listed in defaultLabel; prevents General Chat prototype from competing in argmax
 - [Phase 10-semantic-cosine-routing]: _prototypeVectors NOT cleared on setKeywordMode() — allows re-enablement via setSemanticMode() if encoder recovers without rebuilding prototypes
+- [Phase 10-02]: WASM renders clusters synchronously for immediate display; async scheduleEncode callback overwrites with cosine buckets when embeddings arrive — prevents blank display while waiting for encoder
+- [Phase 10-02]: clusters-header starts hidden and is revealed by processMessages() on first analysis render, mirroring the existing clusters section lifecycle
+- [Phase 10-02]: setKeywordMode() and badge update applied in both gpu-unavailable handler (permanent GPU loss) and slow-encoding path (WASM speed threshold exceeded) — two separate fallback triggers
 
 ### Pending Todos
 
@@ -87,5 +91,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 10-01-PLAN.md (cosine routing config + router module + encoder durationMs timing). Phase 10 Plan 1 of 2 complete.
+Stopped at: Completed 10-02-PLAN.md (cosine router wired into sidebar.js, clustering mode badge, semantic bucket rendering). Phase 10 complete (2/2 plans). Ready for Phase 11.
 Resume file: None
