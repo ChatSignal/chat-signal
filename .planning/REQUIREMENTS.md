@@ -27,10 +27,10 @@ Requirements for the Semantic AI Pipeline milestone. Each maps to roadmap phases
 
 ### SLM Upgrade
 
-- [ ] **SLM-01**: WebLLM model switched from Phi-2 to Qwen2.5-0.5B-Instruct-q4f16_1-MLC
-- [ ] **SLM-02**: Prompt format updated to Qwen ChatML template (`<|im_start|>` / `<|im_end|>`)
-- [ ] **SLM-03**: Response parser updated to handle Qwen2.5 output style (conversational preamble before structured content)
-- [ ] **SLM-04**: Pre-clustered semantic groups from encoder passed into Qwen prompts for context-aware summarization
+- [x] **SLM-01**: WebLLM model switched from Phi-2 to Qwen2.5-0.5B-Instruct-q4f16_1-MLC
+- [x] **SLM-02**: Prompt format updated to Qwen ChatML template (`<|im_start|>` / `<|im_end|>`)
+- [x] **SLM-03**: Response parser updated to handle Qwen2.5 output style (conversational preamble before structured content)
+- [x] **SLM-04**: Pre-clustered semantic groups from encoder passed into Qwen prompts for context-aware summarization
 
 ### Fallback & Integration
 
@@ -79,10 +79,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLU-02 | Phase 10 | Complete |
 | GPU-01 | Phase 9 | Complete |
 | GPU-02 | Phase 9 | Complete |
-| SLM-01 | Phase 11 | Pending |
-| SLM-02 | Phase 11 | Pending |
-| SLM-03 | Phase 11 | Pending |
-| SLM-04 | Phase 11 | Pending |
+| SLM-01 | Phase 11 | Complete |
+| SLM-02 | Phase 11 | Complete |
+| SLM-03 | Phase 11 | Complete |
+| SLM-04 | Phase 11 | Complete |
 | FBK-01 | Phase 12 | Pending |
 | FBK-02 | Phase 12 | Pending |
 | FBK-03 | Phase 12 | Pending |

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
-**Current focus:** v1.2 Semantic AI Pipeline — Phase 10: Semantic Cosine Routing (complete), Phase 11: Qwen Summarization (next)
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 11: Qwen Summarization (in progress, 1/2 plans complete)
 
 ## Current Position
 
-Phase: 10 of 12 (Semantic Cosine Routing) — COMPLETE
-Plan: 2 of 2 complete in current phase
-Status: Phase 10 done, advancing to Phase 11
-Last activity: 2026-02-20 — 10-02-PLAN.md complete (cosine router wired into sidebar.js, mode badge, semantic bucket rendering)
+Phase: 11 of 12 (Qwen SLM Swap)
+Plan: 1 of 2 complete in current phase
+Status: 11-01 complete — model swap, keyword-scan parser, fallback state. Ready for 11-02 (fallback UI).
+Last activity: 2026-02-20 — 11-01-PLAN.md complete (Qwen2.5-0.5B swap, keyword-scan parser, garbage fallback, isInFallback/retryLLM exports)
 
-Progress: [█░░░░░░░░░] ~31% (v1.2, 5/16 plans complete)
+Progress: [██░░░░░░░░] ~37% (v1.2, 6/16 plans complete)
 
 ## Performance Metrics
 
@@ -32,12 +32,13 @@ Progress: [█░░░░░░░░░] ~31% (v1.2, 5/16 plans complete)
 - 06-02: ~4 min — 2 tasks, 4 files (Playwright screenshot script + three 1280x800 PNGs)
 
 **v1.2 Velocity:**
-- Total plans completed: 4
+- Total plans completed: 6
 - 08-01: ~3 min — 2 tasks, 5 files (Transformers.js vendoring, encoder-adapter.js)
 - 08-02: ~5 min — 2 tasks, 5 files (sidebar encoder progress bar, analysis gating, settings backend info)
 - 09-01: ~2 min — 2 tasks, 3 files (GPU scheduler module, encoder-adapter wiring, sidebar event listener)
 - 10-01: ~2 min — 2 tasks, 3 files (routing-config.js, cosine-router.js, encoder-adapter durationMs)
 - 10-02: ~2 min — 2 tasks, 3 files (cosine router wired into sidebar.js, clustering mode badge, semantic bucket rendering)
+- 11-01: ~2 min — 2 tasks, 1 file (Qwen2.5-0.5B swap, keyword-scan parser, garbage fallback, isInFallback/retryLLM exports)
 
 ## Accumulated Context
 
@@ -77,6 +78,13 @@ Decisions from 09-01 execution:
 - [Phase 10-02]: clusters-header starts hidden and is revealed by processMessages() on first analysis render, mirroring the existing clusters section lifecycle
 - [Phase 10-02]: setKeywordMode() and badge update applied in both gpu-unavailable handler (permanent GPU loss) and slow-encoding path (WASM speed threshold exceeded) — two separate fallback triggers
 
+Decisions from 11-01 execution:
+- Keyword-scan parser (response.match(/MOOD:/i)) replaces line-position parser (startsWith) to handle Qwen2.5 conversational preamble
+- Garbage detection: mood=neutral AND confidence=0.5 AND summary='' identifies silent fallback result — specific sentinel values make detection unambiguous
+- _garbageCount resets to 0 only on successful parse — 2 failures must be consecutive to trigger session fallback (locked decision)
+- hasSummaryFormat() uses /\S.*:\s*\S/ pattern — permissive enough to match emoji+category lines without requiring a specific emoji regex
+- retryLLM() performs full engine reload (not state-only reset) — relies on IndexedDB cache for fast ~2-5s re-init (locked decision)
+
 ### Pending Todos
 
 None.
@@ -84,12 +92,12 @@ None.
 ### Blockers/Concerns
 
 - Phase 10 gate: cosine threshold started at 0.30 (below literature 0.35) — stream chat is noisier; needs calibration against live stream chat after Plan 02 wires routing into sidebar
-- Phase 11 gate: verify vendored `libs/web-llm/index.js` includes `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` in `prebuiltAppConfig` before coding starts
-- Phase 11 gate: Qwen2.5-0.5B structured output reliability is LOW confidence until 20+ real outputs validated
+- Phase 11 gate (CLEARED): Qwen2.5-0.5B-Instruct-q4f16_1-MLC confirmed in vendored bundle — model swap complete in 11-01
+- Phase 11: Qwen2.5-0.5B structured output reliability is LOW confidence until 20+ real outputs validated — keyword-scan parser + garbage fallback mitigate this
 - sidePanel incognito behavior is MEDIUM confidence — deferred VERIF-01 from v1.1, still pending
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 10-02-PLAN.md (cosine router wired into sidebar.js, clustering mode badge, semantic bucket rendering). Phase 10 complete (2/2 plans). Ready for Phase 11.
+Stopped at: Completed 11-01-PLAN.md (Qwen2.5-0.5B-Instruct model swap, keyword-scan parser, garbage-triggered fallback state, isInFallback/retryLLM exports). Phase 11 in progress (1/2 plans). Ready for 11-02 (fallback UI).
 Resume file: None
