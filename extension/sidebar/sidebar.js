@@ -189,6 +189,16 @@ if (!isTestEnv) {
       renderHistoryList([]);
     }
   });
+
+  // GPU scheduler: handle permanent GPU loss
+  // When the WebGPU device is lost unexpectedly, the scheduler broadcasts this event
+  // so the sidebar falls back to WASM-only mode on the next analysis cycle
+  window.addEventListener('gpu-unavailable', (event) => {
+    console.warn('[Sidebar] GPU unavailable, falling back to WASM-only mode:', event.detail);
+    encoderReady = false;
+    // Encoder will continue to function via WASM backend on next init
+    // No UI change needed — analysis gate falls through when encoderReady is false
+  });
 }
 
 const REQUIRED_BYTES = 450 * 1024 * 1024; // 450MB

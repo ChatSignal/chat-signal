@@ -2,6 +2,7 @@
 // Provides: batch encoding, WebGPU/WASM backend detection, hash cache, retry logic
 
 import { env, pipeline } from '../libs/transformers/transformers.js';
+import { scheduleGpuTask, registerDevice } from './modules/gpu-scheduler.js';
 
 // Configure ONNX WASM paths BEFORE any pipeline() call (Pitfall 2 in research)
 // Must point to vendored files via extension URL to satisfy MV3 CSP
@@ -168,9 +169,27 @@ async function initEncoder(onProgress) {
     }
 
     // Warm-up run to prime GPU/WASM JIT before first real encode
+    // Route through scheduler so warm-up counts as the first GPU task in the queue
     console.log('[Encoder] Running warm-up inference...');
-    await encoderPipeline(['warm up'], { pooling: 'mean', normalize: true });
+    await scheduleGpuTask('encoder', 1, () =>
+      encoderPipeline(['warm up'], { pooling: 'mean', normalize: true })
+    );
     console.log(`[Encoder] Warm-up complete. Backend: ${backendUsed}`);
+
+    // Register WebGPU device for loss detection (WebGPU backend only)
+    // Transformers.js manages the device internally; request a second device reference
+    // solely to attach the device.lost watcher for the scheduler
+    if (backendUsed === 'webgpu' && navigator.gpu) {
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (adapter) {
+          const device = await adapter.requestDevice();
+          registerDevice(device);
+        }
+      } catch (e) {
+        console.log('[Encoder] Could not register device for loss detection:', e);
+      }
+    }
 
     // Signal fully ready to caller
     if (onProgress) {
@@ -246,7 +265,11 @@ async function encodeMessages(messages) {
 
   if (newMessages.length > 0) {
     const texts = newMessages.map(m => m.text);
-    const output = await encoderPipeline(texts, { pooling: 'mean', normalize: true });
+    // Route GPU inference through scheduler — only the pipeline call touches the GPU;
+    // cache lookups and cache writes are CPU-only and stay outside the scheduler
+    const output = await scheduleGpuTask('encoder', 1, () =>
+      encoderPipeline(texts, { pooling: 'mean', normalize: true })
+    );
     const embeddings = output.tolist(); // number[][], shape [n, 384]
 
     newMessages.forEach((msg, i) => {
