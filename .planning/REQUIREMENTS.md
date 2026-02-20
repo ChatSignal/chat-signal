@@ -15,10 +15,10 @@ Requirements for CWS publication. Each maps to roadmap phases.
 
 ### Manifest & Permissions
 
-- [ ] **MNFST-01**: Add `unlimitedStorage` permission to manifest.json for WebLLM IndexedDB model cache (~400MB)
-- [ ] **MNFST-02**: Increment manifest version from `0.1.0` to `1.1.0` for CWS submission
-- [ ] **MNFST-03**: Audit `connect-src` CSP — remove `raw.githubusercontent.com` if unused, justify remaining HuggingFace entries
-- [ ] **MNFST-04**: Update manifest description to single-purpose framing covering all features (clustering, sentiment, topics, session history)
+- [x] **MNFST-01**: Add `unlimitedStorage` permission to manifest.json for WebLLM IndexedDB model cache (~400MB)
+- [x] **MNFST-02**: Increment manifest version from `0.1.0` to `1.1.0` for CWS submission
+- [x] **MNFST-03**: Audit `connect-src` CSP — remove `raw.githubusercontent.com` if unused, justify remaining HuggingFace entries
+- [x] **MNFST-04**: Update manifest description to single-purpose framing covering all features (clustering, sentiment, topics, session history)
 
 ### User Disclosure
 
@@ -78,10 +78,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRIV-01 | Phase 4 | Complete |
 | PRIV-02 | Phase 4 | Complete |
 | PRIV-03 | Phase 4 | Complete |
-| MNFST-01 | Phase 5 | Pending |
-| MNFST-02 | Phase 5 | Pending |
-| MNFST-03 | Phase 5 | Pending |
-| MNFST-04 | Phase 5 | Pending |
+| MNFST-01 | Phase 5 | Complete |
+| MNFST-02 | Phase 5 | Complete |
+| MNFST-03 | Phase 5 | Complete |
+| MNFST-04 | Phase 5 | Complete |
 | DISC-01 | Phase 5 | Pending |
 | DISC-02 | Phase 5 | Pending |
 | STORE-01 | Phase 6 | Pending |

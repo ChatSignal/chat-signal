@@ -21,7 +21,7 @@
 **Milestone Goal:** Prepare the extension for Chrome Web Store submission — permissions compliance, privacy policy, LLM storage warnings, and store listing assets.
 
 - [x] **Phase 4: Privacy and Dashboard Compliance** - Write and host privacy policy; complete all CWS dashboard fields (completed 2026-02-20)
-- [ ] **Phase 5: Manifest Audit and Disclosure UI** - Audit manifest permissions and CSP; add disk space warning to WebLLM consent modal
+- [x] **Phase 5: Manifest Audit and Disclosure UI** - Audit manifest permissions and CSP; add disk space warning to WebLLM consent modal (completed 2026-02-20)
 - [ ] **Phase 6: Store Listing Assets** - Create screenshots, promotional image, and trademark-compliant store copy
 - [ ] **Phase 7: Verification and Submission** - Verify incognito behavior; build clean ZIP; submit to CWS
 
@@ -50,7 +50,7 @@ Plans:
   3. `unlimitedStorage` permission is present in manifest.json for WebLLM IndexedDB model cache
   4. Consent modal shows disk usage disclosure (approximate size and HuggingFace CDN source) before the user clicks "Enable AI"
   5. "Enable AI" button is disabled with an explanatory message when `navigator.storage.estimate()` reports insufficient available quota
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 05-01-PLAN.md — Manifest audit: version bump, unlimitedStorage, description, CSP verification and documentation
 - [ ] 05-02-PLAN.md — Consent modal disclosure UI: enhanced copy, storage availability check, button gating
@@ -82,6 +82,6 @@ Plans:
 | 2. DOMPurify Integration | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 3. Configurable Thresholds | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Privacy and Dashboard Compliance | 2/2 | Complete    | 2026-02-20 | - |
-| 5. Manifest Audit and Disclosure UI | v1.1 | 0/2 | Not started | - |
+| 5. Manifest Audit and Disclosure UI | 2/2 | Complete   | 2026-02-20 | - |
 | 6. Store Listing Assets | v1.1 | 0/? | Not started | - |
 | 7. Verification and Submission | v1.1 | 0/? | Not started | - |
