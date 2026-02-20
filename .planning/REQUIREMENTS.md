@@ -22,8 +22,8 @@ Requirements for CWS publication. Each maps to roadmap phases.
 
 ### User Disclosure
 
-- [ ] **DISC-01**: Disk space warning shown before WebLLM model download using `navigator.storage.estimate()` — disable "Enable AI" button if insufficient space (~450MB needed)
-- [ ] **DISC-02**: Consent modal discloses persistent disk usage and download source (HuggingFace CDN)
+- [x] **DISC-01**: Disk space warning shown before WebLLM model download using `navigator.storage.estimate()` — disable "Enable AI" button if insufficient space (~450MB needed)
+- [x] **DISC-02**: Consent modal discloses persistent disk usage and download source (HuggingFace CDN)
 
 ### Store Listing
 
@@ -82,8 +82,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MNFST-02 | Phase 5 | Complete |
 | MNFST-03 | Phase 5 | Complete |
 | MNFST-04 | Phase 5 | Complete |
-| DISC-01 | Phase 5 | Pending |
-| DISC-02 | Phase 5 | Pending |
+| DISC-01 | Phase 5 | Complete |
+| DISC-02 | Phase 5 | Complete |
 | STORE-01 | Phase 6 | Pending |
 | STORE-02 | Phase 6 | Pending |
 | STORE-03 | Phase 6 | Pending |

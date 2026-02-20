@@ -28,6 +28,7 @@ Progress: [████░░░░░░] ~40% (v1.1 phases — Phase 5 in prog
 
 **v1.1 Phase 5 Metrics:**
 - 05-01: ~1 min — 2 tasks, 2 files (manifest audit, CSP rationale)
+- 05-02: ~2 min — 2 tasks, 3 files (consent modal disclosure, storage check)
 
 ## Accumulated Context
 
@@ -47,6 +48,9 @@ Recent decisions affecting current work:
 - [Phase 04-02]: Product name is "Chat Signal" (not "Chat Signal Radar") — privacy policy renders correctly under this name, use consistently in CWS dashboard
 - [Phase 05-01]: raw.githubusercontent.com CSP entry retained — grep-confirmed used by WebLLM modelLibURLPrefix at libs/web-llm/index.js
 - [Phase 05-01]: unlimitedStorage permission added to manifest (was documented but missing); Phase 5 placeholder note removed from cws-justifications.md
+- [Phase 05-02]: 450MB threshold for storage check (model + IndexedDB overhead); navigator.storage.estimate() unavailable -> allow attempt gracefully
+- [Phase 05-02]: Storage check awaited before modal display to prevent race condition on Enable AI button click
+- [Phase 05-02]: Actual storage estimate value NOT shown in modal text — only static ~450MB requirement stated
 
 ### Pending Todos
 
@@ -61,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 05-01-PLAN.md — manifest v1.1.0, unlimitedStorage, updated description, CSP rationale documented. Proceed to 05-02 (disk space warning in consent modal).
+Stopped at: Completed 05-02-PLAN.md — consent modal disclosure (HuggingFace, persistent storage, local-only), storage availability check gating Enable AI button. Proceed to 05-03.
 Resume file: None
