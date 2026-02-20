@@ -16,12 +16,18 @@ Chat Signal Radar is a Chrome extension that analyzes YouTube and Twitch live ch
 Content Script → Background Worker → Sidebar UI → WASM Engine
 (DOM observer)    (message relay)    (display)    (analysis)
                                          ↓
+                                    Encoder Adapter
+                                  (MiniLM via Transformers.js)
+                                         ↓
+                                    Cosine Router
+                                  (semantic clustering)
+                                         ↓
                                     LLM Adapter
                                   (WebLLM/fallback)
 ```
 
 - **wasm-engine/**: Rust WASM analysis engine
-  - Message clustering (keyword-based)
+  - Message clustering (keyword-based, used as fallback)
   - Topic extraction (with stop word filtering)
   - Sentiment signal analysis (lexicon-based)
 - **extension/**: Chrome Extension (Manifest V3)
@@ -29,6 +35,9 @@ Content Script → Background Worker → Sidebar UI → WASM Engine
   - `background.js`: Service worker for message relay
   - `llm-adapter.js`: WebLLM integration with fallback summarizer
   - `sidebar/`: UI components (HTML, JS, CSS with system theme support)
+    - `encoder-adapter.js`: MiniLM encoder via Transformers.js (WebGPU with WASM fallback)
+    - `cosine-router.js`: Cosine similarity classification into 4 buckets
+    - `routing-config.js`: Seed phrases, per-category thresholds, tuning config
   - `libs/web-llm/`: Bundled WebLLM library (optional, for AI summaries)
   - `wasm/`: Generated WASM artifacts (git-ignored)
 - **docs/**: GitHub Pages site (privacy policy, CWS compliance docs, store assets)
@@ -74,6 +83,9 @@ There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 - `extension/content-script.js`: Platform-specific chat extraction (YouTube/Twitch selectors)
 - `extension/llm-adapter.js`: WebLLM integration for AI-powered sentiment analysis
 - `extension/sidebar/sidebar.js`: Main entry point, WASM loading, UI event handling
+- `extension/sidebar/encoder-adapter.js`: MiniLM encoder pipeline (WebGPU/WASM backends, batched queue)
+- `extension/sidebar/cosine-router.js`: Prototype vector computation, per-message cosine classification, mode state
+- `extension/sidebar/routing-config.js`: Seed phrases per category, per-category thresholds, tuning constants
 - `extension/sidebar/modules/`: Modular components
   - `SessionManager.js`: Session lifecycle, inactivity detection, persistence
   - `StateManager.js`: Application state management and data accumulation
@@ -158,15 +170,24 @@ Messages (from content script)
 analyze_chat() [WASM]
     ↓
 AnalysisResult {
-  buckets: ClusterBucket[],
-  topics: TopicEntry[],
-  sentiment_signals: SentimentSignals
+  buckets: ClusterBucket[],       ← keyword-based (fallback)
+  topics: TopicEntry[],           ← always active
+  sentiment_signals: SentimentSignals  ← always active
 }
+    ↓
+Encoder Adapter (if ready)
+    ↓
+MiniLM embeddings (384-dim, L2-normalized)
+    ↓
+Cosine Router (if semantic mode active)
+    ↓
+Overrides bucket assignments with cosine-classified buckets
     ↓
 Sidebar renders:
   - Mood indicator (with optional LLM enhancement)
   - Trending topics cloud
-  - Cluster buckets
+  - Cluster buckets (semantic or keyword)
+  - "Semantic"/"Keyword" badge
   - AI summary (optional)
 ```
 
@@ -255,6 +276,11 @@ await resetLLM();  // Cleanup
 - [x] **Manifest Audit**: Version bump to 1.1.0, unlimitedStorage, CSP audit, disk space warning in consent modal
 - [x] **Store Listing Assets**: Three 1280x800 screenshots, 440x280 promotional image, trademark-compliant store copy
 
+### Shipped (v2.0 — Semantic AI Pipeline)
+- [x] **MiniLM Encoder**: In-browser embedding via Transformers.js (WebGPU with WASM fallback)
+- [x] **GPU Scheduler**: Promise-chain mutex for single-pipeline GPU access
+- [x] **Semantic Cosine Routing**: Messages classified by cosine similarity to prototype vectors, with per-category thresholds and automatic fallback to keyword mode
+
 ### Not Yet Started
 - [ ] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission
 
@@ -269,7 +295,7 @@ await resetLLM();  // Cleanup
 
 ### Future Ideas
 - User-configurable sentiment keywords
-- Embedding-based semantic clustering (beyond keyword matching)
+- Threshold calibration for semantic clustering per-category
 - Moderator-specific features (flagging, quick actions)
 - Multi-stream monitoring
 - API/webhook integration for external tools

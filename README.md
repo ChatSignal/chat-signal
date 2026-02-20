@@ -5,6 +5,7 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 ## ✨ Features
 
 - **Message Clustering**: Automatically categorizes messages into Questions, Issues/Bugs, Requests, and General Chat
+- **Semantic Clustering**: When GPU is available, messages are classified by cosine similarity to prototype vectors using MiniLM embeddings — falls back silently to keyword matching
 - **Sentiment Analysis**: Real-time mood indicator showing chat sentiment (excited, positive, angry, negative, confused, neutral)
 - **Trending Topics**: Word cloud of frequently mentioned terms, with special highlighting for emotes
 - **Session History**: Save and review past session summaries with full sentiment breakdown and captured questions
@@ -15,9 +16,13 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 ## 🏗️ Architecture
 
 - **Rust WASM Engine** (`wasm-engine/`): High-performance analysis compiled to WebAssembly
-  - Message clustering
+  - Message clustering (keyword-based fallback)
   - Topic extraction with stop-word filtering
   - Sentiment signal analysis
+- **Semantic AI Pipeline** (`extension/sidebar/`): In-browser ML for smarter clustering
+  - MiniLM encoder via Transformers.js (WebGPU with WASM fallback)
+  - Cosine similarity routing to prototype vectors per category
+  - Automatic mode switching with "Semantic"/"Keyword" badge
 - **Chrome Extension** (`extension/`): Manifest V3 extension with sidebar UI
   - Real-time chat observation
   - Mood indicator with theme-aware display
@@ -78,6 +83,9 @@ chat-signal-radar/
 │   │   ├── sidebar.html   # Dashboard UI
 │   │   ├── sidebar.css    # Styling (light/dark theme support)
 │   │   ├── sidebar.js     # Main entry point, WASM loading
+│   │   ├── encoder-adapter.js    # MiniLM encoder (WebGPU/WASM)
+│   │   ├── cosine-router.js      # Semantic cosine classification
+│   │   ├── routing-config.js     # Seed phrases & thresholds
 │   │   ├── modules/       # Modular components
 │   │   │   ├── SessionManager.js  # Session lifecycle & persistence
 │   │   │   └── StateManager.js    # Application state management
@@ -182,14 +190,18 @@ npm run test:js
 2. Batches messages every 5 seconds
 3. Sends batch to **Sidebar** via `chrome.runtime`
 4. **WASM engine** runs combined analysis:
-   - Clusters messages by type
+   - Clusters messages by type (keyword-based)
    - Extracts trending topics (5+ mentions)
    - Computes sentiment signals
-5. **LLM Adapter** optionally enhances sentiment with WebLLM
-6. **Sidebar UI** displays:
+5. **Semantic pipeline** (when encoder is ready) overrides cluster assignments:
+   - MiniLM encodes messages into 384-dim embeddings
+   - Cosine similarity routes each message to the nearest prototype vector
+   - Badge shows "Semantic" or "Keyword" to indicate active mode
+6. **LLM Adapter** optionally enhances sentiment with WebLLM
+7. **Sidebar UI** displays:
    - Mood indicator (emoji + label + confidence)
    - Trending topics word cloud
-   - Categorized message clusters
+   - Categorized message clusters (semantic or keyword)
    - AI summary (if LLM available)
 
 ## 🎭 Sentiment Moods
@@ -223,4 +235,4 @@ PRs welcome! Some ideas for future improvements:
 - Additional streaming platforms
 - Historical trend graphs
 - Export/share functionality
-- Embedding-based semantic clustering
+- Threshold calibration for semantic clustering per-category

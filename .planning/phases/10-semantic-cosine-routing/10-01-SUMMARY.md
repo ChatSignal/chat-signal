@@ -108,6 +108,14 @@ None - no external service configuration required.
 - `encoder-adapter.js` now provides `durationMs` for the speed-threshold fallback logic Plan 02 will implement
 - Plan 02 will add: badge DOM element in sidebar.html, badge CSS in sidebar.css, `buildPrototypes()` call after encoder ready, `classifyBatch()` in scheduleEncode callback, and gpu-unavailable handler updates
 
+## Self-Check: PASSED
+
+- FOUND: extension/sidebar/routing-config.js
+- FOUND: extension/sidebar/cosine-router.js
+- FOUND: .planning/phases/10-semantic-cosine-routing/10-01-SUMMARY.md
+- FOUND: commit fe87e50 (Task 1)
+- FOUND: commit cbb9e6e (Task 2)
+
 ---
 *Phase: 10-semantic-cosine-routing*
 *Completed: 2026-02-20*
