@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It clusters messages (questions, issues, requests, general), tracks sentiment with 6 moods, detects trending topics, and provides session summaries. Users can configure analysis window size, inactivity timeout, and other thresholds through the options page. All DOM output is sanitized via DOMPurify.
+A Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It clusters messages (questions, issues, requests, general), tracks sentiment with 6 moods, detects trending topics, and provides session summaries. Users can configure analysis window size, inactivity timeout, and other thresholds through the options page. All DOM output is sanitized via DOMPurify. The extension is CWS-ready with a hosted privacy policy, permission justifications, disk space disclosure for WebLLM, and automated store listing asset generation.
 
 ## Core Value
 
@@ -28,14 +28,18 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 - ✓ duplicateWindow wired to WASM engine from user settings — v1.0
 - ✓ Number.isFinite() validation on all numeric thresholds — v1.0
 - ✓ Input-time validation with save-blocking on options page — v1.0
+- ✓ Privacy policy hosted at chatsignal.dev/privacy-policy via GitHub Pages — v1.1
+- ✓ CWS dashboard permission justifications for all manifest permissions — v1.1
+- ✓ Manifest v1.1.0 with unlimitedStorage, audited CSP, single-purpose description — v1.1
+- ✓ Consent modal with HuggingFace disclosure and storage availability gating — v1.1
+- ✓ Store listing copy with approved trademark patterns — v1.1
+- ✓ Three 1280x800 screenshots + 440x280 promo image via automated scripts — v1.1
 
 ### Active
 
-- [ ] Permission justification and manifest review for CWS compliance
-- [ ] Disk space warnings before WebLLM model download (~400MB)
-- [ ] Privacy policy hosted on a public URL
-- [ ] Store listing screenshots (1280x800 or 640x400)
 - [ ] Incognito mode verification (chrome.storage, sidePanel, WASM)
+- [ ] Clean extension ZIP built and scanned with CRXcavator
+- [ ] Chrome Web Store submission
 
 ### Out of Scope
 
@@ -43,7 +47,6 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 - Platform expansion (Kick, Rumble) — candidate for next milestone
 - Alerts on sentiment spikes — candidate for next milestone
 - Historical trend graphs — candidate for next milestone
-- Chrome Web Store publication — NOW IN SCOPE for v1.1
 - Per-category sentiment sensitivity — high complexity, low payoff
 - Custom sentiment keyword lists — requires Rust changes, 5-10x complexity
 - Per-channel settings — storage namespace complexity
@@ -51,20 +54,22 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 
 ## Context
 
-- Shipped v1.0 milestone: 3 phases, 7 plans, 33 files changed
+- Shipped v1.0: 3 phases, 7 plans — analysis window, DOMPurify, configurable thresholds
+- Shipped v1.1: 3 phases (4-6), 6 plans — privacy policy, manifest audit, consent modal, store assets
+- Known gap: Phase 7 (verification + submission) deferred — VERIF-01, VERIF-02 pending
 - Codebase: ~18,500 LOC (JS/HTML/CSS) + 913 LOC (Rust), 18 unit tests
 - Tech stack: Rust/WASM + vanilla JS Chrome extension (MV3)
+- Dev dependencies added in v1.1: Playwright (screenshots), sharp (image generation)
 - DOMPurify 3.3.1 vendored at `extension/libs/dompurify/purify.min.js`
-- Analysis window configurable 50-1000 (default 500), up from hardcoded 100
-- All numeric validation uses Number.isFinite() — no typeof-number checks remaining
+- Privacy policy live at https://chatsignal.dev/privacy-policy
+- Store assets in `docs/store/` — 3 screenshots + promo image, regenerable via scripts
 - Three copies of DEFAULT_SETTINGS exist (sidebar.js, StateManager.js, options.js) — known debt
-- Options page has input-time validation that blocks save on invalid values
+- sidePanel incognito behavior is medium confidence — manual test is the verification source of truth
 
 ## Constraints
 
 - **Tech stack**: Rust/WASM + vanilla JS Chrome extension (MV3) — no framework changes
-- **Extension size**: DOMPurify (~60KB) acceptable; no other new dependencies
-- **Scope**: Preparing for Chrome Web Store submission
+- **Extension size**: DOMPurify (~60KB) acceptable; Playwright/sharp are devDependencies only
 - **Testing**: Rust unit tests must pass; existing test coverage maintained
 
 ## Key Decisions
@@ -78,17 +83,12 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 | 2x buffer cap on allMessages | Retains history for smooth window expansion without unbounded memory | ✓ Good — predictable memory usage |
 | DOMPurify as synchronous script tag | Must be available before ES module executes | ✓ Good — fail-fast if missing |
 | Input-time validation with save-blocking | Prevents invalid settings from persisting to storage | ✓ Good — immediate user feedback |
-
-## Current Milestone: v1.1 CWS Readiness
-
-**Goal:** Prepare the extension for Chrome Web Store submission — permissions compliance, privacy policy, LLM storage warnings, and store listing assets.
-
-**Target features:**
-- CWS-compliant manifest with permission justifications
-- Disk space warnings for WebLLM model download
-- Hosted privacy policy
-- Store listing screenshots
-- Incognito mode verification
+| GitHub Pages for privacy policy | Free, permanent HTTPS, no third-party branding | ✓ Good — live at chatsignal.dev |
+| navigator.storage.estimate() for disk check | No new manifest permission vs chrome.system.storage | ✓ Good — gating works without extra permissions |
+| Include WebLLM in CWS submission | Users opted in via consent modal; unlimitedStorage justifiable | ✓ Good — disclosed and gated |
+| Product name "Chat Signal" | Avoids platform trademarks in name | ✓ Good — CWS compliant |
+| Base64 icon embed in promo SVG | libvips/sharp has no emoji font on Linux | ✓ Good — cross-platform reproducible |
+| Playwright screenshots with chrome API stubs | Renders real sidebar.html without live extension context | ✓ Good — automated, reproducible |
 
 ---
-*Last updated: 2026-02-19 after v1.1 milestone start*
+*Last updated: 2026-02-20 after v1.1 milestone*
