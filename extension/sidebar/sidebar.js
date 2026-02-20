@@ -182,6 +182,26 @@ if (!isTestEnv) {
     statusText.textContent = 'Ready! Waiting for chat messages...';
   });
 
+  // Retry AI button: re-initialize the LLM engine after entering fallback mode
+  if (retryAiBtn) {
+    retryAiBtn.addEventListener('click', async () => {
+      if (fallbackNotice) fallbackNotice.classList.add('hidden');
+      statusText.textContent = 'Reloading AI model...';
+      try {
+        await retryLLM((progress) => {
+          statusText.textContent = `Loading AI: ${Math.round(progress.progress * 100)}%`;
+        });
+        llmEnabled = true;
+        statusText.textContent = 'Ready! Waiting for chat messages...';
+      } catch (error) {
+        console.warn('[Sidebar] AI retry failed:', error);
+        llmEnabled = false;
+        statusText.textContent = 'Ready! Waiting for chat messages...';
+      }
+      updateFallbackNotice();
+    });
+  }
+
   // Stream ended prompt handlers
   saveSessionBtn.addEventListener('click', async () => {
     streamEndedPrompt.classList.add('hidden');
@@ -713,6 +733,7 @@ async function updateMoodIndicator(messages, sentimentSignals, currentSettings) 
       console.warn('[Sidebar] LLM sentiment failed, using fallback:', error);
       sentimentResult = computeFallbackSentiment(sentimentSignals, currentSettings);
     }
+    updateFallbackNotice();
   } else {
     // Use rule-based fallback
     sentimentResult = computeFallbackSentiment(sentimentSignals, currentSettings);
@@ -778,6 +799,16 @@ function updateSentimentSamples(mood, signals) {
   `, DOMPURIFY_CONFIG);
 }
 
+// Show or hide the fallback notice based on current isInFallback() state
+function updateFallbackNotice() {
+  if (!fallbackNotice) return;
+  if (isInFallback()) {
+    fallbackNotice.classList.remove('hidden');
+  } else {
+    fallbackNotice.classList.add('hidden');
+  }
+}
+
 // Generate AI summary from buckets
 async function generateAISummary(buckets) {
   try {
@@ -803,9 +834,12 @@ async function generateAISummary(buckets) {
       aiSummaryText.textContent = summary.summary;
     }
 
+    updateFallbackNotice();
+
   } catch (error) {
     console.error('[Sidebar] AI summary failed:', error);
     aiSummaryDiv.classList.add('hidden');
+    updateFallbackNotice();
   }
 }
 
@@ -1166,6 +1200,7 @@ function startNewSession() {
   moodSection.classList.add('hidden');
   topicsSection.classList.add('hidden');
   aiSummaryDiv.classList.add('hidden');
+  if (fallbackNotice) fallbackNotice.classList.add('hidden');
   clustersDiv.innerHTML = '';
   if (clustersHeader) clustersHeader.classList.add('hidden');
   firstRunDiv.classList.remove('hidden');
@@ -1270,6 +1305,9 @@ function switchToView(view) {
     } else {
       firstRunDiv.classList.remove('hidden');
     }
+
+    // Restore fallback notice to correct state when returning to live view
+    updateFallbackNotice();
   } else if (view === 'history') {
     historyTab.classList.add('active');
     liveTab.classList.remove('active');
@@ -1284,6 +1322,7 @@ function switchToView(view) {
     if (clustersHeader) clustersHeader.classList.add('hidden');
     firstRunDiv.classList.add('hidden');
     aiSummaryDiv.classList.add('hidden');
+    if (fallbackNotice) fallbackNotice.classList.add('hidden');
 
     // Load and render history
     loadAndRenderHistory();
