@@ -30,8 +30,8 @@ async function initializeLLM(progressCallback = null) {
       // Try to load bundled WebLLM
       const { CreateMLCEngine } = await import(webllmPath);
 
-      // Initialize with small model (Phi-2 or Llama-3.2-1B)
-      engine = await CreateMLCEngine('Phi-2-q4f16_1-MLC', {
+      // Initialize with small model (Qwen2.5-0.5B-Instruct)
+      engine = await CreateMLCEngine('Qwen2.5-0.5B-Instruct-q4f16_1-MLC', {
         initProgressCallback: (report) => {
           if (progressCallback) {
             progressCallback({
@@ -171,7 +171,7 @@ async function summarizeBuckets(buckets) {
       messages: [
         {
           role: 'system',
-          content: 'You are analyzing live stream chat. Provide a brief summary as a simple list with one line per category. Format: "emoji Category: insight". Use emojis: ❓ Questions, 🐛 Issues, 🙏 Requests, 💬 General. Be specific and actionable. Max 4 lines.'
+          content: 'You are a neutral chat analyst. Analyze the provided pre-classified chat groups. Be factual and concise. Provide one line per category with an emoji. Format: emoji Category: insight. Max 4 lines.'
         },
         {
           role: 'user',
@@ -205,17 +205,17 @@ async function summarizeBuckets(buckets) {
  * Build prompt from cluster buckets
  */
 function buildSummaryPrompt(buckets) {
-  let prompt = 'Analyze these chat message clusters:\n\n';
+  let prompt = 'Analyze these pre-classified live stream chat groups:\n\n';
 
   buckets.forEach((bucket, index) => {
-    prompt += `${index + 1}. ${bucket.label} (${bucket.count} messages):\n`;
-    bucket.sample_messages.slice(0, 2).forEach(msg => {
+    prompt += `${index + 1}. ${bucket.label} (${bucket.count} messages classified as ${bucket.label}):\n`;
+    bucket.sample_messages.slice(0, 3).forEach(msg => {
       prompt += `   - "${msg}"\n`;
     });
     prompt += '\n';
   });
 
-  prompt += 'Summary:';
+  prompt += 'Provide one line per category with an emoji. Max 4 lines.\nFormat: emoji Category: brief insight';
   return prompt;
 }
 
