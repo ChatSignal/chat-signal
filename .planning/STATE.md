@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — large analysis windows, robust DOM sanitization, and user-tunable thresholds make the tool reliable across different stream sizes.
-**Current focus:** v1.1 CWS Readiness — Phase 5: CWS Dashboard and Manifest Audit
+**Current focus:** v1.1 CWS Readiness — Phase 6: Store Listing Assets
 
 ## Current Position
 
-Phase: 5 of 7 (CWS Dashboard and Manifest Audit)
-Plan: 2 of N complete in current phase
-Status: In progress — 05-02 complete (HuggingFace disclosure + storage availability check in consent modal), proceeding to 05-03
-Last activity: 2026-02-20 — Completed 05-02: consent modal disclosure (HuggingFace, persistent storage, local-only), navigator.storage.estimate() gating Enable AI button
+Phase: 6 of 7 (Store Listing Assets)
+Plan: 1 of 2 complete in current phase
+Status: In progress — 06-01 complete (CWS store listing copy + 440x280 promo image), proceeding to 06-02
+Last activity: 2026-02-20 — Completed 06-01: CWS-compliant store listing copy (97-char summary, audience-first description), 440x280 promo image via sharp SVG pipeline
 
-Progress: [████░░░░░░] ~40% (v1.1 phases — Phase 5 in progress, 05-01 and 05-02 complete)
+Progress: [█████░░░░░] ~55% (v1.1 phases — Phase 6 in progress, 06-01 complete)
 
 ## Performance Metrics
 
@@ -29,6 +29,9 @@ Progress: [████░░░░░░] ~40% (v1.1 phases — Phase 5 in prog
 **v1.1 Phase 5 Metrics:**
 - 05-01: ~1 min — 2 tasks, 2 files (manifest audit, CSP rationale)
 - 05-02: ~2 min — 2 tasks, 3 files (consent modal disclosure, storage check)
+
+**v1.1 Phase 6 Metrics:**
+- 06-01: ~2 min — 2 tasks, 4 files (store listing copy, promo image, npm deps)
 
 ## Accumulated Context
 
@@ -51,6 +54,10 @@ Recent decisions affecting current work:
 - [Phase 05-02]: 450MB threshold for storage check (model + IndexedDB overhead); navigator.storage.estimate() unavailable -> allow attempt gracefully
 - [Phase 05-02]: Storage check awaited before modal display to prevent race condition on Enable AI button click
 - [Phase 05-02]: Actual storage estimate value NOT shown in modal text — only static ~450MB requirement stated
+- [Phase 06-01]: Embed extension icon as base64 PNG in SVG (not emoji text) — libvips/sharp has no emoji font on Linux
+- [Phase 06-01]: No platform logos in promo image — Chat Signal branding only, avoids trademark issues entirely
+- [Phase 06-01]: Item summary is 97 chars: "Real-time chat analysis for streamers and moderators. Works with YouTube and Twitch live streams."
+- [Phase 06-01]: playwright and sharp installed here (plan 06-01) since both needed in 06-02 screenshots plan
 
 ### Pending Todos
 
@@ -65,5 +72,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 05-02-PLAN.md — consent modal disclosure (HuggingFace, persistent storage, local-only), storage availability check gating Enable AI button. Proceed to 05-03.
+Stopped at: Completed 06-01-PLAN.md — CWS store listing copy (97-char summary, audience-first description with trust signals), 440x280 promo image via sharp SVG pipeline with base64 icon embed. Proceed to 06-02.
 Resume file: None
