@@ -123,7 +123,7 @@ Plans:
 | 6. Store Listing Assets | v1.1 | 2/2 | Complete | 2026-02-20 |
 | 7. Verification and Submission | v1.1 | 0/? | Deferred | - |
 | 8. Encoder Foundation | 2/2 | Complete   | 2026-02-20 | - |
-| 9. GPU Scheduler | 1/1 | Complete   | 2026-02-20 | - |
+| 9. GPU Scheduler | 1/1 | Complete    | 2026-02-20 | - |
 | 10. Semantic Cosine Routing | v1.2 | 0/? | Not started | - |
 | 11. Qwen SLM Swap | v1.2 | 0/? | Not started | - |
 | 12. Integration and Hardening | v1.2 | 0/? | Not started | - |
