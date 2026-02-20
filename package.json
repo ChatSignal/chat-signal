@@ -4,5 +4,9 @@
   "type": "module",
   "scripts": {
     "test:js": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2",
+    "sharp": "^0.34.5"
   }
 }
