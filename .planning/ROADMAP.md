@@ -20,7 +20,7 @@
 
 **Milestone Goal:** Prepare the extension for Chrome Web Store submission — permissions compliance, privacy policy, LLM storage warnings, and store listing assets.
 
-- [ ] **Phase 4: Privacy and Dashboard Compliance** - Write and host privacy policy; complete all CWS dashboard fields
+- [x] **Phase 4: Privacy and Dashboard Compliance** - Write and host privacy policy; complete all CWS dashboard fields (completed 2026-02-20)
 - [ ] **Phase 5: Manifest Audit and Disclosure UI** - Audit manifest permissions and CSP; add disk space warning to WebLLM consent modal
 - [ ] **Phase 6: Store Listing Assets** - Create screenshots, promotional image, and trademark-compliant store copy
 - [ ] **Phase 7: Verification and Submission** - Verify incognito behavior; build clean ZIP; submit to CWS
@@ -35,7 +35,7 @@
   1. Privacy policy is reachable at a public HTTPS URL (GitHub Pages) and accurately discloses chat DOM reading, chrome.storage.local usage, optional HuggingFace model download, and no external server transmission
   2. CWS dashboard Privacy Practices tab has per-permission justifications written for sidePanel, storage, unlimitedStorage, and host_permissions (YouTube, Twitch)
   3. CWS dashboard data usage certification checkboxes for "Website content" and "Browsing activity" are checked and submitted
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 04-01-PLAN.md — Write privacy policy, CNAME, and CWS justifications doc
 - [ ] 04-02-PLAN.md — Configure GitHub Pages hosting and verify live URL
@@ -78,7 +78,7 @@ Plans:
 | 1. Analysis Window | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 2. DOMPurify Integration | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 3. Configurable Thresholds | v1.0 | 3/3 | Complete | 2026-02-19 |
-| 4. Privacy and Dashboard Compliance | 1/2 | In Progress|  | - |
+| 4. Privacy and Dashboard Compliance | 2/2 | Complete   | 2026-02-20 | - |
 | 5. Manifest Audit and Disclosure UI | v1.1 | 0/? | Not started | - |
 | 6. Store Listing Assets | v1.1 | 0/? | Not started | - |
 | 7. Verification and Submission | v1.1 | 0/? | Not started | - |
