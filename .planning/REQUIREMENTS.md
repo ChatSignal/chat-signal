@@ -75,26 +75,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRIV-01 | - | Pending |
-| PRIV-02 | - | Pending |
-| PRIV-03 | - | Pending |
-| MNFST-01 | - | Pending |
-| MNFST-02 | - | Pending |
-| MNFST-03 | - | Pending |
-| MNFST-04 | - | Pending |
-| DISC-01 | - | Pending |
-| DISC-02 | - | Pending |
-| STORE-01 | - | Pending |
-| STORE-02 | - | Pending |
-| STORE-03 | - | Pending |
-| VERIF-01 | - | Pending |
-| VERIF-02 | - | Pending |
+| PRIV-01 | Phase 4 | Pending |
+| PRIV-02 | Phase 4 | Pending |
+| PRIV-03 | Phase 4 | Pending |
+| MNFST-01 | Phase 5 | Pending |
+| MNFST-02 | Phase 5 | Pending |
+| MNFST-03 | Phase 5 | Pending |
+| MNFST-04 | Phase 5 | Pending |
+| DISC-01 | Phase 5 | Pending |
+| DISC-02 | Phase 5 | Pending |
+| STORE-01 | Phase 6 | Pending |
+| STORE-02 | Phase 6 | Pending |
+| STORE-03 | Phase 6 | Pending |
+| VERIF-01 | Phase 7 | Pending |
+| VERIF-02 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
