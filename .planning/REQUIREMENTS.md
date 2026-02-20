@@ -70,28 +70,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENC-01 | — | Pending |
-| ENC-02 | — | Pending |
-| ENC-03 | — | Pending |
-| ENC-04 | — | Pending |
-| ENC-05 | — | Pending |
-| CLU-01 | — | Pending |
-| CLU-02 | — | Pending |
-| GPU-01 | — | Pending |
-| GPU-02 | — | Pending |
-| SLM-01 | — | Pending |
-| SLM-02 | — | Pending |
-| SLM-03 | — | Pending |
-| SLM-04 | — | Pending |
-| FBK-01 | — | Pending |
-| FBK-02 | — | Pending |
-| FBK-03 | — | Pending |
+| ENC-01 | Phase 8 | Pending |
+| ENC-02 | Phase 8 | Pending |
+| ENC-03 | Phase 8 | Pending |
+| ENC-04 | Phase 8 | Pending |
+| ENC-05 | Phase 8 | Pending |
+| CLU-01 | Phase 10 | Pending |
+| CLU-02 | Phase 10 | Pending |
+| GPU-01 | Phase 9 | Pending |
+| GPU-02 | Phase 9 | Pending |
+| SLM-01 | Phase 11 | Pending |
+| SLM-02 | Phase 11 | Pending |
+| SLM-03 | Phase 11 | Pending |
+| SLM-04 | Phase 11 | Pending |
+| FBK-01 | Phase 12 | Pending |
+| FBK-02 | Phase 12 | Pending |
+| FBK-03 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after initial definition*
+*Last updated: 2026-02-20 after roadmap creation*

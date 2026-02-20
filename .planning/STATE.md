@@ -4,17 +4,17 @@
 
 See: .planning/PROJECT.md (updated 2026-02-20)
 
-**Core value:** Real-time chat analysis must be accurate enough to be actionable — large analysis windows, robust DOM sanitization, and user-tunable thresholds make the tool reliable across different stream sizes.
-**Current focus:** Milestone v1.2 — Semantic AI Pipeline
+**Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 8: Encoder Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-20 — Milestone v1.2 started
+Phase: 8 of 12 (Encoder Foundation)
+Plan: — of — in current phase
+Status: Ready to plan
+Last activity: 2026-02-20 — v1.2 roadmap created (5 phases, 16 requirements mapped)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0% (v1.2)
 
 ## Performance Metrics
 
@@ -37,16 +37,25 @@ Progress: [░░░░░░░░░░] 0%
 
 See PROJECT.md Key Decisions table for full log.
 
+Recent decisions affecting v1.2:
+- Encode in sidebar page context (not background.js) — WebGPU unavailable in MV3 service workers
+- Prototype cosine routing over K-Means/DBSCAN — deterministic, O(n×4), maps to fixed 4-bucket UI
+- MiniLM auto-loads without consent (~25MB) — Qwen remains consent-gated (~950MB combined)
+- GPU scheduler built before either WebGPU model is active — prevents device loss or OOM
+
 ### Pending Todos
 
 None.
 
 ### Blockers/Concerns
 
-- sidePanel incognito behavior is MEDIUM confidence — manual test needed before CWS submission (deferred VERIF-01)
+- Phase 10 gate: cosine threshold default (0.35) needs calibration against live stream chat — literature values from support ticket domain, not stream chat
+- Phase 11 gate: verify vendored `libs/web-llm/index.js` includes `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` in `prebuiltAppConfig` before coding starts
+- Phase 11 gate: Qwen2.5-0.5B structured output reliability is LOW confidence until 20+ real outputs validated
+- sidePanel incognito behavior is MEDIUM confidence — deferred VERIF-01 from v1.1, still pending
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed v1.1 milestone archival. Next: /gsd:new-milestone or manual Phase 7 verification.
+Stopped at: v1.2 roadmap created. Next: /gsd:plan-phase 8
 Resume file: None
