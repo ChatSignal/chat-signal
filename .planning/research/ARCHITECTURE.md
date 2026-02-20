@@ -1,388 +1,515 @@
 # Architecture Research
 
-**Domain:** Chrome Extension — CWS compliance integration into existing MV3 extension
-**Researched:** 2026-02-19
-**Confidence:** HIGH (official Chrome docs verified for all critical claims)
+**Domain:** Chrome Extension — Semantic AI Pipeline Integration (v1.2)
+**Researched:** 2026-02-20
+**Confidence:** HIGH (Chrome docs + Transformers.js docs verified; MLC model sizes from official HF repos)
 
 ---
 
 ## Context: What This Research Answers
 
-The existing extension architecture is stable and ships. This document answers five integration questions for the v1.1 CWS Readiness milestone:
+The existing v1.1 architecture is stable and ships. This document answers six integration questions for the v1.2 Semantic AI Pipeline milestone:
 
-1. Where does the privacy policy live, and what must it contain?
-2. How do disk space warnings integrate into the existing WebLLM consent flow?
-3. Can `host_permissions` be replaced with `activeTab`?
-4. What is the correct justification for `all_frames: true`?
-5. How does incognito mode affect `chrome.storage.local` and `sidePanel`?
+1. Where should the Transformers.js encoder live? (sidebar context, background worker, or offscreen document)
+2. Where should the GPU scheduler module live, and how does it coordinate encoder and WebLLM?
+3. Data flow: Content Script → ? → Encoder → Clustering → SLM → UI — map the new pipeline.
+4. How does WASM fallback mode work when encoder isn't ready?
+5. Model loading lifecycle — when do MiniLM and Qwen load relative to extension startup?
+6. What existing files need modification vs what's new?
 
 ---
 
-## System Overview (Existing + CWS Changes)
+## System Overview: New v1.2 Pipeline
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  YouTube / Twitch page (host frame + possible iframes)           │
+│  YouTube / Twitch page                                           │
 │  ┌────────────────────┐                                          │
-│  │  content-script.js │ ← needs all_frames:true for embedded     │
-│  │  (DOM observer,    │   chat iframes on YouTube                │
-│  │   MutationObserver)│                                          │
+│  │  content-script.js │ (UNCHANGED — DOM observer)              │
 │  └────────┬───────────┘                                          │
 └───────────┼──────────────────────────────────────────────────────┘
-            │ chrome.runtime.sendMessage (CHAT_MESSAGES)
+            │ chrome.runtime.sendMessage({ type: 'CHAT_MESSAGES' })
             ▼
 ┌──────────────────────┐
-│   background.js      │ Service Worker (MV3)
-│   (message relay,    │ Re-broadcasts to sidebar
-│    sidePanel.open()) │
+│   background.js      │ (UNCHANGED — simple relay)
+│   Service Worker     │
 └──────────┬───────────┘
-           │ chrome.runtime.onMessage
+           │ chrome.runtime.onMessage → sidebar receives
            ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  sidebar/sidebar.html + sidebar.js  (chrome.sidePanel)          │
+│  sidebar/sidebar.js  (MODIFIED — orchestrates new pipeline)     │
 │                                                                 │
-│  ┌─────────────────┐  ┌───────────────────┐                    │
-│  │  SessionManager  │  │  StateManager     │                    │
-│  │  (lifecycle,     │  │  (rolling window, │                    │
-│  │   inactivity)    │  │   accumulation)   │                    │
-│  └─────────────────┘  └───────────────────┘                    │
+│  On CHAT_MESSAGES received:                                     │
+│  1. Add to allMessages buffer (existing)                        │
+│  2. If encoder ready → EncoderAdapter.encode(messages)          │
+│     If encoder not ready → fallback: WASM analyze_chat()       │
 │                                                                 │
-│  ┌──────────────────────────────────────┐                       │
-│  │  LLM Consent Modal  [MODIFIED v1.1]  │ ← disk space warning  │
-│  │  llm-adapter.js     [EXISTING]       │   added here          │
-│  └──────────────────────────────────────┘                       │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  encoder-adapter.js  [NEW]                              │    │
+│  │  Transformers.js pipeline('feature-extraction',         │    │
+│  │    'Xenova/all-MiniLM-L6-v2')                          │    │
+│  │  → encodeMessages(texts): Float32Array[]               │    │
+│  │  → clusterByCosine(embeddings, labels): ClusterBucket[]│    │
+│  └──────────────────┬──────────────────────────────────────┘    │
+│                     │ semantic clusters                          │
+│                     ▼                                           │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  gpu-scheduler.js  [NEW]                                │    │
+│  │  Priority queue: encoder (P1) > SLM (P2)               │    │
+│  │  Prevents simultaneous GPU use by encoder + WebLLM      │    │
+│  └──────────────────┬──────────────────────────────────────┘    │
+│                     │ releases GPU, signals SLM turn            │
+│                     ▼                                           │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  llm-adapter.js  [MODIFIED]                             │    │
+│  │  Switch model: Phi-2 → Qwen2.5-0.5B-Instruct-q4f16_1  │    │
+│  │  summarizeBuckets() receives pre-clustered groups       │    │
+│  │  from encoder (not just raw WASM buckets)               │    │
+│  └──────────────────┬──────────────────────────────────────┘    │
+│                     │ summary text                              │
+│                     ▼                                           │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  WASM Engine (UNCHANGED as fallback)                    │    │
+│  │  analyze_chat_with_settings() — fallback clustering     │    │
+│  │  analyze_sentiment_signals() — always used              │    │
+│  │  extract_topics() — always used                         │    │
+│  └─────────────────────────────────────────────────────────┘    │
 │                                                                 │
-│  ┌────────────────────────────────────┐                         │
-│  │  WASM Engine (wasm_engine.wasm)    │                         │
-│  │  analyze_chat_with_settings()      │                         │
-│  └────────────────────────────────────┘                         │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ chrome.storage.local / chrome.storage.sync
+│  StateManager.js  (MODIFIED — adds encoderReady flag)           │
+│  SessionManager.js  (UNCHANGED)                                 │
+└─────────────────────────────────────────────────────────────────┘
+                         │ chrome.storage (UNCHANGED)
                          ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  chrome.storage  (always shared between normal + incognito)      │
-│  .local   →  session history (storage-manager.js)               │
-│  .sync    →  user settings (options.js, sidebar.js)             │
-│  .local   →  AI consent flags (aiConsentShown, aiSummaries)     │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│  Privacy Policy  [NEW v1.1]                                      │
-│  Hosted externally (GitHub Pages recommended)                    │
-│  URL entered in CWS Developer Dashboard                          │
-│  No code changes to extension required                           │
-└──────────────────────────────────────────────────────────────────┘
+             chrome.storage.local / chrome.storage.sync
 ```
 
 ---
 
-## Integration Point 1: Privacy Policy
+## Q1: Where Does the Encoder Live?
 
-### Where It Lives
+**Answer: The sidebar document context. Not the background service worker, not an offscreen document.**
 
-The privacy policy is a static HTML or Markdown document hosted at a public URL. The extension itself does not change. The URL is entered into the Chrome Web Store Developer Dashboard's privacy fields section — it is not linked from inside the extension.
+### Rationale
 
-**Recommended hosting:** GitHub Pages. Cost: free. Setup: create `docs/privacy-policy.md` (or `.html`) in the repository, enable GitHub Pages in repository settings, point to `main` branch `/docs` folder. Result: `https://<username>.github.io/<repo>/privacy-policy`.
+**The sidebar is a full browser page.** It has DOM access, WebGPU access, and persistent lifetime while the panel is open. Transformers.js runs its ONNX Runtime with WebGPU or WASM backend directly in a page context.
 
-**Alternative:** Any static hosting with a stable URL (Netlify, Vercel, personal domain). The URL must remain live permanently; CWS will verify it during review.
+**Background service worker** — MV3 service workers are terminated after ~30 seconds of inactivity and restart on demand. Running a 25MB ONNX model inside a service worker means re-initializing it every time it wakes. Service workers also cannot access DOM APIs, which Transformers.js ONNX WASM fallback requires for memory allocation. WebGPU is available in service workers since Chrome 124, but the startup cost and termination problem make it unsuitable for a model that must be loaded once and kept warm.
 
-### What the Policy Must Contain (Confidence: HIGH)
+**Offscreen document** — Chrome's `chrome.offscreen` API (Chrome 109+) creates a hidden document for DOM-dependent operations in MV3. It is the right solution when you need persistent DOM access from the background worker layer. However, the sidebar already is a persistent document. Adding an offscreen document solely for the encoder creates an unnecessary message-passing boundary (sidebar → background → offscreen → background → sidebar) and doubles the IPC overhead on every encode call. The sidebar lives as long as the user has it open, which is exactly the lifetime the encoder needs.
 
-CWS requires the policy to comprehensively disclose:
+**Conclusion:** Transformers.js encoder (`encoder-adapter.js`) runs inside the sidebar's JavaScript context, alongside the existing WASM module. It is imported via ES module in `sidebar.js`, just as `llm-adapter.js` is today.
 
-1. What data is collected
-2. How that data is used
-3. With whom data is shared
-4. All third parties who receive user data
+### WebGPU Access in Sidebar
 
-For Chat Signal Radar specifically, the policy must address:
+The sidebar is rendered in Chrome's side panel, which is an extension page (`chrome-extension://...`). Extension pages have full access to WebGPU. The Transformers.js `pipeline()` with `device: 'webgpu'` will work. If WebGPU is unavailable (e.g., older hardware), Transformers.js automatically falls back to WASM/CPU backend for the encoder.
 
-| Data Item | Reality | Policy Statement |
-|-----------|---------|------------------|
-| Chat messages | Read from DOM, analyzed locally, never transmitted | "Chat messages are processed locally in your browser. No message content is sent to external servers." |
-| Session history | Stored in `chrome.storage.local` on device only | "Session summaries are stored locally on your device using Chrome's extension storage API." |
-| User settings | Stored in `chrome.storage.sync` (syncs across user's Chrome devices) | "Your settings are stored using Chrome Sync and may be synchronized across your signed-in Chrome devices." |
-| AI model download | Fetched from HuggingFace CDN if user consents | "If you enable AI Summaries, a model (~400MB) is downloaded from HuggingFace and cached locally. No user data is sent to HuggingFace." |
-| Hugging Face CDN | Only accessed for model binary, not user data | Disclose in policy that this network connection occurs. |
+### CSP Change Required
 
-**No analytics, no crash reporting, no user accounts** — this simplifies the policy significantly.
+The existing CSP is:
+```
+script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co ...
+```
 
-### CWS Dashboard Privacy Fields (Confidence: HIGH)
+Transformers.js bundles ONNX Runtime WASM helpers that must be served locally. The MiniLM model files must be either:
 
-The developer dashboard requires filling out:
+- **Option A (recommended):** Fetched from HuggingFace on first use and cached in IndexedDB. Requires `https://huggingface.co` already in `connect-src` (already present). Set `env.allowRemoteModels = true` and `env.useBrowserCache = true`.
+- **Option B:** Bundle the model files in the extension package at build time. Requires ~25MB added to extension zip. Set `env.allowRemoteModels = false` and `env.localModelPath = chrome.runtime.getURL('models/')`.
 
-1. **Single Purpose Description** — one paragraph explaining what the extension does
-2. **Permission Justifications** — per-permission explanation (see Integration Point 3)
-3. **Remote Code Declaration** — must declare no remote code execution (WASM is bundled, not remote)
-4. **Data Usage Certification** — checkboxes for each data type collected
-5. **Privacy Policy URL** — the hosted URL from above
+Option A is recommended because:
+1. MiniLM (~25MB) auto-loads without consent — small enough that a one-time download is acceptable.
+2. HuggingFace is already an allowed `connect-src` origin.
+3. IndexedDB caching means subsequent loads are instant.
+4. Extension zip stays under CWS size limits.
+
+The Transformers.js ONNX WASM runtime helpers (`.wasm` files) must be bundled locally and pointed to via `env.backends.onnx.wasm.wasmPaths`. The existing `'wasm-unsafe-eval'` in CSP covers this.
 
 ---
 
-## Integration Point 2: Disk Space Warning in WebLLM Consent Flow
+## Q2: Where Does the GPU Scheduler Live?
 
-### Current Consent Flow
+**Answer: A new `gpu-scheduler.js` module in `extension/sidebar/modules/`, imported and instantiated in `sidebar.js`.**
 
-```
-[First activation]
-  → check aiConsentShown in chrome.storage.local
-      → if false: show llm-consent-modal in sidebar.html
-          → user clicks "Enable AI" or "Skip"
-              → set aiSummariesEnabled + aiConsentShown in chrome.storage.sync
-                  → if "Enable AI": call initializeLLM() → WebLLM downloads model
-```
+### The Problem It Solves
 
-The modal is defined in `sidebar.html` (element `#llm-consent-modal`) and handled by event listeners in `sidebar.js` (`llmEnableBtn`, `llmSkipBtn` around line 72).
+Transformers.js (for MiniLM encoding) and WebLLM (for Qwen summary generation) both use WebGPU. If they run simultaneously, they contend for the same GPU command queue. WebGPU does not queue across separate API contexts — contention causes errors, slowdowns, or silent failures.
 
-### Where to Add Disk Space Warning
+The encoder runs on every batch of messages (every ~5 seconds during active chat). The SLM runs on demand (user triggers summary, or periodic refresh). Without coordination, a summary generation can start mid-encode.
 
-**Location:** Inside `#llm-consent-modal` in `sidebar.html`, and the JS logic in `sidebar.js` or `llm-adapter.js`.
-
-**What to add:**
-
-1. **Static size disclosure** — the modal already says "~400MB" in the `#ai-opt-in` div (line 54 of `sidebar.html`). The consent modal itself (`#llm-consent-modal`) needs the same disclosure. This is a pure HTML change.
-
-2. **Dynamic space check (optional but recommended)** — before showing "Enable AI" as an active option, call `navigator.storage.estimate()` and compare `quota - usage` to 450MB (10% buffer over 400MB). If insufficient space, disable the "Enable AI" button and show a warning message.
-
-**Implementation pattern:**
+### Scheduler Design
 
 ```javascript
-// In sidebar.js, before or when showing llm-consent-modal
-async function checkStorageForLLM() {
-  if ('storage' in navigator && 'estimate' in navigator.storage) {
-    const { usage, quota } = await navigator.storage.estimate();
-    const available = quota - usage;
-    const MODEL_SIZE_BYTES = 450 * 1024 * 1024; // 450MB with buffer
-    if (available < MODEL_SIZE_BYTES) {
-      const availableMB = Math.round(available / (1024 * 1024));
-      return { hasSpace: false, availableMB };
+// gpu-scheduler.js — Priority queue pattern
+class GPUScheduler {
+  constructor() {
+    this.queue = [];       // pending tasks
+    this.running = false;  // GPU lock
+  }
+
+  // Priority 1 = highest (encoder), Priority 2 = lower (SLM)
+  async schedule(fn, priority = 2) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ fn, priority, resolve, reject });
+      this.queue.sort((a, b) => a.priority - b.priority);
+      this._drain();
+    });
+  }
+
+  async _drain() {
+    if (this.running || this.queue.length === 0) return;
+    this.running = true;
+    const { fn, resolve, reject } = this.queue.shift();
+    try {
+      resolve(await fn());
+    } catch (e) {
+      reject(e);
+    } finally {
+      this.running = false;
+      this._drain();
     }
   }
-  return { hasSpace: true, availableMB: null };
 }
 ```
 
-**When to call it:** When `llmEnableBtn` is about to be displayed — either in the modal show handler or when the modal is about to be shown.
+**Key behaviors:**
+- Encoder calls schedule with `priority: 1` — always runs before pending SLM calls.
+- SLM calls schedule with `priority: 2` — runs when encoder is idle.
+- Tasks execute serially — never simultaneously.
+- If encoder is frequent (every 5s) and SLM request queued, SLM runs after the in-flight encode completes. SLM calls are low-frequency (every 30s or on-demand), so queue depth stays small.
 
-**Files changed:**
-- `extension/sidebar/sidebar.html` — add disk size disclosure text to `#llm-consent-modal` HTML
-- `extension/sidebar/sidebar.js` — add `checkStorageForLLM()` call, disable button + show warning if insufficient space
+### Where It Lives
 
-**Files not changed:**
-- `extension/llm-adapter.js` — `initializeLLM()` is unchanged; the check is a pre-condition in the UI layer, not the adapter layer
-- `manifest.json` — no new permissions required; `navigator.storage.estimate()` is a standard Web API with no permission requirement
-
-**Confidence note (MEDIUM):** `navigator.storage.estimate()` returns estimates, not exact values. The quota reported inside a Chrome extension sidebar may differ from a web page context because extensions are treated as a separate origin. The function should be treated as a best-effort check, not a guarantee. The static "~400MB" disclosure is mandatory regardless of whether the dynamic check is implemented.
+`extension/sidebar/modules/gpu-scheduler.js` — imported as a singleton in `sidebar.js`. Both `encoder-adapter.js` and `llm-adapter.js` receive the scheduler as a parameter (dependency injection), or `sidebar.js` wraps all calls to them through the scheduler. The latter is simpler: `sidebar.js` is the coordinator.
 
 ---
 
-## Integration Point 3: host_permissions vs activeTab
+## Q3: Data Flow — Full New Pipeline
 
-### Verdict: host_permissions Must Stay (Confidence: HIGH)
-
-`activeTab` cannot replace `host_permissions` for Chat Signal Radar. The reason is architectural: content scripts declared in the manifest run automatically on page load and continuously observe the DOM via `MutationObserver`. `activeTab` only grants temporary host permission following a user gesture (clicking the extension icon, keyboard shortcut, context menu). Once granted, it persists only until the user navigates away.
-
-The content script in `content-script.js` must:
-- Inject automatically when the user opens a YouTube or Twitch live stream
-- Run a persistent `MutationObserver` for the full session duration
-- Batch and send messages every 5 seconds regardless of whether the user has clicked the extension icon
-
-None of these behaviors are compatible with `activeTab`, which is gesture-gated and navigation-scoped.
-
-**Formal rule from Chrome docs:** "If your extension needs persistent access to specific websites... you need `host_permissions`."
-
-### Permission Justification Text for CWS Dashboard
-
-The CWS dashboard requires a text justification for each permission. Use the following:
-
-| Permission | Justification |
-|------------|---------------|
-| `host_permissions: youtube.com` | "Required to inject a content script that observes the live chat DOM on YouTube streams. The extension monitors chat messages in real time without transmitting any data off the device." |
-| `host_permissions: twitch.tv` | "Required to inject a content script that observes the live chat DOM on Twitch streams. The extension monitors chat messages in real time without transmitting any data off the device." |
-| `storage` | "Used to persist user settings (chrome.storage.sync) and session history (chrome.storage.local) on the user's device. No data is sent to external servers." |
-| `sidePanel` | "Required to display the analysis dashboard in Chrome's side panel, keeping it visible alongside the stream page." |
-
-### CSP Justification
-
-The existing CSP in `manifest.json`:
+### Normal Flow (Encoder Ready, AI Enabled)
 
 ```
-script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;
+Content Script (DOM observer, every 5s)
+  │
+  │ chrome.runtime.sendMessage({ type: 'CHAT_MESSAGES', messages: [...] })
+  ▼
+background.js (relay only — UNCHANGED)
+  │
+  │ chrome.runtime.sendMessage(message)
+  ▼
+sidebar.js: chrome.runtime.onMessage handler
+  │
+  ├─ allMessages.push(...) — add to rolling buffer
+  ├─ totalMessageCount++
+  ├─ lastMessageTime = Date.now()
+  │
+  ├─ [EXISTING] wasmModule.analyze_chat_with_settings()
+  │    → batchResult.sentiment_signals → accumulate sessionSentiment
+  │    → topic extraction (still WASM, always)
+  │
+  ├─ windowMessages = allMessages.slice(-windowSize)
+  │
+  └─ gpuScheduler.schedule(() => encodeAndCluster(windowMessages), priority=1)
+       │
+       ▼
+   encoder-adapter.js: encodeMessages(texts)
+       │ Transformers.js pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
+       │ → Float32Array[384] per message (384-dim MiniLM embeddings)
+       │
+       └─ clusterByCosine(embeddings, labels=['Questions','Issues','Requests','General'])
+            │ Cosine similarity against per-category centroids
+            │ → ClusterBucket[] (same shape as WASM output)
+            ▼
+   sidebar.js: renderClusters(semanticBuckets)  ← UI update (fast path)
+       │
+       └─ if (llmEnabled && isLLMReady && needsSummary):
+            gpuScheduler.schedule(() =>
+              llm-adapter.js: summarizeBuckets(semanticBuckets)
+            , priority=2)
+              │ Qwen2.5-0.5B-Instruct via WebLLM
+              │ Prompt includes pre-clustered groups from encoder
+              ▼
+            sidebar.js: renderAISummary(summaryText)
 ```
 
-**`wasm-unsafe-eval`** — explicitly allowed in MV3 by Chrome for extensions that use WebAssembly. Chrome's minimum CSP includes it. No justification needed in the dashboard; it is a standard MV3 pattern.
+### Fallback Flow (Encoder Not Ready or AI Disabled)
 
-**`connect-src` to HuggingFace/GitHub** — CWS reviewers may ask about this. The justification: "Used to download the optional AI model (Phi-2, ~400MB) from HuggingFace when the user explicitly opts in to AI summaries. Only accessed after explicit user consent. No user data is sent."
+```
+sidebar.js: chrome.runtime.onMessage handler
+  │
+  └─ if (!encoderReady):
+       windowMessages = allMessages.slice(-windowSize)
+       │
+       wasmModule.analyze_chat_with_settings(windowMessages, ...)
+         → result.buckets    (keyword clustering — existing)
+         → result.topics     (existing)
+         → result.sentiment_signals (existing)
+       │
+       renderClusters(result.buckets)
+       │
+       if (llmEnabled && isLLMReady):
+         llm-adapter.js: summarizeBuckets(result.buckets)
+```
 
-**If the WebLLM bundle is not present** (the extension ships without it), remove HuggingFace/GitHub from `connect-src` to reduce the permission surface. The `llm-adapter.js` fallback path does not require network access.
+**Important:** Sentiment analysis and topic extraction always go through WASM, even when the encoder is active. The encoder only replaces cluster bucket classification. WASM's `analyze_sentiment_signals` and `extract_topics` are not replaced.
+
+### Data Shapes at Each Boundary
+
+| Boundary | Data Shape | Notes |
+|----------|------------|-------|
+| Content Script → Background | `{ type, messages: [{text, author, timestamp}], platform, streamUrl, streamTitle }` | Unchanged |
+| Background → Sidebar | Same message | Unchanged relay |
+| Sidebar → EncoderAdapter | `string[]` (message texts, window slice) | New |
+| EncoderAdapter → Sidebar | `ClusterBucket[]` (label, count, sample_messages) | Same shape as WASM output |
+| Sidebar → LLMAdapter | `ClusterBucket[]` | Same shape — llm-adapter.js unchanged signature |
+| LLMAdapter → Sidebar | `{ summary: string, ... }` | Unchanged |
+
+The encoder output must match the WASM `ClusterBucket` shape exactly — this allows `renderClusters()` and `summarizeBuckets()` to be called identically regardless of whether buckets came from encoder or WASM.
 
 ---
 
-## Integration Point 4: all_frames: true Justification
+## Q4: WASM Fallback Mode
 
-### Why It Is Needed
+### When Fallback Activates
 
-YouTube embeds its live chat in an iframe whose source is `https://www.youtube.com/live_chat?v=...`. This iframe is a separate frame on the same origin (`www.youtube.com`), but it is a child frame, not the top frame. Without `all_frames: true`, the content script only runs in the top frame (the main video page) and never reaches the chat container.
+WASM fallback is active in these conditions:
 
-Twitch's primary chat is in the main frame on `twitch.tv`, but streamer pages may embed Twitch via iframes. `all_frames: true` ensures coverage in embedded scenarios.
+| Condition | Fallback Trigger |
+|-----------|-----------------|
+| Encoder not yet loaded | First 5-30 seconds after sidebar opens |
+| Encoder model download in progress | While fetching MiniLM from HuggingFace |
+| Encoder initialization error | ONNX load failure, WASM init failure |
+| AI disabled by user | `settings.aiSummariesEnabled = false` covers both encoder and SLM |
+| GPU unavailable | Transformers.js WASM backend fails on WebGPU error |
 
-**Justification text for CWS dashboard:**
+### Fallback Is Transparent to the UI
 
-"YouTube Live Chat is rendered inside an iframe (https://www.youtube.com/live_chat). The content script must run in all frames matching the host_permissions patterns so it can observe the chat DOM in that iframe. Without all_frames: true, no chat messages would be captured on YouTube."
+The `ClusterBucket[]` interface is the same for WASM output and encoder output. `renderClusters()` in `sidebar.js` receives the same data structure regardless of source. No UI state changes are needed for fallback — the clusters just come from WASM instead of the encoder.
 
-### Risk: Script Runs in More Frames Than Strictly Necessary
+### State Flag in StateManager
 
-With `all_frames: true`, the content script injects into every YouTube and Twitch iframe, not just the chat iframe. The content script already handles this gracefully:
+Add `encoderReady: false` to `StateManager.state`. `sidebar.js` checks this flag before scheduling encoder work:
 
 ```javascript
-// content-script.js lines 9-11
-const isYouTube = window.location.hostname.includes('youtube.com');
-const isTwitch = window.location.hostname.includes('twitch.tv');
+// In sidebar.js processMessages()
+if (stateManager.encoderReady) {
+  gpuScheduler.schedule(() => encodeAndCluster(windowMessages), 1);
+} else {
+  const result = wasmModule.analyze_chat_with_settings(...);
+  renderClusters(result.buckets);
+}
 ```
 
-And then checks for platform-specific selectors before setting up observers. If neither selector matches, the script exits silently without any DOM manipulation. This is correct behavior and demonstrates responsible `all_frames` usage.
+When `encoder-adapter.js` finishes loading (`pipeline()` resolves), it sets `stateManager.encoderReady = true`. From that point, all subsequent message batches use the encoder path.
 
-**If CWS pushes back:** The alternative is programmatic injection from `background.js` using `chrome.scripting.executeScript()` with frame filtering. This is more complex but allows targeting only the specific iframe URL pattern (`*://www.youtube.com/live_chat*`). This would also allow removing `all_frames: true` from the manifest. This is a fallback — pursue only if the CWS reviewer specifically objects.
+### SLM Fallback (Unchanged from v1.1)
+
+The SLM fallback (rule-based `generateFallbackSummary`) is already implemented in `llm-adapter.js`. Switching from Phi-2 to Qwen2.5 does not change the fallback logic — it only changes the `CreateMLCEngine` model ID string.
 
 ---
 
-## Integration Point 5: Incognito Mode
+## Q5: Model Loading Lifecycle
 
-### chrome.storage Behavior (Confidence: HIGH)
+### Startup Sequence
 
-`chrome.storage.local` and `chrome.storage.sync` are **always shared** between normal and incognito extension processes. This is explicitly documented in Chrome's extension manifest reference:
+```
+Extension icon clicked
+  │
+  ▼
+background.js: chrome.sidePanel.open()
+  │
+  ▼
+sidebar.html loads → sidebar.js executes
+  │
+  ├─ [Step 1] loadSettings() — chrome.storage.sync read
+  │
+  ├─ [Step 2] initWasm() — load wasm_engine.js + wasm_engine_bg.wasm
+  │    (completes in ~1-2s, same as today)
+  │    wasmModule becomes available
+  │
+  ├─ [Step 3] initEncoder() — NEW, runs after WASM
+  │    import encoder-adapter.js
+  │    pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {device: 'webgpu'})
+  │    → model fetched from HuggingFace (first time: ~25MB download)
+  │    → cached in IndexedDB (subsequent loads: <1s)
+  │    stateManager.encoderReady = true
+  │    statusText: "AI clustering ready"
+  │
+  └─ [Step 4] checkAISettings() — existing consent flow
+       if (aiSummariesEnabled):
+         initializeLLM() — Qwen2.5 (~945MB download, consent-gated)
+         → model fetched from HuggingFace/MLC CDN
+         → cached in IndexedDB
+         llmEnabled = true
+```
 
-> "chrome.storage.sync and chrome.storage.local are always shared between regular and incognito processes."
+### Loading Priority
 
-**Implication for Chat Signal Radar:**
+| Model | Size | Auto-load | Consent Required | Load Timing |
+|-------|------|-----------|-----------------|-------------|
+| WASM engine | ~200KB | Yes | No | Step 2, before encoder |
+| MiniLM L6-v2 | ~25MB | Yes | No (auto-loads) | Step 3, after WASM |
+| Qwen2.5-0.5B q4f16_1 | ~945MB | No | Yes | Step 4, after consent |
 
-Session history saved while in incognito will appear in the History tab in normal mode, and vice versa. This is the expected and unavoidable behavior for `chrome.storage.local`. The extension does not need to change anything to "handle" incognito — storage works identically.
+### During Loading (Encoder Not Yet Ready)
 
-**User-facing implication to disclose (optional):** Session summaries saved in incognito mode are persisted to device storage the same as those from normal mode. This may be unexpected for privacy-conscious users. Consider noting this in the privacy policy under "Session History."
+Between startup and Step 3 completing:
+- Message batches use WASM fallback (existing behavior)
+- Status bar shows "Loading AI clustering..." (new status message)
+- UI displays WASM keyword clusters — no visible gap to user
 
-### sidePanel Behavior in Incognito (Confidence: MEDIUM)
+### Model Caching
 
-Chrome's official `sidePanel` API documentation does not enumerate incognito-specific restrictions. The default incognito behavior for extensions is **"spanning"** mode, where the extension runs in a single shared process and receives events from incognito tabs with an incognito flag. In spanning mode, the side panel is associated with the window, not the tab.
+**MiniLM:** Transformers.js caches ONNX model files in browser's Cache API / IndexedDB automatically. `env.useBrowserCache = true` (default). After first download, loads in under 1 second.
 
-Extensions are not enabled in incognito mode by default — users must explicitly enable it in `chrome://extensions`. When enabled:
-- `chrome.sidePanel.open({ windowId })` works the same as in normal mode
-- The sidebar HTML/JS runs in the extension's shared process, not the incognito page context
-- `chrome.storage` access from the sidebar works normally (shared storage)
+**Qwen2.5:** WebLLM uses IndexedDB cache via `useIndexedDBCache: true` in `appConfig` (already in `llm-adapter.js`). After first download, loads in 5-15 seconds from local IndexedDB (decompression + GPU upload).
 
-**What to test manually:**
-1. Enable the extension in incognito via `chrome://extensions`
-2. Open a YouTube live stream in an incognito window
-3. Click the extension icon — sidePanel should open
-4. Verify chat messages flow through content script → background → sidebar
-5. Save a session, verify it appears in History tab
+### Encoder Model ID to Use
 
-No code changes are expected to be required for incognito support. This is a verification-only task.
+`Xenova/all-MiniLM-L6-v2` — the Xenova (HuggingFace) port of `sentence-transformers/all-MiniLM-L6-v2` in ONNX format. This is the standard Transformers.js identifier for this model. It produces 384-dimensional sentence embeddings optimized for semantic similarity.
 
-### WASM in Incognito
+### Qwen Model ID for WebLLM
 
-WASM runs inside the sidebar document, which is an extension page (not a web page). Extension pages are not subject to the same incognito isolation as web pages. The WASM module loads from `chrome.runtime.getURL('wasm/wasm_engine_bg.wasm')` — an extension-origin URL — which works in both normal and incognito contexts when the extension is allowed in incognito.
+`Qwen2.5-0.5B-Instruct-q4f16_1-MLC` — confirmed available in MLC format on HuggingFace (`mlc-ai/Qwen2.5-0.5B-Instruct-q0f32-MLC` and q4f16 variants). The q4f16_1 quantization provides ~945MB VRAM usage, the most efficient variant. The model ID string for `CreateMLCEngine` changes from `'Phi-2-q4f16_1-MLC'` to `'Qwen2.5-0.5B-Instruct-q4f16_1-MLC'`.
 
-No changes required.
+**Confidence note (MEDIUM):** The exact MLC model ID string should be verified against the current WebLLM `src/config.ts` model list on GitHub before implementation. Model IDs follow the pattern `<ModelFamily>-<Size>-<QuantFormat>-MLC`.
 
 ---
 
-## New vs Modified Components
+## Q6: New vs Modified Files
 
-| Component | Status | Change Type | Files |
-|-----------|--------|-------------|-------|
-| Privacy policy document | **NEW** | External static file, no extension code | `docs/privacy-policy.md` (or GitHub Pages) |
-| LLM consent modal (HTML) | **MODIFIED** | Add disk space disclosure text | `extension/sidebar/sidebar.html` |
-| Sidebar JS (storage check) | **MODIFIED** | Add `checkStorageForLLM()` + button disable | `extension/sidebar/sidebar.js` |
-| manifest.json | **MODIFIED** | Permission justifications (dashboard only, not file) | `extension/manifest.json` (possibly minor wording tweak) |
-| CWS Developer Dashboard | **NEW** | Permission justification text, privacy URL, data disclosure | External — no code |
-| Store listing assets | **NEW** | 1280x800 screenshots, 440x280 promo image | External files — no code |
-| Incognito verification | **VERIFICATION** | Manual test, no code changes expected | — |
+### New Files
 
----
+| File | Location | Purpose |
+|------|----------|---------|
+| `encoder-adapter.js` | `extension/sidebar/` | Transformers.js pipeline wrapper. Loads MiniLM, exposes `encodeMessages()` and `clusterByCosine()`. Handles WASM fallback signaling. |
+| `gpu-scheduler.js` | `extension/sidebar/modules/` | Priority queue for GPU task serialization. Coordinates encoder (P1) vs SLM (P2) WebGPU access. |
 
-## Data Flow Changes (v1.1 Additions)
+### Modified Files
 
-### Storage Estimate Flow (new)
+| File | Change | Scope |
+|------|--------|-------|
+| `extension/sidebar/sidebar.js` | Import `encoder-adapter.js` and `gpu-scheduler.js`. Add `initEncoder()` call after `initWasm()`. Add `encoderReady` check in message handler. Route encoder output or WASM output through same `renderClusters()`. | Medium — adds ~60-80 lines, wraps existing processMessages() logic |
+| `extension/llm-adapter.js` | Change `CreateMLCEngine` model ID from `Phi-2-q4f16_1-MLC` to `Qwen2.5-0.5B-Instruct-q4f16_1-MLC`. Update `buildSummaryPrompt()` to accept pre-clustered semantic groups as context. Update consent modal disclosure text (~945MB vs ~400MB). | Small — model ID is 1 line, prompt template is ~10 lines |
+| `extension/sidebar/modules/StateManager.js` | Add `encoderReady: false` to state. Add setter with boolean validation. | Small — ~6 lines |
+| `extension/sidebar/sidebar.html` | Add Transformers.js script tag or import path. Update storage consent size disclosure (~950MB total: encoder 25MB + Qwen 945MB). Update status messages for encoder loading state. | Small — HTML additions |
+| `extension/manifest.json` | Version bump to 1.2.0. CSP `connect-src` already includes `huggingface.co` — no addition needed. Possibly add `cdn.jsdelivr.net` if Transformers.js ONNX helpers load from jsdelivr (verify at build time). Update `unlimitedStorage` justification to include encoder. | Small |
 
-```
-[User triggers consent modal]
-  → sidebar.js: checkStorageForLLM()
-      → navigator.storage.estimate()
-          → { usage, quota }
-              → if (quota - usage) < 450MB:
-                  → disable #llm-enable-btn
-                  → show "Insufficient storage: ~XMB available, ~400MB needed"
-              → else:
-                  → show normal consent modal
-                      → user clicks "Enable AI"
-                          → initializeLLM() (existing flow, unchanged)
-```
+### Unchanged Files
 
-### Privacy Policy Access Flow (new, external only)
-
-```
-[CWS reviewer / user]
-  → opens https://<username>.github.io/<repo>/privacy-policy
-      → static HTML page served by GitHub Pages
-          → no extension code involved
-```
+| File | Why Unchanged |
+|------|---------------|
+| `extension/background.js` | Pure relay — no awareness of AI pipeline |
+| `extension/content-script.js` | DOM observer — output format unchanged |
+| `extension/sidebar/modules/SessionManager.js` | Session lifecycle unaffected by clustering method |
+| `extension/sidebar/utils/DOMHelpers.js` | Rendering utilities unchanged |
+| `extension/sidebar/utils/ValidationHelpers.js` | Bucket validation schema unchanged (ClusterBucket shape same) |
+| `extension/sidebar/utils/FormattingHelpers.js` | Display formatting unchanged |
+| `extension/storage-manager.js` | Session persistence unchanged |
+| `wasm-engine/src/lib.rs` | WASM functions unchanged — used as fallback and for sentiment/topics |
+| Rust tests | 18 unit tests remain valid — WASM functions unchanged |
 
 ---
 
-## Build Order Recommendation
+## Architectural Patterns
 
-These tasks are independent of each other. Suggested sequencing based on risk and verification dependencies:
+### Pattern 1: Shared Output Contract
 
-**Step 1 — Privacy policy (no code risk)**
-Create and host the policy first. It can be submitted to the CWS dashboard immediately and refined later. This unblocks the dashboard submission flow.
+**What:** Both the encoder and WASM produce `ClusterBucket[]` with the same shape. The UI and SLM consume this type without knowing or caring which source produced it.
 
-**Step 2 — Disk space warning (low code risk)**
-Modify `sidebar.html` to add static size disclosure to the consent modal. Add dynamic `checkStorageForLLM()` to `sidebar.js`. Manual test with the extension loaded. This is additive and does not change any existing behavior paths.
+**When to use:** When replacing a module (WASM clustering → semantic clustering) and wanting zero UI changes.
 
-**Step 3 — Incognito verification (test, no code)**
-Enable extension in incognito, run manual test checklist. If issues are found, address them before proceeding. Expected outcome: no code changes needed.
+**Trade-offs:** Constrains encoder output to the existing bucket shape. The encoder cannot add new cluster categories without updating the rendering layer. Acceptable for v1.2 — the 4-category taxonomy (Questions, Issues, Requests, General Chat) is the product design, not an implementation artifact.
 
-**Step 4 — CWS Dashboard submission**
-Fill out all privacy fields, permission justifications, upload screenshots and promo image, provide privacy policy URL. Review against checklist.
+**Example:**
+```javascript
+// ClusterBucket — shared contract
+// { label: string, count: number, sample_messages: string[] }
 
-**Step 5 — Store listing assets (external, non-blocking)**
-Screenshots and promo image can be prepared in parallel with steps 1-3. They do not block code work.
+// Encoder path
+const buckets = await encoderAdapter.clusterByCosine(embeddings, messages);
+renderClusters(buckets);  // identical call
+
+// WASM fallback path
+const result = wasmModule.analyze_chat_with_settings(...);
+renderClusters(result.buckets);  // identical call
+```
+
+### Pattern 2: Dependency-Injected GPU Scheduler
+
+**What:** `sidebar.js` holds the `GPUScheduler` singleton and passes GPU work through it. Neither `encoder-adapter.js` nor `llm-adapter.js` knows about the scheduler — they expose plain async functions.
+
+**When to use:** When two modules share a resource (GPU) but neither should be coupled to the other.
+
+**Trade-offs:** `sidebar.js` becomes the coordinator for all GPU-bound operations. For v1.2 this is acceptable — `sidebar.js` is already the top-level orchestrator. If a third GPU-bound module is added later, this pattern scales cleanly.
+
+**Example:**
+```javascript
+// In sidebar.js
+const scheduler = new GPUScheduler();
+
+// Encoding run (high priority)
+const buckets = await scheduler.schedule(
+  () => encoderAdapter.clusterMessages(windowMessages),
+  1
+);
+
+// SLM summary (lower priority, runs after encoding)
+const summary = await scheduler.schedule(
+  () => llmAdapter.summarizeBuckets(buckets),
+  2
+);
+```
+
+### Pattern 3: Progressive Enhancement Loading
+
+**What:** WASM loads first (fast, ~1-2s), encoder loads second (medium, ~1-5s first time), SLM loads last (slow, requires consent + ~945MB download). Each stage makes the product more capable without blocking the previous stage.
+
+**When to use:** When models have wildly different sizes and loading times, and baseline functionality should be instant.
+
+**Trade-offs:** Three separate loading stages add complexity to startup state machine. `sidebar.js` needs to track three readiness flags (`wasmReady`, `encoderReady`, `llmReady`). Worth the complexity — users see useful clustering immediately instead of waiting for all AI models.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Removing host_permissions for "Minimum Permissions"
+### Anti-Pattern 1: Running Encoder in Background Service Worker
 
-**What people do:** Replace `host_permissions` with `activeTab` to reduce perceived permission surface, assuming it makes approval easier.
+**What people do:** Put Transformers.js initialization in `background.js` to persist between sidebar opens.
 
-**Why it breaks:** `activeTab` is gesture-gated and does not allow auto-injected content scripts. The extension would stop capturing chat entirely.
+**Why it breaks:** MV3 service workers are terminated after ~30 seconds of inactivity. The 25MB ONNX model would need to re-initialize every time the worker wakes. More critically, ONNX WASM allocations cannot be transferred across worker restarts — there is no shared memory between service worker instances.
 
-**Do this instead:** Keep `host_permissions` and write a clear justification in the CWS dashboard explaining that the content script must auto-inject to observe chat DOM continuously.
+**Do this instead:** Initialize the encoder in the sidebar document. It persists as long as the user has the panel open, which is exactly the lifetime needed.
 
-### Adding connect-src to manifest for Remote Code
+### Anti-Pattern 2: Encoding Every Individual Message
 
-**What people do:** Add URLs to `connect-src` to allow fetching remote JavaScript logic.
+**What people do:** Call `pipeline()` on each new message as it arrives from the content script.
 
-**Why it breaks:** MV3 policy prohibits remote code execution. Fetching JS from `connect-src` and executing it is banned. CWS will reject.
+**Why it breaks:** MiniLM inference takes ~5-50ms per message on GPU. At high chat velocity (100+ messages/minute), individual encoding creates a continuous GPU backlog that starves the SLM and causes visible UI lag.
 
-**Do this instead:** All JS logic must be bundled in the extension package. The HuggingFace `connect-src` entries are for binary model download only (not JS execution) — this is permitted.
+**Do this instead:** Encode the analysis window slice (`windowMessages`) as a batch on each 5-second cycle. Transformers.js handles batched inference efficiently. The encoding call processes the full window slice at once.
 
-### Declaring `incognito: "split"` Without Reason
+### Anti-Pattern 3: Tight-Coupling Encoder Output to SLM Input
 
-**What people do:** Set `"incognito": "split"` in `manifest.json` thinking it improves privacy.
+**What people do:** Pass raw embedding vectors from the encoder directly to the SLM prompt.
 
-**Why it breaks:** In split mode, the sidebar runs in a separate incognito process and cannot access the shared `chrome.storage` data from normal mode sessions. History Tab would be empty in incognito.
+**Why it breaks:** LLMs cannot process float32 embedding vectors. The encoder must produce readable cluster buckets (label + sample messages) before the SLM prompt is constructed. The SLM needs natural language context, not numeric vectors.
 
-**Do this instead:** Leave the default `"spanning"` mode (omit the `incognito` key from manifest). Shared storage is the correct behavior for this extension.
+**Do this instead:** The encoder's output is human-readable `ClusterBucket[]`. The SLM receives the same bucket format as today, enhanced by the fact that groupings are now semantic rather than keyword-based. `buildSummaryPrompt()` in `llm-adapter.js` already handles this format.
 
-### Showing Storage Warning After Download Starts
+### Anti-Pattern 4: Simultaneous WebGPU Contexts
 
-**What people do:** Show the disk space estimate after calling `initializeLLM()`, when it is too late to stop the download.
+**What people do:** Trigger SLM summary generation immediately when clusters are ready, while the encoder pipeline is still running.
 
-**Why it breaks:** Users may run out of space mid-download, causing a corrupted or incomplete model cache.
+**Why it breaks:** Transformers.js and WebLLM maintain separate WebGPU device instances. Concurrent command submissions from two contexts on the same physical GPU can cause errors or incorrect results on some hardware. GPU API contexts are not multiplexed automatically.
 
-**Do this instead:** Call `navigator.storage.estimate()` before the user clicks "Enable AI", before `initializeLLM()` is ever called. Disable the button if insufficient space is detected.
+**Do this instead:** Route all GPU work through `GPUScheduler`. The encoder runs first (P1), the SLM runs second (P2). The scheduler ensures serial GPU access.
+
+### Anti-Pattern 5: Removing WASM When Encoder Is Ready
+
+**What people do:** Once the encoder is initialized, stop loading WASM entirely to save initialization time.
+
+**Why it breaks:** The WASM engine still performs sentiment analysis and topic extraction — functions that are not replaced by the encoder. Removing WASM would eliminate these features.
+
+**Do this instead:** Keep WASM always initialized. Use it for sentiment and topics regardless of encoder state. Use it for clustering only when encoder is not ready (fallback).
 
 ---
 
@@ -390,27 +517,73 @@ Screenshots and promo image can be prepared in parallel with steps 1-3. They do 
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| Sidebar ↔ llm-adapter.js | Import + function calls | Disk space check lives in sidebar.js, not adapter; adapter's initializeLLM() is unchanged |
-| sidebar.html ↔ sidebar.js | DOM events | Consent modal button events already wired; add storage check to existing handler |
-| Extension ↔ GitHub Pages | None | Privacy policy is external; no in-extension link required |
-| Extension ↔ CWS Dashboard | None (submission time only) | Justification text is dashboard metadata, not manifest fields |
-| chrome.storage ↔ Incognito | Shared automatically | No code boundary; Chrome handles this transparently |
+| sidebar.js ↔ encoder-adapter.js | Import + async function calls | Encoder is a plain ES module; scheduler wraps calls in sidebar.js |
+| sidebar.js ↔ gpu-scheduler.js | Import + schedule() calls | Scheduler is a singleton created in sidebar.js |
+| sidebar.js ↔ llm-adapter.js | Import + function calls (UNCHANGED) | summarizeBuckets() receives ClusterBucket[] — same as today |
+| encoder-adapter.js ↔ Transformers.js | library import | Transformers.js bundle must be available as a local or CDN import |
+| llm-adapter.js ↔ WebLLM | library import (UNCHANGED except model ID) | CreateMLCEngine call changes model string only |
+| encoder-adapter.js ↔ HuggingFace | HTTP fetch for model files | connect-src already allows huggingface.co; model cached in IndexedDB |
+| llm-adapter.js ↔ HuggingFace/MLC | HTTP fetch for Qwen weights (consent-gated) | Same flow as Phi-2 today |
+
+---
+
+## Build Order Recommendation
+
+Dependencies drive this order:
+
+**Phase 1 — GPU Scheduler (no external dependencies)**
+Build `gpu-scheduler.js` first. It has zero external dependencies — pure JavaScript priority queue. Write unit tests. This module unblocks both encoder and SLM integration.
+
+**Phase 2 — Encoder Adapter**
+Build `encoder-adapter.js` with Transformers.js. Implement `encodeMessages()` and `clusterByCosine()`. Verify output shape matches `ClusterBucket[]`. This requires Transformers.js bundling decisions (local vs CDN) to be resolved first.
+
+**Phase 3 — Sidebar Integration (encoder path)**
+Wire `encoder-adapter.js` into `sidebar.js`. Add `initEncoder()` to startup sequence. Add `encoderReady` flag to `StateManager`. Add scheduler wrapping around encode calls. Test WASM fallback still works when encoder is disabled.
+
+**Phase 4 — Qwen SLM Switch**
+Update `llm-adapter.js` model ID. Update consent modal copy (size disclosure: ~950MB total). Update `buildSummaryPrompt()` to use semantic cluster context. Test with Qwen2.5 model.
+
+**Phase 5 — End-to-End Integration**
+Run full pipeline: content script → encoder → GPU scheduler → Qwen → UI. Verify WASM fallback path. Verify sentiment and topics still work via WASM in both paths.
+
+**Dependency note:** Phase 4 (Qwen switch) is independent of Phase 2-3 (encoder). They can be developed in parallel if two workstreams are available. Both depend on Phase 1 (scheduler).
+
+---
+
+## Scaling Considerations
+
+This extension runs entirely client-side. "Scaling" means handling high chat velocity and large analysis windows gracefully on user hardware.
+
+| Concern | At 50 msg/5s batch | At 500 msg/5s batch | Mitigation |
+|---------|-------------------|--------------------|----|
+| Encoder inference time | ~10-50ms (GPU) | ~50-200ms (GPU) | Schedule P1, don't block UI thread |
+| GPU memory | ~150MB (MiniLM loaded) | Same | One model load, kept warm |
+| SLM inference time | ~2-10s | ~2-10s | Schedule P2, async, non-blocking |
+| IndexedDB size | 25MB encoder + 945MB SLM | Same | Already handled by unlimitedStorage |
+| WASM fallback latency | <5ms | ~20ms | Synchronous, always fast |
+
+Encoder batch size is bounded by `analysisWindowSize` (default 500, max 1000). At 1000 messages, encoding all at once is inadvisable. Consider encoding only new messages since last cycle and using cached embeddings for older messages in the window — this is a v1.2+ optimization if profiling shows it's needed.
 
 ---
 
 ## Sources
 
-- [Chrome Web Store: Privacy Policy Requirements](https://developer.chrome.com/docs/webstore/program-policies/privacy) — HIGH confidence
-- [Chrome Web Store: Fill out the privacy fields](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) — HIGH confidence
-- [Chrome Web Store: MV3 Additional Requirements](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements) — HIGH confidence
-- [Chrome Extensions: activeTab permission](https://developer.chrome.com/docs/extensions/mv3/manifest/activeTab/) — HIGH confidence
-- [Chrome Extensions: Content Security Policy (MV3)](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy) — HIGH confidence
-- [Chrome Extensions: Manifest - Incognito](https://developer.chrome.com/docs/extensions/reference/manifest/incognito) — HIGH confidence
-- [Chrome Extensions: sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel) — HIGH confidence (incognito behavior not documented; MEDIUM confidence on behavior inference)
-- [Chrome for Developers: Estimating Available Storage Space](https://developer.chrome.com/blog/estimating-available-storage-space) — HIGH confidence
-- [Chrome Extensions: Supplying Images (screenshots)](https://developer.chrome.com/docs/webstore/images) — HIGH confidence
+- [Transformers.js v3 — WebGPU Support, New Models & Tasks](https://huggingface.co/blog/transformersjs-v3) — HIGH confidence
+- [Transformers.js in Chrome Extension MV3 — practical patch](https://medium.com/@vprprudhvi/running-transformers-js-inside-a-chrome-extension-manifest-v3-a-practical-patch-d7ce4d6a0eac) — MEDIUM confidence
+- [Transformers.js + ONNX Runtime WebGPU in Chrome Extension](https://medium.com/@GenerationAI/transformers-js-onnx-runtime-webgpu-in-chrome-extension-13b563933ca9) — MEDIUM confidence
+- [WebGPU in Service Workers — Chrome 124](https://developer.chrome.com/blog/new-in-webgpu-124) — HIGH confidence (Chrome official)
+- [chrome.offscreen API Reference](https://developer.chrome.com/docs/extensions/reference/api/offscreen) — HIGH confidence
+- [WebGPU + WASM Unavailable in Service Workers — ONNX issue #20876](https://github.com/microsoft/onnxruntime/issues/20876) — HIGH confidence (confirmed pre-Chrome 124 limitation)
+- [WebGPU + WASM Unavailable in Service Workers — Transformers.js issue #787](https://github.com/huggingface/transformers.js/issues/787) — HIGH confidence
+- [mlc-ai/web-llm GitHub — Chrome Extension WebGPU Service Worker example](https://github.com/mlc-ai/web-llm/tree/main/examples/chrome-extension-webgpu-service-worker) — HIGH confidence
+- [Xenova/all-MiniLM-L6-v2 on HuggingFace](https://huggingface.co/Xenova/all-MiniLM-L6-v2) — HIGH confidence (model size ~25MB confirmed)
+- [mlc-ai/Qwen2.5-0.5B-Instruct-q0f32-MLC on HuggingFace](https://huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q0f32-MLC) — HIGH confidence (q4f16_1 ~945MB VRAM confirmed)
+- [Transformers.js env.allowRemoteModels + allowLocalModels — issue #791](https://github.com/huggingface/transformers.js/issues/791) — MEDIUM confidence
+- [Transformers.js official docs](https://huggingface.co/docs/transformers.js/en/index) — HIGH confidence
+- [WebLLM docs — Advanced Use Cases](https://webllm.mlc.ai/docs/user/advanced_usage.html) — HIGH confidence
+- [Offscreen Documents in MV3 — Chrome Developers blog](https://developer.chrome.com/blog/Offscreen-Documents-in-Manifest-v3) — HIGH confidence
 
 ---
 
-*Architecture research for: CWS compliance integration — Chat Signal Radar v1.1*
-*Researched: 2026-02-19*
+*Architecture research for: Semantic AI Pipeline Integration — Chat Signal Radar v1.2*
+*Researched: 2026-02-20*
