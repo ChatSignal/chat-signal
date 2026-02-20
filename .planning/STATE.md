@@ -5,15 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — large analysis windows, robust DOM sanitization, and user-tunable thresholds make the tool reliable across different stream sizes.
-**Current focus:** Between milestones — v1.1 shipped, planning next milestone
+**Current focus:** Milestone v1.2 — Semantic AI Pipeline
 
 ## Current Position
 
-Phase: v1.1 complete (Phases 4-6 shipped)
-Status: Milestone v1.1 CWS Readiness archived — Phase 7 (verification + submission) deferred with known gaps VERIF-01, VERIF-02
-Last activity: 2026-02-20 — Completed v1.1 milestone archival
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-20 — Milestone v1.2 started
 
-Progress: [██████████] 100% (v1.1 shipped)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

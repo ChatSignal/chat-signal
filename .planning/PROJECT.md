@@ -4,6 +4,17 @@
 
 A Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It clusters messages (questions, issues, requests, general), tracks sentiment with 6 moods, detects trending topics, and provides session summaries. Users can configure analysis window size, inactivity timeout, and other thresholds through the options page. All DOM output is sanitized via DOMPurify. The extension is CWS-ready with a hosted privacy policy, permission justifications, disk space disclosure for WebLLM, and automated store listing asset generation.
 
+## Current Milestone: v1.2 Semantic AI Pipeline
+
+**Goal:** Replace keyword-based clustering with a semantic encoder (MiniLM via Transformers.js) and switch the SLM to Qwen2.5-0.5B-Instruct, with a GPU scheduler for resource management.
+
+**Target features:**
+- Transformers.js integration with all-MiniLM-L6-v2 encoder (~25MB, auto-loads without consent)
+- Semantic vector clustering replacing keyword-based WASM clustering (WASM becomes fallback)
+- Switch WebLLM model from Phi-2 to Qwen2.5-0.5B-Instruct
+- GPU scheduler/priority queue as new dedicated module (encoder priority 1, SLM priority 2)
+- Pass encoder clusters into SLM prompts for context-aware summaries
+
 ## Core Value
 
 Real-time chat analysis must be accurate enough to be actionable — large analysis windows, robust DOM sanitization, and user-tunable thresholds make the tool reliable across different stream sizes.
@@ -37,16 +48,22 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 
 ### Active
 
-- [ ] Incognito mode verification (chrome.storage, sidePanel, WASM)
-- [ ] Clean extension ZIP built and scanned with CRXcavator
-- [ ] Chrome Web Store submission
+- [ ] Transformers.js integration with all-MiniLM-L6-v2 sentence encoder
+- [ ] Semantic vector clustering (cosine similarity) replacing keyword-based WASM buckets
+- [ ] Switch WebLLM SLM from Phi-2 to Qwen2.5-0.5B-Instruct
+- [ ] GPU scheduler module — priority queue managing encoder vs SLM WebGPU contention
+- [ ] WASM keyword clustering as fallback when AI models are off or not loaded
+- [ ] Encoder-to-SLM pipeline — pass pre-clustered groups into Qwen prompts for summarization
 
 ### Out of Scope
 
-- Export options (JSON/Markdown) — candidate for next milestone
-- Platform expansion (Kick, Rumble) — candidate for next milestone
-- Alerts on sentiment spikes — candidate for next milestone
-- Historical trend graphs — candidate for next milestone
+- Incognito mode verification — deferred from v1.1 (VERIF-01), candidate for future
+- Clean extension ZIP + CRXcavator scan — deferred from v1.1 (VERIF-02), candidate for future
+- Chrome Web Store submission — depends on VERIF-01/VERIF-02
+- Export options (JSON/Markdown) — candidate for future milestone
+- Platform expansion (Kick, Rumble) — candidate for future milestone
+- Alerts on sentiment spikes — candidate for future milestone
+- Historical trend graphs — candidate for future milestone
 - Per-category sentiment sensitivity — high complexity, low payoff
 - Custom sentiment keyword lists — requires Rust changes, 5-10x complexity
 - Per-channel settings — storage namespace complexity
@@ -69,8 +86,9 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 ## Constraints
 
 - **Tech stack**: Rust/WASM + vanilla JS Chrome extension (MV3) — no framework changes
-- **Extension size**: DOMPurify (~60KB) acceptable; Playwright/sharp are devDependencies only
+- **Extension size**: DOMPurify (~60KB) acceptable; MiniLM (~25MB) auto-loads; Qwen (~400MB+) consent-gated; Playwright/sharp are devDependencies only
 - **Testing**: Rust unit tests must pass; existing test coverage maintained
+- **WebGPU contention**: Encoder and SLM cannot run simultaneously — GPU scheduler required
 
 ## Key Decisions
 
@@ -91,4 +109,4 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 | Playwright screenshots with chrome API stubs | Renders real sidebar.html without live extension context | ✓ Good — automated, reproducible |
 
 ---
-*Last updated: 2026-02-20 after v1.1 milestone*
+*Last updated: 2026-02-20 after v1.2 milestone start*
