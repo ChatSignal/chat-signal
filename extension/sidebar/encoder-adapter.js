@@ -81,9 +81,11 @@ async function flushQueue(onBatchReady) {
 
   const batch = encodingQueue.splice(0, MAX_BATCH);
   try {
+    const startTime = Date.now();
     const embeddings = await encodeMessages(batch);
+    const durationMs = Date.now() - startTime;
     if (onBatchReady && embeddings) {
-      onBatchReady(batch, embeddings);
+      onBatchReady(batch, embeddings, durationMs);
     }
   } catch (err) {
     console.log('[Encoder] flushQueue error:', err);
