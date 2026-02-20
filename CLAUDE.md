@@ -31,9 +31,13 @@ Content Script → Background Worker → Sidebar UI → WASM Engine
   - `sidebar/`: UI components (HTML, JS, CSS with system theme support)
   - `libs/web-llm/`: Bundled WebLLM library (optional, for AI summaries)
   - `wasm/`: Generated WASM artifacts (git-ignored)
-- **docs/**: GitHub Pages site (privacy policy, CWS compliance docs)
+- **docs/**: GitHub Pages site (privacy policy, CWS compliance docs, store assets)
   - Served at `chatsignal.dev` via GitHub Pages from `docs/` folder
-- **scripts/**: Build automation
+  - `docs/store/`: CWS store listing assets (screenshots, promo image)
+  - `docs/cws-store-listing.md`: Copy-paste reference for CWS dashboard
+- **scripts/**: Build automation and asset generation
+  - `scripts/promo-image.mjs`: Generate 440x280 promotional image via sharp
+  - `scripts/screenshot.mjs`: Generate 1280x800 CWS screenshots via Playwright
 
 ## Build Commands
 
@@ -179,6 +183,7 @@ Sidebar renders:
 - wasm-pack
 - Chrome browser
 - Optional: cargo-watch for development auto-rebuild
+- Dev dependencies (npm): Playwright (screenshots), sharp (image generation)
 
 ## WebLLM Integration (Optional)
 
@@ -187,8 +192,10 @@ The extension supports optional AI-powered summaries using WebLLM (in-browser LL
 ### User Consent Flow
 
 On first run, users see a consent modal before any AI model download:
-- **Enable AI** - Sets `aiSummariesEnabled: true` in settings, downloads ~400MB model
+- **Enable AI** - Sets `aiSummariesEnabled: true` in settings, downloads ~400MB model from HuggingFace CDN
 - **Skip** - Keeps `aiSummariesEnabled: false`, uses rule-based fallback
+
+The consent modal discloses persistent disk usage (~450MB) and download source (HuggingFace CDN). If `navigator.storage.estimate()` reports insufficient space, the "Enable AI" button is disabled with a warning message.
 
 The same `aiSummariesEnabled` setting is used by both the consent modal and the Settings page toggle, providing a single source of truth. A separate `aiConsentShown` flag tracks whether the user has seen the consent modal.
 
@@ -243,11 +250,13 @@ await resetLLM();  // Cleanup
 - [x] **DOMPurify Integration**: Replaced regex-based sanitization with DOMPurify for XSS prevention
 - [x] **Configurable Thresholds**: Inactivity timeout setting, input validation with Number.isFinite()
 
-### In Progress (v1.1 — CWS Readiness)
+### Shipped (v1.1 — CWS Readiness)
 - [x] **Privacy Policy**: Hosted at chatsignal.dev/privacy-policy, CWS dashboard compliance docs
-- [ ] **Manifest Audit**: Version bump, CSP audit, disk space warning in consent modal
-- [ ] **Store Listing Assets**: Screenshots, promotional image, trademark-compliant copy
-- [ ] **Verification & Submission**: Incognito testing, clean ZIP, CWS submission
+- [x] **Manifest Audit**: Version bump to 1.1.0, unlimitedStorage, CSP audit, disk space warning in consent modal
+- [x] **Store Listing Assets**: Three 1280x800 screenshots, 440x280 promotional image, trademark-compliant store copy
+
+### Not Yet Started
+- [ ] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission
 
 ### Next Up
 - [ ] **Export Options**: Download session data as JSON or Markdown files

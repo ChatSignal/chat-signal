@@ -89,11 +89,19 @@ chat-signal-radar/
 ├── docs/                  # GitHub Pages site
 │   ├── CNAME              # Custom domain (chatsignal.dev)
 │   ├── privacy-policy.md  # Published privacy policy
-│   └── cws-justifications.md  # CWS dashboard reference
+│   ├── cws-justifications.md  # CWS dashboard reference
+│   ├── cws-store-listing.md   # Store listing copy reference
+│   └── store/             # CWS store assets
+│       ├── promo-440x280.png        # Promotional image
+│       ├── screenshot-clusters.png  # Screenshot: message clusters
+│       ├── screenshot-mood.png      # Screenshot: sentiment/mood
+│       └── screenshot-topics.png    # Screenshot: trending topics
 ├── tests/                 # JavaScript tests
 └── scripts/
     ├── build.sh           # Build Rust → WASM → Extension
-    └── watch.sh           # Dev mode with auto-rebuild
+    ├── watch.sh           # Dev mode with auto-rebuild
+    ├── promo-image.mjs    # Generate 440x280 promo image
+    └── screenshot.mjs     # Generate 1280x800 CWS screenshots
 ```
 
 ## 🛠️ Development
