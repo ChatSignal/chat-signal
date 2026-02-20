@@ -5,6 +5,8 @@ import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSenti
 import { saveSession, loadSessions, deleteSession, clearAllSessions } from '../storage-manager.js';
 import { safeSetHTML, DOMPURIFY_CONFIG, escapeHtml, safeCreateElement } from './utils/DOMHelpers.js';
 import { initEncoderWithRetry, scheduleEncode, getEncoderState, getBackendInfo, resetEncoder } from './encoder-adapter.js';
+import { buildPrototypes, classifyBatch, isSemanticReady, setSemanticMode, setKeywordMode, getMode } from './cosine-router.js';
+import { ROUTING_CONFIG } from './routing-config.js';
 
 const DEBUG = false;
 const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
@@ -92,8 +94,17 @@ const encoderProgress = document.getElementById('encoder-progress');
 const encoderProgressFill = document.getElementById('encoder-progress-fill');
 const encoderProgressText = document.getElementById('encoder-progress-text');
 
+// Clustering mode badge elements
+const clustersHeader = document.getElementById('clusters-header');
+const clusteringModeBadge = document.getElementById('clustering-mode-badge');
+
 // Encoder state
 let encoderReady = false;
+
+// Update the clustering mode badge text ('Semantic' or 'Keyword')
+function updateClusteringBadge(mode) {
+  if (clusteringModeBadge) clusteringModeBadge.textContent = mode;
+}
 
 // Session tracking
 let sessionStartTime = null;
@@ -196,6 +207,8 @@ if (!isTestEnv) {
   window.addEventListener('gpu-unavailable', (event) => {
     console.warn('[Sidebar] GPU unavailable, falling back to WASM-only mode:', event.detail);
     encoderReady = false;
+    setKeywordMode();
+    updateClusteringBadge('Keyword');
     // Encoder will continue to function via WASM backend on next init
     // No UI change needed — analysis gate falls through when encoderReady is false
   });
@@ -305,6 +318,16 @@ async function initEncoderOnStartup() {
     }, 1300);
 
     encoderReady = true;
+
+    // Build cosine routing prototype vectors from seed phrases
+    try {
+      await buildPrototypes();
+      setSemanticMode();
+      updateClusteringBadge('Semantic');
+      console.log('[Sidebar] Semantic clustering activated');
+    } catch (err) {
+      console.warn('[Sidebar] Failed to build prototypes, staying in keyword mode:', err);
+    }
 
     // Store backend info for Settings page display
     chrome.storage.local.set({ encoderBackend: getBackendInfo() });
@@ -420,6 +443,29 @@ function updateAiSummaryState() {
   }
 }
 
+// Build semantic bucket objects from cosine-classified messages
+function buildSemanticBuckets(messages, labels) {
+  const bucketMap = new Map([
+    ['Questions', { label: 'Questions', count: 0, sample_messages: [] }],
+    ['Issues/Bugs', { label: 'Issues/Bugs', count: 0, sample_messages: [] }],
+    ['Requests', { label: 'Requests', count: 0, sample_messages: [] }],
+    ['General Chat', { label: 'General Chat', count: 0, sample_messages: [] }],
+  ]);
+
+  messages.forEach((msg, i) => {
+    const label = labels[i];
+    const bucket = bucketMap.get(label);
+    if (bucket) {
+      bucket.count++;
+      if (bucket.sample_messages.length < 3) {
+        bucket.sample_messages.push(msg.text);
+      }
+    }
+  });
+
+  return [...bucketMap.values()].filter(b => b.count > 0);
+}
+
 // Process incoming messages
 function processMessages(messages) {
   if (!wasmModule) {
@@ -502,6 +548,9 @@ function processMessages(messages) {
       updateMoodIndicator(messages, result.sentiment_signals, settings);
     }
 
+    // Show the clusters-header alongside the clusters section
+    if (clustersHeader) clustersHeader.classList.remove('hidden');
+
     // Clear previous clusters
     clustersDiv.innerHTML = '';
 
@@ -545,10 +594,56 @@ function processMessages(messages) {
       generateAISummary(result.buckets);
     }
 
-    // Feed messages to encoder batch queue for Phase 10 cosine routing
+    // Feed messages to encoder and optionally override WASM buckets with semantic routing
     if (encoderReady) {
-      scheduleEncode(messages, (batch, embeddings) => {
-        console.log(`[Encoder] Batch encoded: ${batch.length} messages, ${embeddings ? embeddings.length : 0} embeddings`);
+      scheduleEncode(messages, (batch, embeddings, durationMs) => {
+        // Check if encoding is too slow (WASM backend fallback)
+        if (durationMs !== undefined && batch.length > 0) {
+          const msPerMessage = durationMs / batch.length;
+          if (msPerMessage > ROUTING_CONFIG.wasmSpeedThresholdMsPerMessage) {
+            console.log(`[Sidebar] Encoding too slow (${msPerMessage.toFixed(0)}ms/msg), falling back to keyword mode`);
+            setKeywordMode();
+            updateClusteringBadge('Keyword');
+            return;
+          }
+        }
+
+        // If semantic mode is active and we have embeddings, override bucket display
+        if (isSemanticReady() && embeddings) {
+          const labels = classifyBatch(batch, embeddings);
+          const semanticBuckets = buildSemanticBuckets(batch, labels);
+
+          // Override the WASM bucket display with semantic buckets
+          clustersDiv.innerHTML = '';
+          if (semanticBuckets.length === 0) {
+            safeSetHTML(clustersDiv, '<div class="empty-state"><p>No clusters yet. Keep chatting!</p></div>');
+          } else {
+            semanticBuckets.forEach(bucket => {
+              const bucketEl = document.createElement('div');
+              bucketEl.className = 'cluster-bucket';
+
+              const headerDiv = safeCreateElement('div', 'cluster-header');
+              const labelDiv = safeCreateElement('div', 'cluster-label', escapeHtml(bucket.label));
+              const countDiv = safeCreateElement('div', 'cluster-count', bucket.count.toString());
+              headerDiv.appendChild(labelDiv);
+              headerDiv.appendChild(countDiv);
+
+              const messagesDiv = safeCreateElement('div', 'cluster-messages');
+              bucket.sample_messages.forEach(msg => {
+                const msgDiv = safeCreateElement('div', 'message-item', escapeHtml(msg));
+                messagesDiv.appendChild(msgDiv);
+              });
+
+              bucketEl.appendChild(headerDiv);
+              bucketEl.appendChild(messagesDiv);
+              clustersDiv.appendChild(bucketEl);
+            });
+          }
+
+          console.log(`[Sidebar] Semantic buckets: ${semanticBuckets.map(b => `${b.label}(${b.count})`).join(', ')}`);
+        } else {
+          console.log(`[Encoder] Batch encoded: ${batch.length} messages, ${embeddings ? embeddings.length : 0} embeddings`);
+        }
       });
     }
 
@@ -1068,6 +1163,7 @@ function startNewSession() {
   topicsSection.classList.add('hidden');
   aiSummaryDiv.classList.add('hidden');
   clustersDiv.innerHTML = '';
+  if (clustersHeader) clustersHeader.classList.add('hidden');
   firstRunDiv.classList.remove('hidden');
   statusDiv.classList.remove('active');
   statusText.textContent = 'Waiting for chat messages...';
@@ -1166,6 +1262,7 @@ function switchToView(view) {
       moodSection.classList.remove('hidden');
       topicsSection.classList.remove('hidden');
       clustersDiv.classList.remove('hidden');
+      if (clustersHeader) clustersHeader.classList.remove('hidden');
     } else {
       firstRunDiv.classList.remove('hidden');
     }
@@ -1180,6 +1277,7 @@ function switchToView(view) {
     moodSection.classList.add('hidden');
     topicsSection.classList.add('hidden');
     clustersDiv.classList.add('hidden');
+    if (clustersHeader) clustersHeader.classList.add('hidden');
     firstRunDiv.classList.add('hidden');
     aiSummaryDiv.classList.add('hidden');
 
