@@ -24,8 +24,6 @@ Saves user settings (analysis preferences, AI consent choice) and session summar
 
 Stores the optional AI model (~400MB) in IndexedDB after a one-time download. The standard storage quota is too small for model weights this size.
 
-**Note: Added to manifest in Phase 5 — paste into dashboard after manifest update.**
-
 ### host_permissions: youtube.com
 
 Reads live chat messages from the YouTube page DOM to perform real-time message clustering, topic detection, and sentiment analysis. No data is transmitted off-device.
@@ -33,6 +31,35 @@ Reads live chat messages from the YouTube page DOM to perform real-time message 
 ### host_permissions: twitch.tv
 
 Reads live chat messages from the Twitch page DOM to perform real-time message clustering, topic detection, and sentiment analysis. No data is transmitted off-device.
+
+---
+
+## Content Security Policy (CSP) Rationale
+
+The extension's CSP is set in `manifest.json` under `content_security_policy.extension_pages`:
+
+```
+script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;
+```
+
+### script-src 'self' 'wasm-unsafe-eval'
+
+- `'self'` — Extension scripts are loaded from the extension package only. No external script sources.
+- `'wasm-unsafe-eval'` — Required for `WebAssembly.instantiate()`. Both the Rust WASM analysis engine (chat clustering, topic extraction, sentiment analysis) and the optional WebLLM model inference use this API. Chrome MV3 documentation specifies `'wasm-unsafe-eval'` as the correct directive for WASM loading — `'unsafe-eval'` is not used and is not present.
+
+### object-src 'self'
+
+Default minimum for Manifest V3 extensions per Chrome documentation. No external object sources are used.
+
+### connect-src entries
+
+All three connect-src domains support the optional AI summarization feature (WebLLM). When AI is not enabled by the user, no external connections are made — the extension operates entirely on-device.
+
+- `https://huggingface.co` — WebLLM fetches model configuration and metadata from the HuggingFace model hub (e.g., model card JSON, tokenizer config).
+- `https://cdn-lfs.huggingface.co` — WebLLM downloads ONNX model weight files from HuggingFace's large file storage CDN. These are binary tensor data files, not executable code.
+- `https://raw.githubusercontent.com` — WebLLM fetches WebGPU shader WASM files from the `mlc-ai/binary-mlc-llm-libs` GitHub repository. Confirmed in use at `libs/web-llm/index.js` via the `modelLibURLPrefix` constant: `https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/`.
+
+**Note:** All connect-src entries support the optional AI features. Without AI enabled, no external connections are made. Model weights are binary tensor data, not executable code.
 
 ---
 
