@@ -182,6 +182,23 @@ if (!isTestEnv) {
   });
 }
 
+const REQUIRED_BYTES = 450 * 1024 * 1024; // 450MB
+
+async function checkStorageAvailability() {
+  if (!navigator.storage || typeof navigator.storage.estimate !== 'function') {
+    // API unavailable — allow attempt (per decision: let it fail naturally)
+    return { sufficient: true };
+  }
+  try {
+    const { quota, usage } = await navigator.storage.estimate();
+    const available = quota - usage;
+    return { sufficient: available >= REQUIRED_BYTES };
+  } catch (err) {
+    console.warn('[LLM Consent] Storage estimate failed:', err);
+    return { sufficient: true }; // On error — allow attempt
+  }
+}
+
 // Load settings from chrome.storage
 async function loadSettings() {
   try {
@@ -247,8 +264,17 @@ async function checkAISettings() {
       llmEnabled = false;
       statusText.textContent = 'Ready! Waiting for chat messages...';
     } else {
-      // First time - show consent modal
+      // First time — check storage then show consent modal
       statusText.textContent = 'Ready! Waiting for chat messages...';
+
+      const { sufficient } = await checkStorageAvailability();
+      if (!sufficient) {
+        llmEnableBtn.disabled = true;
+        const warningEl = document.getElementById('llm-space-warning');
+        if (warningEl) warningEl.classList.remove('hidden');
+        llmSkipBtn.textContent = 'Continue without AI';
+      }
+
       llmConsentModal.classList.remove('hidden');
     }
   } catch (error) {
