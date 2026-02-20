@@ -22,8 +22,8 @@ Requirements for the Semantic AI Pipeline milestone. Each maps to roadmap phases
 
 ### GPU Scheduling
 
-- [ ] **GPU-01**: Dedicated GPU scheduler module (`gpu-scheduler.js`) serializes WebGPU access between encoder and SLM via promise-queue mutex
-- [ ] **GPU-02**: Encoder has priority 1 (runs every batch); SLM has priority 2 (waits for encoder to finish before starting)
+- [x] **GPU-01**: Dedicated GPU scheduler module (`gpu-scheduler.js`) serializes WebGPU access between encoder and SLM via promise-queue mutex
+- [x] **GPU-02**: Encoder has priority 1 (runs every batch); SLM has priority 2 (waits for encoder to finish before starting)
 
 ### SLM Upgrade
 
@@ -77,8 +77,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENC-05 | Phase 8 | Complete |
 | CLU-01 | Phase 10 | Pending |
 | CLU-02 | Phase 10 | Pending |
-| GPU-01 | Phase 9 | Pending |
-| GPU-02 | Phase 9 | Pending |
+| GPU-01 | Phase 9 | Complete |
+| GPU-02 | Phase 9 | Complete |
 | SLM-01 | Phase 11 | Pending |
 | SLM-02 | Phase 11 | Pending |
 | SLM-03 | Phase 11 | Pending |

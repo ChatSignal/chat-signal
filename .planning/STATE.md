@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
-**Current focus:** v1.2 Semantic AI Pipeline — Phase 8: Encoder Foundation
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 9: GPU Scheduler
 
 ## Current Position
 
-Phase: 8 of 12 (Encoder Foundation)
-Plan: 2 of 3 complete in current phase
+Phase: 9 of 12 (GPU Scheduler)
+Plan: 1 of 1 complete in current phase
 Status: In progress
-Last activity: 2026-02-20 — 08-02-PLAN.md complete (sidebar encoder integration + Settings backend info)
+Last activity: 2026-02-20 — 09-01-PLAN.md complete (GPU scheduler module + encoder wiring)
 
-Progress: [█░░░░░░░░░] ~12% (v1.2, 2/16 plans complete)
+Progress: [█░░░░░░░░░] ~19% (v1.2, 3/16 plans complete)
 
 ## Performance Metrics
 
@@ -32,9 +32,10 @@ Progress: [█░░░░░░░░░] ~12% (v1.2, 2/16 plans complete)
 - 06-02: ~4 min — 2 tasks, 4 files (Playwright screenshot script + three 1280x800 PNGs)
 
 **v1.2 Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - 08-01: ~3 min — 2 tasks, 5 files (Transformers.js vendoring, encoder-adapter.js)
 - 08-02: ~5 min — 2 tasks, 5 files (sidebar encoder progress bar, analysis gating, settings backend info)
+- 09-01: ~2 min — 2 tasks, 3 files (GPU scheduler module, encoder-adapter wiring, sidebar event listener)
 
 ## Accumulated Context
 
@@ -61,6 +62,13 @@ Decisions from 08-02 execution:
 - Encoder init is fire-and-forget (no await) in initWasm() — WASM analysis works immediately
 - Options page reads encoderBackend from chrome.storage.local (not sync) — backend is device-specific
 
+Decisions from 09-01 execution:
+- GPU scheduler built as hand-rolled promise-chain mutex (no npm dependency needed for two task types)
+- MAX_QUEUE_DEPTH=8 (mid-range 5-10), ENCODER_BURST_LIMIT=4 (4:1 ratio), AUDIT_SIZE=20 ring buffer
+- scheduleGpuTask wraps only pipeline inference calls, not pipeline creation or cache operations
+- registerDevice() requests a second GPUDevice reference solely for device.lost watcher (Transformers.js holds primary device internally)
+- gpu-unavailable listener in sidebar.js sets encoderReady=false — analysis gate falls through to WASM-only mode, no UI indicator needed
+
 ### Pending Todos
 
 None.
@@ -75,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 08-02-PLAN.md (sidebar encoder integration + Settings backend info). Next: 08-03-PLAN.md
+Stopped at: Completed 09-01-PLAN.md (GPU scheduler module + encoder wiring). Phase 9 complete.
 Resume file: None

@@ -32,7 +32,7 @@
 **Milestone Goal:** Replace keyword-based clustering with MiniLM semantic encoding, add a GPU scheduler for WebGPU resource management, switch the SLM to Qwen2.5-0.5B-Instruct, and connect the full encoder-to-SLM pipeline with WASM as a permanent fallback.
 
 - [x] **Phase 8: Encoder Foundation** — Vendor Transformers.js, load MiniLM, produce 384-dim embeddings (completed 2026-02-20)
-- [ ] **Phase 9: GPU Scheduler** — Serialized WebGPU access between encoder and SLM
+- [x] **Phase 9: GPU Scheduler** — Serialized WebGPU access between encoder and SLM (completed 2026-02-20)
 - [ ] **Phase 10: Semantic Cosine Routing** — Prototype vectors classify messages into 4 fixed buckets
 - [ ] **Phase 11: Qwen SLM Swap** — Replace Phi-2 with Qwen2.5-0.5B, ChatML prompts, encoder pipeline
 - [ ] **Phase 12: Integration and Hardening** — WASM fallback verified, loading sequence, consent update
@@ -123,7 +123,7 @@ Plans:
 | 6. Store Listing Assets | v1.1 | 2/2 | Complete | 2026-02-20 |
 | 7. Verification and Submission | v1.1 | 0/? | Deferred | - |
 | 8. Encoder Foundation | 2/2 | Complete   | 2026-02-20 | - |
-| 9. GPU Scheduler | v1.2 | 0/? | Not started | - |
+| 9. GPU Scheduler | 1/1 | Complete   | 2026-02-20 | - |
 | 10. Semantic Cosine Routing | v1.2 | 0/? | Not started | - |
 | 11. Qwen SLM Swap | v1.2 | 0/? | Not started | - |
 | 12. Integration and Hardening | v1.2 | 0/? | Not started | - |
