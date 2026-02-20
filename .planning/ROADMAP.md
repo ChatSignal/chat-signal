@@ -34,7 +34,7 @@
 - [x] **Phase 8: Encoder Foundation** — Vendor Transformers.js, load MiniLM, produce 384-dim embeddings (completed 2026-02-20)
 - [x] **Phase 9: GPU Scheduler** — Serialized WebGPU access between encoder and SLM (completed 2026-02-20)
 - [x] **Phase 10: Semantic Cosine Routing** — Prototype vectors classify messages into 4 fixed buckets (completed 2026-02-20)
-- [ ] **Phase 11: Qwen SLM Swap** — Replace Phi-2 with Qwen2.5-0.5B, ChatML prompts, encoder pipeline
+- [x] **Phase 11: Qwen SLM Swap** — Replace Phi-2 with Qwen2.5-0.5B, ChatML prompts, encoder pipeline (completed 2026-02-20)
 - [ ] **Phase 12: Integration and Hardening** — WASM fallback verified, loading sequence, consent update
 
 ## Phase Details
@@ -125,5 +125,5 @@ Plans:
 | 8. Encoder Foundation | 2/2 | Complete   | 2026-02-20 | - |
 | 9. GPU Scheduler | 1/1 | Complete    | 2026-02-20 | - |
 | 10. Semantic Cosine Routing | 2/2 | Complete    | 2026-02-20 | - |
-| 11. Qwen SLM Swap | 1/2 | In Progress|  | - |
+| 11. Qwen SLM Swap | 2/2 | Complete   | 2026-02-20 | - |
 | 12. Integration and Hardening | v1.2 | 0/? | Not started | - |

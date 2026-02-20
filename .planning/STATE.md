@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
-**Current focus:** v1.2 Semantic AI Pipeline — Phase 11: Qwen Summarization (in progress, 1/2 plans complete)
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 11: Qwen Summarization (COMPLETE, 2/2 plans done). Ready for Phase 12: Verification & Submission.
 
 ## Current Position
 
-Phase: 11 of 12 (Qwen SLM Swap)
-Plan: 1 of 2 complete in current phase
-Status: 11-01 complete — model swap, keyword-scan parser, fallback state. Ready for 11-02 (fallback UI).
-Last activity: 2026-02-20 — 11-01-PLAN.md complete (Qwen2.5-0.5B swap, keyword-scan parser, garbage fallback, isInFallback/retryLLM exports)
+Phase: 11 of 12 (Qwen SLM Swap) — COMPLETE
+Plan: 2 of 2 complete in current phase
+Status: 11-02 complete — fallback notice UI, retry button, isInFallback/retryLLM wired into sidebar. Phase 11 done.
+Last activity: 2026-02-20 — 11-02-PLAN.md complete (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration)
 
-Progress: [██░░░░░░░░] ~37% (v1.2, 6/16 plans complete)
+Progress: [███░░░░░░░] ~44% (v1.2, 8/16 plans complete)
 
 ## Performance Metrics
 
@@ -32,13 +32,14 @@ Progress: [██░░░░░░░░] ~37% (v1.2, 6/16 plans complete)
 - 06-02: ~4 min — 2 tasks, 4 files (Playwright screenshot script + three 1280x800 PNGs)
 
 **v1.2 Velocity:**
-- Total plans completed: 6
+- Total plans completed: 8
 - 08-01: ~3 min — 2 tasks, 5 files (Transformers.js vendoring, encoder-adapter.js)
 - 08-02: ~5 min — 2 tasks, 5 files (sidebar encoder progress bar, analysis gating, settings backend info)
 - 09-01: ~2 min — 2 tasks, 3 files (GPU scheduler module, encoder-adapter wiring, sidebar event listener)
 - 10-01: ~2 min — 2 tasks, 3 files (routing-config.js, cosine-router.js, encoder-adapter durationMs)
 - 10-02: ~2 min — 2 tasks, 3 files (cosine router wired into sidebar.js, clustering mode badge, semantic bucket rendering)
 - 11-01: ~2 min — 2 tasks, 1 file (Qwen2.5-0.5B swap, keyword-scan parser, garbage fallback, isInFallback/retryLLM exports)
+- 11-02: ~2 min — 2 tasks, 3 files (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration)
 
 ## Accumulated Context
 
@@ -85,6 +86,11 @@ Decisions from 11-01 execution:
 - hasSummaryFormat() uses /\S.*:\s*\S/ pattern — permissive enough to match emoji+category lines without requiring a specific emoji regex
 - retryLLM() performs full engine reload (not state-only reset) — relies on IndexedDB cache for fast ~2-5s re-init (locked decision)
 
+Decisions from 11-02 execution:
+- updateFallbackNotice() called at three sites: generateAISummary try+catch, analyzeSentiment path in updateMoodIndicator, retryAiBtn handler — covers all LLM state transitions
+- Fallback notice hidden via classList in startNewSession() and switchToView('history'); updateFallbackNotice() restores correct state on live view return
+- Generic progress text 'Loading AI: N%' already in place — no model name exposed
+
 ### Pending Todos
 
 None.
@@ -99,5 +105,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 11-01-PLAN.md (Qwen2.5-0.5B-Instruct model swap, keyword-scan parser, garbage-triggered fallback state, isInFallback/retryLLM exports). Phase 11 in progress (1/2 plans). Ready for 11-02 (fallback UI).
+Stopped at: Completed 11-02-PLAN.md (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration). Phase 11 COMPLETE (2/2 plans). Ready for Phase 12 (Verification & Submission).
 Resume file: None
