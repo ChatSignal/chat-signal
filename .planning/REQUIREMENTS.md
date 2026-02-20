@@ -9,9 +9,9 @@ Requirements for CWS publication. Each maps to roadmap phases.
 
 ### Privacy & Compliance
 
-- [ ] **PRIV-01**: Privacy policy hosted at a public URL disclosing: chat DOM content reading, chrome.storage.local usage, optional HuggingFace model download, and no data transmitted to external servers (except HuggingFace CDN for model weights)
-- [ ] **PRIV-02**: CWS dashboard permission justifications written for each manifest permission (sidePanel, storage, unlimitedStorage, host_permissions for youtube.com and twitch.tv)
-- [ ] **PRIV-03**: CWS dashboard data certification checkboxes completed accurately (website content, browsing activity declarations)
+- [x] **PRIV-01**: Privacy policy hosted at a public URL disclosing: chat DOM content reading, chrome.storage.local usage, optional HuggingFace model download, and no data transmitted to external servers (except HuggingFace CDN for model weights)
+- [x] **PRIV-02**: CWS dashboard permission justifications written for each manifest permission (sidePanel, storage, unlimitedStorage, host_permissions for youtube.com and twitch.tv)
+- [x] **PRIV-03**: CWS dashboard data certification checkboxes completed accurately (website content, browsing activity declarations)
 
 ### Manifest & Permissions
 
@@ -75,9 +75,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRIV-01 | Phase 4 | Pending |
-| PRIV-02 | Phase 4 | Pending |
-| PRIV-03 | Phase 4 | Pending |
+| PRIV-01 | Phase 4 | Complete |
+| PRIV-02 | Phase 4 | Complete |
+| PRIV-03 | Phase 4 | Complete |
 | MNFST-01 | Phase 5 | Pending |
 | MNFST-02 | Phase 5 | Pending |
 | MNFST-03 | Phase 5 | Pending |

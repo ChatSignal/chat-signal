@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 4 of 7 (Privacy and Dashboard Compliance)
-Plan: — of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-19 — Roadmap created for v1.1 milestone
+Plan: 1 of 1 complete in current phase
+Status: Phase 4 complete
+Last activity: 2026-02-20 — Completed 04-01: Privacy policy, CNAME, and CWS justifications
 
-Progress: [░░░░░░░░░░] 0% (v1.1 phases)
+Progress: [██░░░░░░░░] ~14% (v1.1 phases — 1 of 7 phases complete)
 
 ## Performance Metrics
 
@@ -33,6 +33,10 @@ Recent decisions affecting current work:
 - v1.1 start: WebLLM bundle included in submission — requires `unlimitedStorage` in manifest and disk space disclosure in consent modal
 - v1.1 start: GitHub Pages chosen for privacy policy hosting (free, permanent HTTPS, no third-party branding)
 - v1.1 start: `navigator.storage.estimate()` chosen over `chrome.system.storage` (no new manifest permission required)
+- 04-01: Conversational plain-language tone for privacy policy — no legal jargon, small indie extension feel
+- 04-01: HuggingFace download disclosed inline (not a separate section) per user decision
+- 04-01: unlimitedStorage justification written in cws-justifications.md now with Phase 5 note — prevents it being forgotten at submission
+- 04-01: Root PRIVACY.md kept as pointer (not deleted) so GitHub repo surfaces a PRIVACY.md
 
 ### Pending Todos
 
@@ -46,6 +50,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Roadmap created for v1.1 CWS Readiness. Ready to plan Phase 4.
+Last session: 2026-02-20
+Stopped at: Completed 04-01-PLAN.md — privacy policy, CNAME, and CWS justifications. Phase 4 complete. Proceed to Phase 5.
 Resume file: None
