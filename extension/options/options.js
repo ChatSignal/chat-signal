@@ -222,8 +222,43 @@ resetBtn.addEventListener('click', async () => {
   await resetToDefaults();
 });
 
+// Load encoder backend info from chrome.storage.local (written by sidebar after encoder init)
+async function loadEncoderInfo() {
+  const el = document.getElementById('encoder-backend-value');
+  if (!el) return;
+
+  try {
+    const result = await chrome.storage.local.get('encoderBackend');
+    const info = result.encoderBackend;
+
+    if (!info) {
+      // Sidebar hasn't been opened yet — encoder hasn't run
+      el.textContent = '—';
+      return;
+    }
+
+    const { state, backend } = info;
+
+    if (state === 'ready') {
+      el.textContent = backend === 'webgpu' ? 'WebGPU' : 'WASM (CPU)';
+    } else if (state === 'loading') {
+      el.textContent = 'Loading...';
+    } else if (state === 'error') {
+      el.textContent = 'Not available';
+    } else {
+      el.textContent = '—';
+    }
+  } catch (err) {
+    console.warn('[Options] Failed to load encoder info:', err);
+    el.textContent = '—';
+  }
+}
+
 // Load settings on page load
-document.addEventListener('DOMContentLoaded', loadSettings);
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  loadEncoderInfo();
+});
 
 if (typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true) {
   globalThis.ChatSignalRadarOptions = {
