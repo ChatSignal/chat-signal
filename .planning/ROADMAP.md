@@ -76,11 +76,11 @@ Plans:
   2. Every message is assigned to exactly one bucket via cosine similarity; messages below threshold (~0.35) default to General Chat
   3. A "Semantic" or "Keyword" status badge in the UI shows which clustering mode is currently active
   4. Cluster assignments are deterministic — the same message always routes to the same bucket given the same prototype vectors
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
+- [ ] 10-01-PLAN.md — Core routing module (cosine-router.js, routing-config.js) and encoder durationMs callback
+- [ ] 10-02-PLAN.md — Wire cosine router into sidebar.js, add Semantic/Keyword badge to UI
 
 ### Phase 11: Qwen SLM Swap
 **Goal**: The SLM is switched to Qwen2.5-0.5B-Instruct with ChatML prompts that consume semantic cluster output for context-aware summaries
