@@ -1,7 +1,7 @@
 // All innerHTML must use DOMPurify
 // Sidebar script - loads WASM and processes chat messages
 
-import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM } from '../llm-adapter.js';
+import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM, isInFallback, retryLLM } from '../llm-adapter.js';
 import { saveSession, loadSessions, deleteSession, clearAllSessions } from '../storage-manager.js';
 import { safeSetHTML, DOMPURIFY_CONFIG, escapeHtml, safeCreateElement } from './utils/DOMHelpers.js';
 import { initEncoderWithRetry, scheduleEncode, getEncoderState, getBackendInfo, resetEncoder } from './encoder-adapter.js';
@@ -97,6 +97,10 @@ const encoderProgressText = document.getElementById('encoder-progress-text');
 // Clustering mode badge elements
 const clustersHeader = document.getElementById('clusters-header');
 const clusteringModeBadge = document.getElementById('clustering-mode-badge');
+
+// Fallback notice elements
+const fallbackNotice = document.getElementById('ai-fallback-notice');
+const retryAiBtn = document.getElementById('retry-ai-btn');
 
 // Encoder state
 let encoderReady = false;

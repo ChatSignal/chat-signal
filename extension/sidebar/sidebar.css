@@ -274,6 +274,39 @@ h1 {
   padding-top: 0;
 }
 
+/* Fallback notice ("Basic mode" indicator + Retry AI button) */
+
+.ai-fallback-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.4em 0.8em;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.fallback-label {
+  font-style: italic;
+}
+
+.fallback-separator {
+  color: var(--text-muted);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  opacity: 0.8;
+}
+
 /* ============================================================================
    CLUSTER BUCKETS
    ============================================================================ */
