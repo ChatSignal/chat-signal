@@ -6,6 +6,10 @@ let engine = null;
 let isInitializing = false;
 let isInitialized = false;
 
+let _inFallback = false;
+let _garbageCount = 0;
+const MAX_GARBAGE_BEFORE_FALLBACK = 2;
+
 /**
  * Initialize WebLLM engine with bundled library
  * @param {Function} progressCallback - Optional callback for initialization progress
@@ -184,8 +188,13 @@ async function summarizeBuckets(buckets) {
 
     const summaryText = response.choices[0].message.content;
 
+    // Validate summary format — at least one line must match emoji+category pattern
+    const validatedSummary = hasSummaryFormat(summaryText)
+      ? summaryText
+      : generateFallbackSummary(prompt);
+
     return {
-      summary: summaryText,
+      summary: validatedSummary,
       refined_buckets: buckets.map(b => ({
         label: b.label,
         count: b.count,
@@ -286,7 +295,23 @@ REASON: [one sentence explanation]`;
       max_tokens: 60
     });
 
-    return parseSentimentResponse(response.choices[0].message.content);
+    const result = parseSentimentResponse(response.choices[0].message.content);
+
+    // Garbage tracking: silent fallback result has mood='neutral', confidence=0.5, summary=''
+    const isGarbage = result.mood === 'neutral' && result.confidence === 0.5 && result.summary === '';
+    if (isGarbage) {
+      _garbageCount++;
+      if (_garbageCount >= MAX_GARBAGE_BEFORE_FALLBACK) {
+        _inFallback = true;
+        engine = createFallbackEngine();
+        if (DEBUG) console.warn('[LLM] Too many garbage responses, switching to rule-based fallback for this session.');
+      }
+    } else {
+      // Good parse: reset consecutive garbage counter
+      _garbageCount = 0;
+    }
+
+    return result;
   } catch (error) {
     console.error('[LLM] Sentiment analysis failed:', error);
     return computeFallbackSentiment(sentimentSignals);
@@ -309,36 +334,37 @@ function buildSignalSummary(signals) {
 }
 
 /**
- * Parse structured sentiment response from LLM
+ * Parse structured sentiment response from LLM using keyword-scan regex.
+ * Handles Qwen2.5's conversational preamble by searching for keywords anywhere
+ * in the response, not just at line start.
  */
 function parseSentimentResponse(response) {
-  const lines = response.split('\n');
-  let mood = 'neutral';
-  let confidence = 0.5;
-  let reason = '';
+  const moodMatch = response.match(/MOOD:\s*([a-z]+)/i);
+  const confMatch = response.match(/CONFIDENCE:\s*([0-9.]+)/i);
+  const reasonMatch = response.match(/REASON:\s*(.+?)(?:\n|$)/i);
 
-  for (const line of lines) {
-    if (line.toUpperCase().startsWith('MOOD:')) {
-      mood = line.replace(/^MOOD:\s*/i, '').trim().toLowerCase();
-    } else if (line.toUpperCase().startsWith('CONFIDENCE:')) {
-      confidence = parseFloat(line.replace(/^CONFIDENCE:\s*/i, '').trim()) || 0.5;
-    } else if (line.toUpperCase().startsWith('REASON:')) {
-      reason = line.replace(/^REASON:\s*/i, '').trim();
-    }
+  // Completely unparseable: silent neutral fallback (locked decision)
+  if (!moodMatch) {
+    if (DEBUG) console.warn('[LLM] No MOOD keyword found, silent fallback. Response:', response);
+    return { mood: 'neutral', confidence: 0.5, summary: '', emoji: MOOD_EMOJIS.neutral };
   }
 
-  // Validate mood
   const validMoods = ['excited', 'positive', 'angry', 'negative', 'confused', 'neutral'];
-  if (!validMoods.includes(mood)) {
-    mood = 'neutral';
-  }
+  let mood = (moodMatch[1] || '').trim().toLowerCase();
+  if (!validMoods.includes(mood)) mood = 'neutral';
 
-  return {
-    mood,
-    confidence: Math.min(1, Math.max(0, confidence)),
-    summary: reason,
-    emoji: MOOD_EMOJIS[mood] || '😐'
-  };
+  const confidence = confMatch ? Math.min(1, Math.max(0, parseFloat(confMatch[1]) || 0.5)) : 0.5;
+  const reason = reasonMatch ? reasonMatch[1].trim() : '';
+
+  return { mood, confidence, summary: reason, emoji: MOOD_EMOJIS[mood] || '😐' };
+}
+
+/**
+ * Check if LLM summary response matches the expected emoji+category format.
+ * At least one line must have the format: [content]: [content]
+ */
+function hasSummaryFormat(text) {
+  return text.split('\n').some(line => /\S.*:\s*\S/.test(line.trim()) && line.trim().length > 0);
 }
 
 /**
@@ -435,11 +461,35 @@ async function resetLLM() {
   }
 }
 
+/**
+ * Check if the session has switched to rule-based fallback mode due to
+ * repeated garbage output from the LLM.
+ * @returns {boolean}
+ */
+function isInFallback() { return _inFallback; }
+
+/**
+ * Reset fallback state and re-initialize the LLM engine.
+ * Useful for a "Retry AI" user action after the session has entered fallback mode.
+ * Relies on IndexedDB cache so re-init is fast (~2-5s) after first download.
+ * @param {Function} progressCallback - Optional progress callback
+ */
+async function retryLLM(progressCallback) {
+  _inFallback = false;
+  _garbageCount = 0;
+  engine = null;
+  isInitialized = false;
+  isInitializing = false;
+  await initializeLLM(progressCallback);
+}
+
 export {
   initializeLLM,
   summarizeBuckets,
   analyzeSentiment,
   computeFallbackSentiment,
   isLLMReady,
-  resetLLM
+  resetLLM,
+  isInFallback,
+  retryLLM
 };
