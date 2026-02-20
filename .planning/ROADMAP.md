@@ -91,11 +91,11 @@ Plans:
   2. Prompts use ChatML format (`<|im_start|>` / `<|im_end|>`) and produce parseable `MOOD:` / structured output reliably across 20+ sampled outputs
   3. The response parser locates structured content by scanning for first keyword occurrence, not by assuming line position, so Qwen preamble does not break parsing
   4. Semantic cluster groups from the encoder are passed into Qwen prompts and produce noticeably more specific summaries than the prior WASM-cluster input
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [ ] 11-01-PLAN.md — Model swap, prompt update with semantic context, keyword-scan parser, fallback state
+- [ ] 11-02-PLAN.md — Fallback UI (Basic mode indicator + Retry AI button), sidebar wiring
 
 ### Phase 12: Integration and Hardening
 **Goal**: The complete pipeline works end-to-end with verified fallback paths, a correct progressive loading sequence, and updated consent disclosure
