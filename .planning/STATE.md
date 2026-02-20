@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 6 of 7 (Store Listing Assets)
-Plan: 1 of 2 complete in current phase
-Status: In progress — 06-01 complete (CWS store listing copy + 440x280 promo image), proceeding to 06-02
-Last activity: 2026-02-20 — Completed 06-01: CWS-compliant store listing copy (97-char summary, audience-first description), 440x280 promo image via sharp SVG pipeline
+Plan: 2 of 2 complete in current phase
+Status: Phase 6 complete — 06-01 (store listing copy + promo image) and 06-02 (three 1280x800 CWS screenshots) done
+Last activity: 2026-02-20 — Completed 06-02: three 1280x800 CWS screenshots via Playwright (clusters, mood, topics), all verified at exact dimensions
 
-Progress: [█████░░░░░] ~55% (v1.1 phases — Phase 6 in progress, 06-01 complete)
+Progress: [██████░░░░] ~65% (v1.1 phases — Phase 6 complete, all store assets ready, proceeding to Phase 7)
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@ Progress: [█████░░░░░] ~55% (v1.1 phases — Phase 6 in prog
 
 **v1.1 Phase 6 Metrics:**
 - 06-01: ~2 min — 2 tasks, 4 files (store listing copy, promo image, npm deps)
+- 06-02: ~4 min — 2 tasks, 4 files (Playwright screenshot script + three 1280x800 PNGs)
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Recent decisions affecting current work:
 - [Phase 06-01]: No platform logos in promo image — Chat Signal branding only, avoids trademark issues entirely
 - [Phase 06-01]: Item summary is 97 chars: "Real-time chat analysis for streamers and moderators. Works with YouTube and Twitch live streams."
 - [Phase 06-01]: playwright and sharp installed here (plan 06-01) since both needed in 06-02 screenshots plan
+- [Phase 06-02]: deviceScaleFactor: 1 explicit in Playwright context — prevents HiDPI output doubling dimensions on some systems
+- [Phase 06-02]: chrome.storage.local.get stub returns aiConsentShown: true — suppresses consent modal from appearing in screenshots without modifying extension code
+- [Phase 06-02]: Fresh browser context per screenshot (not page.reload) — cleanest DOM isolation, no state bleed between inject functions
 
 ### Pending Todos
 
@@ -72,5 +76,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 06-01-PLAN.md — CWS store listing copy (97-char summary, audience-first description with trust signals), 440x280 promo image via sharp SVG pipeline with base64 icon embed. Proceed to 06-02.
+Stopped at: Completed 06-02-PLAN.md — Three 1280x800 CWS screenshots via Playwright: clusters, mood/sentiment, trending topics. Phase 6 fully complete. Proceed to Phase 7 (verification and submission).
 Resume file: None

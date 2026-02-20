@@ -28,7 +28,7 @@ Requirements for CWS publication. Each maps to roadmap phases.
 ### Store Listing
 
 - [x] **STORE-01**: Store description copy using approved trademark patterns ("works with YouTube" not "YouTube extension")
-- [ ] **STORE-02**: Screenshots captured at 1280x800 showing sidebar in action on a live stream (minimum 1, up to 5)
+- [x] **STORE-02**: Screenshots captured at 1280x800 showing sidebar in action on a live stream (minimum 1, up to 5)
 - [x] **STORE-03**: Promotional image created at 440x280
 
 ### Verification
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-01 | Phase 5 | Complete |
 | DISC-02 | Phase 5 | Complete |
 | STORE-01 | Phase 6 | Complete |
-| STORE-02 | Phase 6 | Pending |
+| STORE-02 | Phase 6 | Complete |
 | STORE-03 | Phase 6 | Complete |
 | VERIF-01 | Phase 7 | Pending |
 | VERIF-02 | Phase 7 | Pending |

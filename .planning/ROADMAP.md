@@ -22,7 +22,7 @@
 
 - [x] **Phase 4: Privacy and Dashboard Compliance** - Write and host privacy policy; complete all CWS dashboard fields (completed 2026-02-20)
 - [x] **Phase 5: Manifest Audit and Disclosure UI** - Audit manifest permissions and CSP; add disk space warning to WebLLM consent modal (completed 2026-02-20)
-- [ ] **Phase 6: Store Listing Assets** - Create screenshots, promotional image, and trademark-compliant store copy
+- [x] **Phase 6: Store Listing Assets** - Create screenshots, promotional image, and trademark-compliant store copy (completed 2026-02-20)
 - [ ] **Phase 7: Verification and Submission** - Verify incognito behavior; build clean ZIP; submit to CWS
 
 ## Phase Details
@@ -63,7 +63,7 @@ Plans:
   1. Store description copy uses approved trademark patterns (e.g., "works with YouTube" not "YouTube extension") and accurately describes all features within the character limit
   2. At least one screenshot exists at exactly 1280x800 px showing the sidebar with populated data (cluster buckets, mood indicator, and trending topics visible — not a loading or empty state)
   3. A promotional image exists at 440x280 px suitable for upload to the CWS dashboard
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 06-01-PLAN.md — Store listing copy and promotional image (440x280)
 - [ ] 06-02-PLAN.md — Automated Playwright screenshots (3x 1280x800)
@@ -86,5 +86,5 @@ Plans:
 | 3. Configurable Thresholds | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Privacy and Dashboard Compliance | 2/2 | Complete    | 2026-02-20 | - |
 | 5. Manifest Audit and Disclosure UI | 2/2 | Complete    | 2026-02-20 | - |
-| 6. Store Listing Assets | 1/2 | In Progress|  | - |
+| 6. Store Listing Assets | 2/2 | Complete   | 2026-02-20 | - |
 | 7. Verification and Submission | v1.1 | 0/? | Not started | - |
