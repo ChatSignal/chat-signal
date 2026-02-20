@@ -48,11 +48,11 @@
   2. MiniLM auto-loads on sidebar open without a consent prompt and produces 384-dimensional vectors for encoded messages
   3. Messages are encoded in batches (10-50) and only new messages are re-encoded on each analysis cycle (hash cache skips known messages)
   4. WebGPU backend is used for encoding when available; WASM backend activates automatically when WebGPU is absent
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md — Vendor Transformers.js, create encoder-adapter.js with encoding pipeline
+- [ ] 08-02-PLAN.md — Sidebar progress bar UI, encoder lifecycle wiring, Settings backend info
 
 ### Phase 9: GPU Scheduler
 **Goal**: A standalone GPU scheduler module serializes WebGPU access so encoder and SLM can never run concurrently
