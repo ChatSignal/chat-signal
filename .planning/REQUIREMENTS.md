@@ -17,8 +17,8 @@ Requirements for the Semantic AI Pipeline milestone. Each maps to roadmap phases
 
 ### Semantic Clustering
 
-- [ ] **CLU-01**: Prototype cosine routing classifies messages into 4 existing buckets (Questions, Issues/Bugs, Requests, General Chat) using pre-computed category prototype vectors
-- [ ] **CLU-02**: Cosine similarity threshold (~0.35-0.45) determines classification; below-threshold messages default to General Chat
+- [x] **CLU-01**: Prototype cosine routing classifies messages into 4 existing buckets (Questions, Issues/Bugs, Requests, General Chat) using pre-computed category prototype vectors
+- [x] **CLU-02**: Cosine similarity threshold (~0.35-0.45) determines classification; below-threshold messages default to General Chat
 
 ### GPU Scheduling
 
@@ -75,8 +75,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENC-03 | Phase 8 | Complete |
 | ENC-04 | Phase 8 | Complete |
 | ENC-05 | Phase 8 | Complete |
-| CLU-01 | Phase 10 | Pending |
-| CLU-02 | Phase 10 | Pending |
+| CLU-01 | Phase 10 | Complete |
+| CLU-02 | Phase 10 | Complete |
 | GPU-01 | Phase 9 | Complete |
 | GPU-02 | Phase 9 | Complete |
 | SLM-01 | Phase 11 | Pending |
