@@ -122,7 +122,7 @@ Plans:
 | 5. Manifest Audit and Disclosure UI | v1.1 | 2/2 | Complete | 2026-02-20 |
 | 6. Store Listing Assets | v1.1 | 2/2 | Complete | 2026-02-20 |
 | 7. Verification and Submission | v1.1 | 0/? | Deferred | - |
-| 8. Encoder Foundation | v1.2 | 0/? | Not started | - |
+| 8. Encoder Foundation | 1/2 | In Progress|  | - |
 | 9. GPU Scheduler | v1.2 | 0/? | Not started | - |
 | 10. Semantic Cosine Routing | v1.2 | 0/? | Not started | - |
 | 11. Qwen SLM Swap | v1.2 | 0/? | Not started | - |

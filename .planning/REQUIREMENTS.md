@@ -9,11 +9,11 @@ Requirements for the Semantic AI Pipeline milestone. Each maps to roadmap phases
 
 ### Encoder Integration
 
-- [ ] **ENC-01**: Transformers.js 3.x vendored into extension with ONNX WASM paths configured for MV3 CSP compliance
+- [x] **ENC-01**: Transformers.js 3.x vendored into extension with ONNX WASM paths configured for MV3 CSP compliance
 - [ ] **ENC-02**: all-MiniLM-L6-v2 encoder auto-loads on extension startup without user consent (~23MB, cached after first download)
-- [ ] **ENC-03**: Messages encoded in batches (10-50) into 384-dimensional vectors via Transformers.js feature-extraction pipeline
-- [ ] **ENC-04**: WebGPU backend used for encoding when available, WASM backend as automatic fallback
-- [ ] **ENC-05**: Incremental encoding with message hash cache — only new messages re-encoded on each analysis cycle
+- [x] **ENC-03**: Messages encoded in batches (10-50) into 384-dimensional vectors via Transformers.js feature-extraction pipeline
+- [x] **ENC-04**: WebGPU backend used for encoding when available, WASM backend as automatic fallback
+- [x] **ENC-05**: Incremental encoding with message hash cache — only new messages re-encoded on each analysis cycle
 
 ### Semantic Clustering
 
@@ -70,11 +70,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENC-01 | Phase 8 | Pending |
+| ENC-01 | Phase 8 | Complete |
 | ENC-02 | Phase 8 | Pending |
-| ENC-03 | Phase 8 | Pending |
-| ENC-04 | Phase 8 | Pending |
-| ENC-05 | Phase 8 | Pending |
+| ENC-03 | Phase 8 | Complete |
+| ENC-04 | Phase 8 | Complete |
+| ENC-05 | Phase 8 | Complete |
 | CLU-01 | Phase 10 | Pending |
 | CLU-02 | Phase 10 | Pending |
 | GPU-01 | Phase 9 | Pending |

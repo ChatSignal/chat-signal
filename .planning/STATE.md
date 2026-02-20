@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 8 of 12 (Encoder Foundation)
-Plan: — of — in current phase
-Status: Ready to plan
-Last activity: 2026-02-20 — v1.2 roadmap created (5 phases, 16 requirements mapped)
+Plan: 1 of 3 complete in current phase
+Status: In progress
+Last activity: 2026-02-20 — 08-01-PLAN.md complete (encoder-adapter.js + Transformers.js vendoring)
 
-Progress: [░░░░░░░░░░] 0% (v1.2)
+Progress: [█░░░░░░░░░] ~6% (v1.2, 1/16 plans complete)
 
 ## Performance Metrics
 
@@ -31,6 +31,10 @@ Progress: [░░░░░░░░░░] 0% (v1.2)
 - 06-01: ~2 min — 2 tasks, 4 files (store listing copy, promo image, npm deps)
 - 06-02: ~4 min — 2 tasks, 4 files (Playwright screenshot script + three 1280x800 PNGs)
 
+**v1.2 Velocity:**
+- Total plans completed: 1
+- 08-01: ~3 min — 2 tasks, 5 files (Transformers.js vendoring, encoder-adapter.js)
+
 ## Accumulated Context
 
 ### Decisions
@@ -42,6 +46,13 @@ Recent decisions affecting v1.2:
 - Prototype cosine routing over K-Means/DBSCAN — deterministic, O(n×4), maps to fixed 4-bucket UI
 - MiniLM auto-loads without consent (~25MB) — Qwen remains consent-gated (~950MB combined)
 - GPU scheduler built before either WebGPU model is active — prevents device loss or OOM
+
+Decisions from 08-01 execution:
+- Glob-based vendor script avoids file-list staleness after Transformers.js upgrades
+- wasmPaths set at module level (before function definitions) — mandatory for MV3 CSP compliance
+- WebGPU detection with manual WASM fallback (Transformers.js v3 does not auto-fallback)
+- initEncoderWithRetry resets state+promise between retries so initEncoder runs fresh
+- TIME_FLUSH_MS=8000 chosen for slow chat tolerance (range noted: 5-10s)
 
 ### Pending Todos
 
@@ -57,5 +68,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: v1.2 roadmap created. Next: /gsd:plan-phase 8
+Stopped at: Completed 08-01-PLAN.md (encoder-adapter.js + Transformers.js vendoring). Next: 08-02-PLAN.md (sidebar integration)
 Resume file: None
