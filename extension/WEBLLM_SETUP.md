@@ -49,14 +49,14 @@ Do nothing! The extension works without WebLLM using rule-based summaries.
 ## Model Storage
 
 - Models are cached in IndexedDB (managed by WebLLM)
-- First load downloads ~400MB (Phi-2-q4f16_1)
+- First load downloads ~400MB (Qwen2.5-0.5B-Instruct-q4f16_1)
 - Subsequent loads are instant
 
 ## Switching Models
 
-Edit `llm-adapter.js` line 24:
+Edit `llm-adapter.js` line 38:
 ```javascript
-engine = await CreateMLCEngine('Llama-3.2-1B-Instruct-q4f16_1-MLC', { // Change model here
+engine = await CreateMLCEngine('Qwen2.5-0.5B-Instruct-q4f16_1-MLC', { // Change model here
 ```
 
 Available models: https://github.com/mlc-ai/web-llm#supported-models
@@ -69,4 +69,4 @@ Available models: https://github.com/mlc-ai/web-llm#supported-models
 
 **Model won't download** - Check browser console, ensure network access to HuggingFace
 
-**Out of memory** - Use smaller model like Phi-2 instead of Llama-3
+**Out of memory** - Qwen2.5-0.5B-Instruct is already the smallest supported model; ensure ~1GB VRAM is available

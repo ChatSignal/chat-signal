@@ -155,12 +155,13 @@ The sentiment system uses a two-tier approach:
    - Confused: "?", "wait", "huh", "explain", etc.
    - Neutral: everything else
 
-2. **LLM Adapter** determines mood from signals:
+2. **LLM Adapter** (Qwen2.5-0.5B-Instruct) determines mood from signals:
    - Ignores neutral messages when calculating mood
    - Requires at least 3 sentiment signals before declaring a non-neutral mood
    - Upgrades positive → excited when sentiment_score > 30
    - Upgrades negative → angry when sentiment_score < -30
-   - Falls back to rule-based analysis if WebLLM unavailable
+   - Keyword-scan regex parser (`MOOD:`, `CONFIDENCE:`, `REASON:`) tolerates model preamble
+   - Falls back to rule-based analysis if WebLLM unavailable or after repeated garbage output
 
 ## Data Flow
 
@@ -183,12 +184,19 @@ Cosine Router (if semantic mode active)
     ↓
 Overrides bucket assignments with cosine-classified buckets
     ↓
+LLM Adapter (Qwen2.5-0.5B-Instruct, if ready)
+    ↓
+Receives pre-classified semantic buckets with sample messages
+    ↓
+Generates context-aware summaries + sentiment mood
+(keyword-scan parser tolerates preamble; garbage → fallback)
+    ↓
 Sidebar renders:
   - Mood indicator (with optional LLM enhancement)
   - Trending topics cloud
   - Cluster buckets (semantic or keyword)
   - "Semantic"/"Keyword" badge
-  - AI summary (optional)
+  - AI summary (if LLM available, or "Basic mode" indicator)
 ```
 
 ## Development Workflow
@@ -223,7 +231,7 @@ The same `aiSummariesEnabled` setting is used by both the consent modal and the 
 ### How it works
 
 1. `llm-adapter.js` attempts to load WebLLM from `libs/web-llm/index.js`
-2. If user consented and bundle found, uses Phi-2-q4f16_1-MLC model for summarization
+2. If user consented and bundle found, uses Qwen2.5-0.5B-Instruct-q4f16_1-MLC model for summarization
 3. If bundle not found or user declined, falls back to rule-based summary extraction
 4. Sidebar displays AI-generated summaries alongside cluster buckets
 
@@ -237,13 +245,15 @@ See `extension/WEBLLM_SETUP.md` for detailed instructions. Three options:
 ### LLM Adapter API
 
 ```javascript
-import { initializeLLM, summarizeBuckets, analyzeSentiment, isLLMReady, resetLLM } from './llm-adapter.js';
+import { initializeLLM, summarizeBuckets, analyzeSentiment, isLLMReady, resetLLM, isInFallback, retryLLM } from './llm-adapter.js';
 
 await initializeLLM(progressCallback);  // Initialize engine
 const summary = await summarizeBuckets(buckets);  // Generate summary
 const sentiment = await analyzeSentiment(messages, signals);  // Analyze mood
 isLLMReady();  // Check if ready
 await resetLLM();  // Cleanup
+isInFallback();  // Check if in rule-based fallback mode
+await retryLLM();  // Re-initialize engine after fallback
 ```
 
 ## Roadmap
@@ -280,6 +290,7 @@ await resetLLM();  // Cleanup
 - [x] **MiniLM Encoder**: In-browser embedding via Transformers.js (WebGPU with WASM fallback)
 - [x] **GPU Scheduler**: Promise-chain mutex for single-pipeline GPU access
 - [x] **Semantic Cosine Routing**: Messages classified by cosine similarity to prototype vectors, with per-category thresholds and automatic fallback to keyword mode
+- [x] **Qwen SLM Swap**: Switched from Phi-2 to Qwen2.5-0.5B-Instruct with keyword-scan parser, semantic cluster context in prompts, and garbage-triggered fallback to rule-based mode
 
 ### Not Yet Started
 - [ ] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission

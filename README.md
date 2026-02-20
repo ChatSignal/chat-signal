@@ -10,7 +10,7 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 - **Trending Topics**: Word cloud of frequently mentioned terms, with special highlighting for emotes
 - **Session History**: Save and review past session summaries with full sentiment breakdown and captured questions
 - **Smart Session Detection**: Auto-prompts to save when stream chat goes inactive for 2+ minutes
-- **AI Summaries**: Optional WebLLM-powered chat summaries (works offline, falls back gracefully)
+- **AI Summaries**: Optional WebLLM-powered chat summaries using Qwen2.5-0.5B-Instruct (works offline, falls back gracefully with "Basic mode" indicator)
 - **Configurable Thresholds**: Adjust analysis window size and inactivity timeout from the settings page
 
 ## 🏗️ Architecture
@@ -197,7 +197,9 @@ npm run test:js
    - MiniLM encodes messages into 384-dim embeddings
    - Cosine similarity routes each message to the nearest prototype vector
    - Badge shows "Semantic" or "Keyword" to indicate active mode
-6. **LLM Adapter** optionally enhances sentiment with WebLLM
+6. **LLM Adapter** (Qwen2.5-0.5B-Instruct) enhances sentiment and generates summaries from semantic clusters
+   - Keyword-scan parser tolerates model preamble
+   - Garbage-triggered fallback to rule-based mode with "Basic mode" UI indicator
 7. **Sidebar UI** displays:
    - Mood indicator (emoji + label + confidence)
    - Trending topics word cloud
