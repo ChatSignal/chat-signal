@@ -10,6 +10,7 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 - **Session History**: Save and review past session summaries with full sentiment breakdown and captured questions
 - **Smart Session Detection**: Auto-prompts to save when stream chat goes inactive for 2+ minutes
 - **AI Summaries**: Optional WebLLM-powered chat summaries (works offline, falls back gracefully)
+- **Configurable Thresholds**: Adjust analysis window size and inactivity timeout from the settings page
 
 ## 🏗️ Architecture
 
@@ -69,6 +70,10 @@ chat-signal-radar/
 │   ├── content-script.js  # Chat DOM observer
 │   ├── llm-adapter.js     # WebLLM integration
 │   ├── storage-manager.js # Session history persistence
+│   ├── options/           # Settings page
+│   │   ├── options.html
+│   │   ├── options.js
+│   │   └── options.css
 │   ├── sidebar/
 │   │   ├── sidebar.html   # Dashboard UI
 │   │   ├── sidebar.css    # Styling (light/dark theme support)
@@ -81,6 +86,11 @@ chat-signal-radar/
 │   │       ├── ValidationHelpers.js  # Input validation & sanitization
 │   │       └── FormattingHelpers.js  # Text formatting utilities
 │   └── wasm/              # (generated) WASM artifacts
+├── docs/                  # GitHub Pages site
+│   ├── CNAME              # Custom domain (chatsignal.dev)
+│   ├── privacy-policy.md  # Published privacy policy
+│   └── cws-justifications.md  # CWS dashboard reference
+├── tests/                 # JavaScript tests
 └── scripts/
     ├── build.sh           # Build Rust → WASM → Extension
     └── watch.sh           # Dev mode with auto-rebuild
@@ -191,30 +201,11 @@ Sentiment requires at least 3 signal-bearing messages before showing a non-neutr
 
 MPL 2.0
 
-## 🔒 Privacy & Data Handling
+## 🔒 Privacy
 
-Chat Signal Radar processes live chat messages locally inside your browser. It does **not** send chat content to any external servers by default.
+Chat Signal Radar processes everything locally in your browser. No chat content is sent to any server. The only external request is an optional one-time AI model download from HuggingFace CDN (if you enable AI summaries).
 
-**What is collected/stored:**
-- Recent chat messages are held in memory for live analysis (up to the most recent 100 messages).
-- Session summaries (if saved) are stored in Chrome local storage (up to 50 sessions).
-- Settings and preferences are stored in Chrome sync storage.
-- If you enable AI summaries, the WebLLM model is downloaded and cached locally in IndexedDB for offline use.
-
-**What is *not* collected:**
-- No chat content is uploaded or transmitted to external servers.
-- No personal data is collected or sold.
-
-## 🌐 Network Access & External Resources
-
-This extension only makes external network requests when AI summaries are enabled. In that case, it may download model assets from:
-- `https://huggingface.co`
-- `https://cdn-lfs.huggingface.co`
-
-If you use the optional WebLLM setup instructions, the bundled library may be fetched from:
-- `https://raw.githubusercontent.com`
-
-You can keep AI summaries disabled to avoid any external downloads.
+Full privacy policy: **[chatsignal.dev/privacy-policy](https://chatsignal.dev/privacy-policy)**
 
 ## 🤝 Contributing
 

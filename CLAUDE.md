@@ -31,6 +31,8 @@ Content Script → Background Worker → Sidebar UI → WASM Engine
   - `sidebar/`: UI components (HTML, JS, CSS with system theme support)
   - `libs/web-llm/`: Bundled WebLLM library (optional, for AI summaries)
   - `wasm/`: Generated WASM artifacts (git-ignored)
+- **docs/**: GitHub Pages site (privacy policy, CWS compliance docs)
+  - Served at `chatsignal.dev` via GitHub Pages from `docs/` folder
 - **scripts/**: Build automation
 
 ## Build Commands
@@ -236,6 +238,17 @@ await resetLLM();  // Cleanup
 - [x] **Session History**: Persist summaries to chrome.storage.local, "History" tab to view past sessions
 - [x] **Session-wide Stats**: Accumulate questions, sentiment, and message counts across entire session (not just rolling window)
 
+### Shipped (v1.0)
+- [x] **Configurable Analysis Window**: User-adjustable analysis window size (50-500 messages) with dynamic windowing
+- [x] **DOMPurify Integration**: Replaced regex-based sanitization with DOMPurify for XSS prevention
+- [x] **Configurable Thresholds**: Inactivity timeout setting, input validation with Number.isFinite()
+
+### In Progress (v1.1 — CWS Readiness)
+- [x] **Privacy Policy**: Hosted at chatsignal.dev/privacy-policy, CWS dashboard compliance docs
+- [ ] **Manifest Audit**: Version bump, CSP audit, disk space warning in consent modal
+- [ ] **Store Listing Assets**: Screenshots, promotional image, trademark-compliant copy
+- [ ] **Verification & Submission**: Incognito testing, clean ZIP, CWS submission
+
 ### Next Up
 - [ ] **Export Options**: Download session data as JSON or Markdown files
 - [ ] **Platform Expansion**: Add support for additional streaming platforms
@@ -251,4 +264,3 @@ await resetLLM();  // Cleanup
 - Moderator-specific features (flagging, quick actions)
 - Multi-stream monitoring
 - API/webhook integration for external tools
-- Chrome Web Store publication
