@@ -48,5 +48,22 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "libs/transformers/transformers.js",
+        "libs/transformers/*.wasm",
+        "libs/transformers/*.mjs"
+      ],
+      "matches": ["<all_urls>"]
+    },
+    {
+      "resources": [
+        "wasm/wasm_engine_bg.wasm",
+        "wasm/wasm_engine.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
