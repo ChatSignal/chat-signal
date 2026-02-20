@@ -62,10 +62,10 @@ Plans:
   1. `gpu-scheduler.js` exists in `extension/sidebar/modules/` and all GPU calls in `sidebar.js` route through it
   2. Encoder (priority 1) and SLM (priority 2) never execute simultaneously — timestamp logging confirms non-overlapping execution
   3. Queue depth is capped so that backlogged tasks do not compound into unbounded latency
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md — Create gpu-scheduler.js module and wire into encoder pipeline
 
 ### Phase 10: Semantic Cosine Routing
 **Goal**: Messages are classified into the four existing buckets by cosine similarity to prototype vectors, visibly outperforming keyword matching
