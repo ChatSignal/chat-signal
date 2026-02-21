@@ -106,10 +106,11 @@ Plans:
   2. On cold start the sidebar displays WASM cluster results within ~2 seconds, then upgrades to semantic clustering once MiniLM finishes loading (~5-30 seconds) — no blank render period
   3. The consent modal discloses the correct combined model size (~950MB total for Qwen2.5 + MiniLM) and the "Enable AI" button is gated on available storage
   4. Cache coexistence is confirmed: reopening the sidebar after a prior session warm-starts both MiniLM and Qwen without re-downloading either model
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md — Fix WASM rendering gate, encoder status text, warm-start detection, Qwen auto-retry
+- [ ] 12-02-PLAN.md — Consent modal two-model disclosure and storage warning update
 
 ## Progress
 
