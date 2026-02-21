@@ -10,6 +10,9 @@ let _inFallback = false;
 let _garbageCount = 0;
 const MAX_GARBAGE_BEFORE_FALLBACK = 2;
 
+let _autoRetryScheduled = false;
+const GARBAGE_RETRY_COOLDOWN_MS = 60_000;
+
 /**
  * Initialize WebLLM engine with bundled library
  * @param {Function} progressCallback - Optional callback for initialization progress
@@ -302,9 +305,34 @@ REASON: [one sentence explanation]`;
     if (isGarbage) {
       _garbageCount++;
       if (_garbageCount >= MAX_GARBAGE_BEFORE_FALLBACK) {
+        // Capture whether this was a real Qwen engine before switching to fallback.
+        // Only schedule auto-retry if the bundle was present (not already a missing-bundle fallback).
+        const wasRealEngine = engine && !engine._isFallback;
         _inFallback = true;
         engine = createFallbackEngine();
         if (DEBUG) console.warn('[LLM] Too many garbage responses, switching to rule-based fallback for this session.');
+
+        // Auto-retry once after cooldown if the engine was real (not missing-bundle fallback)
+        if (wasRealEngine && !_autoRetryScheduled) {
+          _autoRetryScheduled = true;
+          setTimeout(async () => {
+            _autoRetryScheduled = false;
+            _inFallback = false;
+            _garbageCount = 0;
+            engine = null;
+            isInitialized = false;
+            isInitializing = false;
+            try {
+              await initializeLLM();
+              // If retry resolved to a fallback engine, restore the fallback flag
+              if (engine && engine._isFallback) {
+                _inFallback = true;
+              }
+            } catch (_) {
+              _inFallback = true;
+            }
+          }, GARBAGE_RETRY_COOLDOWN_MS);
+        }
       }
     } else {
       // Good parse: reset consecutive garbage counter

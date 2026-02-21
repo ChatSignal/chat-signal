@@ -538,14 +538,10 @@ function processMessages(messages) {
     // Store latest analysis result for summary
     lastAnalysisResult = result;
 
-    // Gate analysis UI rendering on encoder readiness
-    // While encoder is loading, only stats update — analysis sections stay hidden
-    // When encoder errors, fall through to normal WASM rendering (fallback mode)
-    if (!encoderReady && getEncoderState() === 'loading') {
-      // Encoder still initializing — defer analysis rendering
-      // Messages continue to accumulate in allMessages for catch-up encoding
-      return;
-    }
+    // While encoder is loading, allow WASM keyword clusters to render immediately.
+    // Only the scheduleEncode call is skipped (encoder not ready for embeddings yet).
+    // When encoder errors, encoderLoading is false and scheduleEncode is also skipped (encoderReady false).
+    const encoderLoading = !encoderReady && getEncoderState() === 'loading';
 
     // Accumulate questions for the session summary
     const questionsBucket = result.buckets?.find(b => b.label === 'Questions');
@@ -618,8 +614,9 @@ function processMessages(messages) {
       generateAISummary(result.buckets);
     }
 
-    // Feed messages to encoder and optionally override WASM buckets with semantic routing
-    if (encoderReady) {
+    // Feed messages to encoder and optionally override WASM buckets with semantic routing.
+    // Skip when encoder is still loading (encoderLoading) — catch-up encoding runs after init.
+    if (encoderReady && !encoderLoading) {
       scheduleEncode(messages, (batch, embeddings, durationMs) => {
         // Check if encoding is too slow (WASM backend fallback)
         if (durationMs !== undefined && batch.length > 0) {
