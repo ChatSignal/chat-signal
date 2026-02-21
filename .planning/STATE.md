@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
-**Current focus:** v1.2 Semantic AI Pipeline — Phase 12: Integration and Hardening (1/? plans done). WASM gate fix, encoder status text, and Qwen auto-retry landed.
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 12: Integration and Hardening (2/? plans done). WASM gate fix, encoder status text, Qwen auto-retry, and consent modal two-model disclosure landed.
 
 ## Current Position
 
 Phase: 12 of 12 (Integration and Hardening) — IN PROGRESS
-Plan: 1 of ? complete in current phase
-Status: 12-01 complete — WASM gate fixed (clusters render during encoder download), encoder status text (warm/cold), miniLMCached flag, Qwen auto-retry with 60s cooldown.
-Last activity: 2026-02-21 — 12-01-PLAN.md complete (WASM rendering gate fix, encoder status text lifecycle, warm-start detection, Qwen auto-retry)
+Plan: 2 of ? complete in current phase
+Status: 12-02 complete — Consent modal updated to separately disclose ~23MB encoder (auto-loads) and ~400MB language model (opt-in); storage warning references language model specifically.
+Last activity: 2026-02-21 — 12-02-PLAN.md complete (consent modal two-model disclosure, FBK-03 satisfied)
 
 Progress: [████░░░░░░] ~50% (v1.2, 9/16 plans complete)
 
@@ -41,6 +41,7 @@ Progress: [████░░░░░░] ~50% (v1.2, 9/16 plans complete)
 - 11-01: ~2 min — 2 tasks, 1 file (Qwen2.5-0.5B swap, keyword-scan parser, garbage fallback, isInFallback/retryLLM exports)
 - 11-02: ~2 min — 2 tasks, 3 files (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration)
 - 12-01: ~2 min — 2 tasks, 4 files (WASM gate fix, encoder status text, warm-start detection, Qwen auto-retry with 60s cooldown)
+- 12-02: ~1 min — 1 task, 1 file (consent modal two-model disclosure, FBK-03)
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Decisions from 12-01 execution:
 - wasRealEngine = engine && !engine._isFallback captured before fallback switch: auto-retry only fires for real Qwen garbage, not missing-bundle fallback
 - miniLMCached stored in chrome.storage.local (device-specific, not sync): warm start shows 'Restoring semantic engine...' vs cold 'Loading semantic engine...'
 - Status text hidden in two places: after initEncoderWithRetry resolves AND in onError 'unavailable' branch to cover both success and final failure paths
+- [Phase 12-integration-and-hardening]: ~400MB used for language model disclosure (not ~450MB) — matches WEBLLM_SETUP.md; JS threshold stays at 450MB for IndexedDB buffer
+- [Phase 12-integration-and-hardening]: Consent modal display text updated only — no JS logic changes; storage check threshold (REQUIRED_BYTES = 450MB) unchanged by design
 
 ### Pending Todos
 
@@ -112,5 +115,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 12-01-PLAN.md (WASM gate fix, encoder status text, warm-start detection, Qwen auto-retry). Phase 12 in progress (1/? plans done).
+Stopped at: Completed 12-02-PLAN.md (consent modal two-model disclosure, FBK-03 satisfied). Phase 12 in progress (2/? plans done).
 Resume file: None

@@ -34,9 +34,9 @@ Requirements for the Semantic AI Pipeline milestone. Each maps to roadmap phases
 
 ### Fallback & Integration
 
-- [ ] **FBK-01**: WASM keyword clustering remains active as fallback when encoder hasn't loaded or AI is disabled
-- [ ] **FBK-02**: Progressive model loading sequence: WASM first (~1-2s), then MiniLM (~25MB cached), then Qwen (consent-gated)
-- [ ] **FBK-03**: Consent modal disclosure updated for Qwen2.5 model size (~950MB total)
+- [x] **FBK-01**: WASM keyword clustering remains active as fallback when encoder hasn't loaded or AI is disabled
+- [x] **FBK-02**: Progressive model loading sequence: WASM first (~1-2s), then MiniLM (~25MB cached), then Qwen (consent-gated)
+- [x] **FBK-03**: Consent modal disclosure updated for Qwen2.5 model size (~950MB total)
 
 ## Future Requirements
 
@@ -83,9 +83,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SLM-02 | Phase 11 | Complete |
 | SLM-03 | Phase 11 | Complete |
 | SLM-04 | Phase 11 | Complete |
-| FBK-01 | Phase 12 | Pending |
-| FBK-02 | Phase 12 | Pending |
-| FBK-03 | Phase 12 | Pending |
+| FBK-01 | Phase 12 | Complete |
+| FBK-02 | Phase 12 | Complete |
+| FBK-03 | Phase 12 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 16 total
