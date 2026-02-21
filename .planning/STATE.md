@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via encoder vectors replaces keyword matching for dramatically better message classification accuracy.
-**Current focus:** v1.2 Semantic AI Pipeline — Phase 11: Qwen Summarization (COMPLETE, 2/2 plans done). Ready for Phase 12: Verification & Submission.
+**Current focus:** v1.2 Semantic AI Pipeline — Phase 12: Integration and Hardening (1/? plans done). WASM gate fix, encoder status text, and Qwen auto-retry landed.
 
 ## Current Position
 
-Phase: 11 of 12 (Qwen SLM Swap) — COMPLETE
-Plan: 2 of 2 complete in current phase
-Status: 11-02 complete — fallback notice UI, retry button, isInFallback/retryLLM wired into sidebar. Phase 11 done.
-Last activity: 2026-02-20 — 11-02-PLAN.md complete (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration)
+Phase: 12 of 12 (Integration and Hardening) — IN PROGRESS
+Plan: 1 of ? complete in current phase
+Status: 12-01 complete — WASM gate fixed (clusters render during encoder download), encoder status text (warm/cold), miniLMCached flag, Qwen auto-retry with 60s cooldown.
+Last activity: 2026-02-21 — 12-01-PLAN.md complete (WASM rendering gate fix, encoder status text lifecycle, warm-start detection, Qwen auto-retry)
 
-Progress: [███░░░░░░░] ~44% (v1.2, 8/16 plans complete)
+Progress: [████░░░░░░] ~50% (v1.2, 9/16 plans complete)
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [███░░░░░░░] ~44% (v1.2, 8/16 plans complete)
 - 10-02: ~2 min — 2 tasks, 3 files (cosine router wired into sidebar.js, clustering mode badge, semantic bucket rendering)
 - 11-01: ~2 min — 2 tasks, 1 file (Qwen2.5-0.5B swap, keyword-scan parser, garbage fallback, isInFallback/retryLLM exports)
 - 11-02: ~2 min — 2 tasks, 3 files (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration)
+- 12-01: ~2 min — 2 tasks, 4 files (WASM gate fix, encoder status text, warm-start detection, Qwen auto-retry with 60s cooldown)
 
 ## Accumulated Context
 
@@ -91,6 +92,12 @@ Decisions from 11-02 execution:
 - Fallback notice hidden via classList in startNewSession() and switchToView('history'); updateFallbackNotice() restores correct state on live view return
 - Generic progress text 'Loading AI: N%' already in place — no model name exposed
 
+Decisions from 12-01 execution:
+- encoderLoading flag replaces early-return gate: WASM clusters render during encoder download; only scheduleEncode is skipped (encoder not ready for embeddings)
+- wasRealEngine = engine && !engine._isFallback captured before fallback switch: auto-retry only fires for real Qwen garbage, not missing-bundle fallback
+- miniLMCached stored in chrome.storage.local (device-specific, not sync): warm start shows 'Restoring semantic engine...' vs cold 'Loading semantic engine...'
+- Status text hidden in two places: after initEncoderWithRetry resolves AND in onError 'unavailable' branch to cover both success and final failure paths
+
 ### Pending Todos
 
 None.
@@ -104,6 +111,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: Completed 11-02-PLAN.md (Basic mode indicator, Retry AI button, updateFallbackNotice(), view/session reset integration). Phase 11 COMPLETE (2/2 plans). Ready for Phase 12 (Verification & Submission).
+Last session: 2026-02-21
+Stopped at: Completed 12-01-PLAN.md (WASM gate fix, encoder status text, warm-start detection, Qwen auto-retry). Phase 12 in progress (1/? plans done).
 Resume file: None
