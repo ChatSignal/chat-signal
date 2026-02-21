@@ -94,15 +94,16 @@
         <p>Enable AI-powered summaries and mood analysis?</p>
         <p class="modal-detail">
           All processing happens locally — no chat data leaves your browser.
-          Enabling this will download a ~450MB AI model from HuggingFace on first use.
-          The model is stored locally and persists across browser sessions.
+          A small encoder model (~23MB) loads automatically to power clustering.
+          Enabling AI adds a language model (~400MB) downloaded from HuggingFace on first use.
+          Both models are stored locally and persist across browser sessions.
         </p>
         <div class="modal-actions">
           <button id="llm-enable-btn" class="btn btn-primary">Enable AI</button>
           <button id="llm-skip-btn" class="btn btn-secondary">Skip for now</button>
         </div>
         <p id="llm-space-warning" class="modal-warning hidden">
-          Not enough disk space available (~450MB needed)
+          Not enough disk space available (~400MB needed for the AI language model)
         </p>
         <p class="modal-hint">You can change this later in Settings.</p>
       </div>
