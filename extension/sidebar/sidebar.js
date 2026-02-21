@@ -280,6 +280,17 @@ if (!isTestEnv) {
 
 // Initialize encoder pipeline with stage-aware progress bar
 async function initEncoderOnStartup() {
+  // Detect warm start (MiniLM already cached from a previous session)
+  const { miniLMCached } = await chrome.storage.local.get('miniLMCached');
+  const encoderStatusText = document.getElementById('encoder-status-text');
+
+  if (encoderStatusText) {
+    encoderStatusText.textContent = miniLMCached
+      ? 'Restoring semantic engine...'
+      : 'Loading semantic engine...';
+    encoderStatusText.classList.remove('hidden');
+  }
+
   // Show progress bar
   encoderProgress.classList.remove('hidden');
 
@@ -324,10 +335,19 @@ async function initEncoderOnStartup() {
         encoderProgress.classList.add('hidden');
       }, 5000);
       encoderReady = false;
+
+      // Hide status text on final encoder failure
+      const encoderStatusEl = document.getElementById('encoder-status-text');
+      if (encoderStatusEl) encoderStatusEl.classList.add('hidden');
     }
   };
 
   const result = await initEncoderWithRetry(onProgress, onError);
+
+  // Hide encoder status text regardless of outcome (success or non-unavailable error)
+  if (encoderStatusText) {
+    encoderStatusText.classList.add('hidden');
+  }
 
   if (result !== null) {
     // Success — fill to 100%, fade out progress bar
@@ -356,6 +376,9 @@ async function initEncoderOnStartup() {
     // Store backend info for Settings page display
     chrome.storage.local.set({ encoderBackend: getBackendInfo() });
     console.log(`[Encoder] Ready, backend: ${getBackendInfo().backend}`);
+
+    // Mark MiniLM as cached so next session shows "Restoring..." instead of "Loading..."
+    chrome.storage.local.set({ miniLMCached: true });
 
     // Catch-up: encode messages that arrived during the loading window
     if (allMessages && allMessages.length > 0) {
