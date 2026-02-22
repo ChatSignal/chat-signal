@@ -1,23 +1,12 @@
-# Chat Signal Radar
+# Chat Signal
 
 ## What This Is
 
-A Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It clusters messages (questions, issues, requests, general), tracks sentiment with 6 moods, detects trending topics, and provides session summaries. Users can configure analysis window size, inactivity timeout, and other thresholds through the options page. All DOM output is sanitized via DOMPurify. The extension is CWS-ready with a hosted privacy policy, permission justifications, disk space disclosure for WebLLM, and automated store listing asset generation.
-
-## Current Milestone: v1.2 Semantic AI Pipeline
-
-**Goal:** Replace keyword-based clustering with a semantic encoder (MiniLM via Transformers.js) and switch the SLM to Qwen2.5-0.5B-Instruct, with a GPU scheduler for resource management.
-
-**Target features:**
-- Transformers.js integration with all-MiniLM-L6-v2 encoder (~25MB, auto-loads without consent)
-- Semantic vector clustering replacing keyword-based WASM clustering (WASM becomes fallback)
-- Switch WebLLM model from Phi-2 to Qwen2.5-0.5B-Instruct
-- GPU scheduler/priority queue as new dedicated module (encoder priority 1, SLM priority 2)
-- Pass encoder clusters into SLM prompts for context-aware summaries
+A Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly with semantic AI. It clusters messages (questions, issues, requests, general) via cosine similarity to prototype vectors, tracks sentiment with 6 moods, detects trending topics, and provides AI-powered session summaries via an in-browser Qwen2.5 SLM. WASM keyword clustering serves as an always-available fallback. All processing happens locally — no chat data leaves the browser.
 
 ## Core Value
 
-Real-time chat analysis must be accurate enough to be actionable — large analysis windows, robust DOM sanitization, and user-tunable thresholds make the tool reliable across different stream sizes.
+Real-time chat analysis must be accurate enough to be actionable — semantic clustering via MiniLM encoder vectors replaces keyword matching for dramatically better message classification, while progressive model loading ensures instant results with graceful upgrades.
 
 ## Requirements
 
@@ -45,15 +34,16 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 - ✓ Consent modal with HuggingFace disclosure and storage availability gating — v1.1
 - ✓ Store listing copy with approved trademark patterns — v1.1
 - ✓ Three 1280x800 screenshots + 440x280 promo image via automated scripts — v1.1
+- ✓ Transformers.js integration with all-MiniLM-L6-v2 sentence encoder — v1.2
+- ✓ Semantic vector clustering (cosine similarity) replacing keyword-based WASM buckets — v1.2
+- ✓ Switch WebLLM SLM from Phi-2 to Qwen2.5-0.5B-Instruct — v1.2
+- ✓ GPU scheduler module — priority queue managing encoder vs SLM WebGPU contention — v1.2
+- ✓ WASM keyword clustering as fallback when AI models are off or not loaded — v1.2
+- ✓ Encoder-to-SLM pipeline — pass pre-clustered groups into Qwen prompts for summarization — v1.2
 
 ### Active
 
-- [ ] Transformers.js integration with all-MiniLM-L6-v2 sentence encoder
-- [ ] Semantic vector clustering (cosine similarity) replacing keyword-based WASM buckets
-- [ ] Switch WebLLM SLM from Phi-2 to Qwen2.5-0.5B-Instruct
-- [ ] GPU scheduler module — priority queue managing encoder vs SLM WebGPU contention
-- [ ] WASM keyword clustering as fallback when AI models are off or not loaded
-- [ ] Encoder-to-SLM pipeline — pass pre-clustered groups into Qwen prompts for summarization
+(None — next milestone not yet planned)
 
 ### Out of Scope
 
@@ -68,20 +58,25 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 - Custom sentiment keyword lists — requires Rust changes, 5-10x complexity
 - Per-channel settings — storage namespace complexity
 - Shared constants module for DEFAULT_SETTINGS — acknowledged debt, not urgent
+- Dynamic cluster discovery (K-Means/DBSCAN) — fixed 4-bucket UI makes it unnecessary
+- Multiple SLM model choices — single proven model is better for now
+- Adaptive cosine threshold tuning — candidate for future milestone
 
 ## Context
 
 - Shipped v1.0: 3 phases, 7 plans — analysis window, DOMPurify, configurable thresholds
 - Shipped v1.1: 3 phases (4-6), 6 plans — privacy policy, manifest audit, consent modal, store assets
+- Shipped v1.2: 5 phases (8-12), 9 plans — MiniLM encoder, GPU scheduler, cosine routing, Qwen SLM, integration
 - Known gap: Phase 7 (verification + submission) deferred — VERIF-01, VERIF-02 pending
-- Codebase: ~18,500 LOC (JS/HTML/CSS) + 913 LOC (Rust), 18 unit tests
-- Tech stack: Rust/WASM + vanilla JS Chrome extension (MV3)
-- Dev dependencies added in v1.1: Playwright (screenshots), sharp (image generation)
+- v1.2 tech debt: LLM GPU calls bypass scheduler (low), LLM gets keyword not semantic buckets (low), resetEncoder/getMode/getStatus orphaned exports (trivial)
+- Codebase: ~20,000 LOC (JS/HTML/CSS) + 913 LOC (Rust), 18 unit tests
+- Tech stack: Rust/WASM + vanilla JS Chrome extension (MV3) + Transformers.js + WebLLM
+- New modules in v1.2: encoder-adapter.js, gpu-scheduler.js, cosine-router.js, routing-config.js
 - DOMPurify 3.3.1 vendored at `extension/libs/dompurify/purify.min.js`
+- Transformers.js + ONNX WASM vendored at `extension/libs/transformers/`
 - Privacy policy live at https://chatsignal.dev/privacy-policy
 - Store assets in `docs/store/` — 3 screenshots + promo image, regenerable via scripts
 - Three copies of DEFAULT_SETTINGS exist (sidebar.js, StateManager.js, options.js) — known debt
-- sidePanel incognito behavior is medium confidence — manual test is the verification source of truth
 
 ## Constraints
 
@@ -89,6 +84,7 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 - **Extension size**: DOMPurify (~60KB) acceptable; MiniLM (~25MB) auto-loads; Qwen (~400MB+) consent-gated; Playwright/sharp are devDependencies only
 - **Testing**: Rust unit tests must pass; existing test coverage maintained
 - **WebGPU contention**: Encoder and SLM cannot run simultaneously — GPU scheduler required
+- **Sidebar context**: WebGPU unavailable in MV3 service workers; all model inference runs in sidebar page context
 
 ## Key Decisions
 
@@ -107,6 +103,14 @@ Real-time chat analysis must be accurate enough to be actionable — large analy
 | Product name "Chat Signal" | Avoids platform trademarks in name | ✓ Good — CWS compliant |
 | Base64 icon embed in promo SVG | libvips/sharp has no emoji font on Linux | ✓ Good — cross-platform reproducible |
 | Playwright screenshots with chrome API stubs | Renders real sidebar.html without live extension context | ✓ Good — automated, reproducible |
+| Encode in sidebar page context | WebGPU unavailable in MV3 service workers | ✓ Good — full GPU access, persistent lifetime |
+| Prototype cosine routing over K-Means/DBSCAN | Deterministic, O(n×4), maps to fixed 4-bucket UI | ✓ Good — fast, predictable, no cluster count tuning |
+| MiniLM auto-loads without consent (~25MB) | Small enough to not warrant consent; Qwen remains gated | ✓ Good — semantic clustering available by default |
+| Cosine threshold 0.30 (not 0.35) | Stream chat is noisier than support tickets; lower threshold reduces false General Chat | ✓ Good — appropriate for domain |
+| Keyword-scan parser for Qwen output | Qwen2.5 produces preamble before structured content; line-position parsing breaks | ✓ Good — tolerates model chattiness |
+| Garbage detection with sentinel values | mood=neutral + confidence=0.5 + summary='' is unambiguous garbage signal | ✓ Good — 2 consecutive triggers → fallback |
+| WASM renders during encoder download | encoderLoading flag skips scheduleEncode, not WASM analysis — no blank display | ✓ Good — instant results on cold start |
+| Separate consent disclosure for encoder vs SLM | Users understand what auto-loads (~23MB) vs what they opt into (~400MB) | ✓ Good — transparent, accurate |
 
 ---
-*Last updated: 2026-02-20 after v1.2 milestone start*
+*Last updated: 2026-02-21 after v1.2 milestone*

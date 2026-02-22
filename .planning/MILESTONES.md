@@ -37,3 +37,26 @@
 
 ---
 
+
+## v1.2 Semantic AI Pipeline (Shipped: 2026-02-22)
+
+**Phases completed:** 5 phases, 9 plans, 0 tasks
+
+**Key accomplishments:**
+- Vendored Transformers.js with all-MiniLM-L6-v2 encoder — WebGPU/WASM backends, hash cache, adaptive batch queue
+- GPU scheduler with promise-chain mutex serializing encoder and SLM WebGPU access
+- Cosine similarity routing replaces keyword clustering — prototype vectors classify messages into 4 buckets
+- Switched SLM to Qwen2.5-0.5B-Instruct with keyword-scan parser and garbage-triggered fallback
+- Progressive loading: WASM clusters render instantly, semantic upgrade when encoder ready
+- Consent modal updated to separately disclose encoder (~23MB) and language model (~400MB)
+
+**Stats:** 12 files changed, 1,404 insertions, 44 deletions (extension code)
+
+### Tech Debt (accepted)
+- GPU-01/GPU-02: LLM GPU calls bypass gpu-scheduler (no runtime failure — WebLLM manages own context)
+- SLM-04: LLM receives keyword buckets, not semantic buckets (functional, suboptimal)
+- `resetEncoder` imported but never called on session reset
+- `getMode`, `getStatus` exported but never consumed
+
+---
+
