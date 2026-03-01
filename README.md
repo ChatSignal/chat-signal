@@ -1,12 +1,12 @@
-# 📡 Chat Signal Radar
+# 📡 Chat Signal
 
 A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch live chat in real-time. See what the conversation is really about — questions, sentiment, trending topics — without losing it in the scroll.
 
 ## ✨ Features
 
-- **Message Clustering**: Automatically categorizes messages into Questions, Issues/Bugs, Requests, and General Chat
+- **Message Clustering**: Automatically categorizes messages into Questions, Issues/Bugs, Requests, and General Chat using whole-word boundary matching to reduce false positives
 - **Semantic Clustering**: When GPU is available, messages are classified by cosine similarity to prototype vectors using MiniLM embeddings — falls back silently to keyword matching
-- **Sentiment Analysis**: Real-time mood indicator showing chat sentiment (excited, positive, angry, negative, confused, neutral)
+- **Sentiment Analysis**: Real-time mood indicator showing chat sentiment (excited, positive, angry, negative, confused, neutral) — positive/negative signals take priority over confusion markers
 - **Trending Topics**: Word cloud of frequently mentioned terms, with special highlighting for emotes
 - **Session History**: Save and review past session summaries with full sentiment breakdown and captured questions
 - **Smart Session Detection**: Auto-prompts to save when stream chat goes inactive for 2+ minutes
@@ -65,7 +65,7 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 ## 📁 Project Structure
 
 ```
-chat-signal-radar/
+chat-signal/
 ├── wasm-engine/           # Rust → WASM analysis engine
 │   ├── Cargo.toml
 │   └── src/lib.rs         # Clustering, topics, sentiment
@@ -79,18 +79,20 @@ chat-signal-radar/
 │   │   ├── options.html
 │   │   ├── options.js
 │   │   └── options.css
+│   ├── settings-defaults.js  # Shared default settings (single source of truth)
 │   ├── sidebar/
 │   │   ├── sidebar.html   # Dashboard UI
 │   │   ├── sidebar.css    # Styling (light/dark theme support)
 │   │   ├── sidebar.js     # Main entry point, WASM loading
-│   │   ├── encoder-adapter.js    # MiniLM encoder (WebGPU/WASM)
+│   │   ├── encoder-adapter.js    # MiniLM encoder (lazy-init, WebGPU/WASM)
 │   │   ├── cosine-router.js      # Semantic cosine classification
 │   │   ├── routing-config.js     # Seed phrases & thresholds
 │   │   ├── modules/       # Modular components
+│   │   │   ├── gpu-scheduler.js   # WebGPU mutex with priority scheduling
 │   │   │   ├── SessionManager.js  # Session lifecycle & persistence
 │   │   │   └── StateManager.js    # Application state management
 │   │   └── utils/         # Utility modules
-│   │       ├── DOMHelpers.js         # Safe DOM manipulation
+│   │       ├── DOMHelpers.js         # Safe DOM manipulation (DOMPurify)
 │   │       ├── ValidationHelpers.js  # Input validation & sanitization
 │   │       └── FormattingHelpers.js  # Text formatting utilities
 │   └── wasm/              # (generated) WASM artifacts
@@ -127,7 +129,7 @@ chat-signal-radar/
 3. **After code changes:**
    - Watch mode auto-rebuilds WASM
    - Go to `chrome://extensions/`
-   - Click reload icon on Chat Signal Radar extension
+   - Click reload icon on Chat Signal extension
    - Refresh the stream page
 
 4. **Debugging:** 
@@ -164,10 +166,10 @@ The extension uses a modular architecture with clear separation of concerns:
 
 ### Security Features
 
-- **XSS Prevention**: Replaces unsafe `innerHTML` with safe DOM manipulation
+- **XSS Prevention**: DOMPurify with explicit allowed tags/attributes; safe DOM helpers for all rendering
 - **Input Sanitization**: All user input and WASM output is validated and sanitized
 - **Data Validation**: Comprehensive validation for messages, analysis results, settings, and session data
-- **Safe Patterns**: Only allowed static HTML patterns are used for trusted content
+- **Restricted Resources**: Web-accessible resources limited to YouTube and Twitch origins only
 
 ### Run Tests
 
@@ -178,7 +180,7 @@ cargo test
 
 18 unit tests cover clustering, topic extraction, sentiment analysis, and spam detection.
 
-For extension logic tests:
+For extension logic tests (content-script, sidebar, options, LLM adapter):
 
 ```bash
 npm run test:js
@@ -213,11 +215,11 @@ npm run test:js
 | Excited | 🎉 | Strong positive signals (score > 30) |
 | Positive | 😊 | Positive keywords (love, great, pog, etc.) |
 | Neutral | 😐 | Few sentiment signals detected |
-| Confused | 🤔 | Questions, "wait", "huh", etc. |
+| Confused | 🤔 | Questions, "wait", "huh", etc. (only when no positive/negative signal) |
 | Negative | 😔 | Negative keywords (bad, boring, etc.) |
 | Angry | 😠 | Strong negative signals (score < -30) |
 
-Sentiment requires at least 3 signal-bearing messages before showing a non-neutral mood.
+Sentiment requires at least 3 signal-bearing messages before showing a non-neutral mood. Positive and negative signals take priority over confusion markers — "this is awesome?" counts as positive, not confused.
 
 ## 📝 License
 
@@ -225,7 +227,7 @@ MPL 2.0
 
 ## 🔒 Privacy
 
-Chat Signal Radar processes everything locally in your browser. No chat content is sent to any server. The only external request is an optional one-time AI model download from HuggingFace CDN (if you enable AI summaries).
+Chat Signal processes everything locally in your browser. No chat content is sent to any server. The only external request is an optional one-time AI model download from HuggingFace CDN (if you enable AI summaries).
 
 Full privacy policy: **[chatsignal.dev/privacy-policy](https://chatsignal.dev/privacy-policy)**
 

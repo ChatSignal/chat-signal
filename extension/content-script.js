@@ -46,6 +46,7 @@ let currentContainer = null;
 let batchTimer = null;
 let containerMonitor = null;
 let lastUrl = window.location.href;
+let navObserver = null;
 
 function observeChat() {
   startBatchTimer();
@@ -86,7 +87,7 @@ function startContainerWatcher() {
       attachObserver(nextContainer);
     } else if (retryCount >= MAX_RETRIES) {
       clearInterval(checkForChat);
-      console.warn('[Chat Signal Radar] Chat container not found after 30 seconds. Chat may not be available on this page.');
+      console.warn('[Chat Signal] Chat container not found after 30 seconds. Chat may not be available on this page.');
     }
   }, 1000);
 }
@@ -110,10 +111,10 @@ function startContainerMonitor() {
 }
 
 function startNavigationWatcher() {
-  if (!document.body) {
+  if (!document.body || navObserver) {
     return;
   }
-  const navObserver = new MutationObserver(() => {
+  navObserver = new MutationObserver(() => {
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
       resetObserver();
@@ -134,7 +135,7 @@ function findChatContainer() {
           return iframeDoc.querySelector('#items');
         }
       } catch (error) {
-        if (DEBUG) console.warn('[Chat Signal Radar] Unable to access YouTube chat iframe:', error);
+        if (DEBUG) console.warn('[Chat Signal] Unable to access YouTube chat iframe:', error);
       }
     }
     return document.querySelector('yt-live-chat-item-list-renderer #items');
@@ -151,7 +152,7 @@ function attachObserver(container) {
   resetObserver();
   currentContainer = container;
   const platform = isYouTube ? 'YouTube' : 'Twitch';
-  if (DEBUG) console.log(`[Chat Signal Radar] Started observing ${platform} chat`);
+  if (DEBUG) console.log(`[Chat Signal] Started observing ${platform} chat`);
 
   currentObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {

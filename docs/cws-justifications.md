@@ -6,7 +6,7 @@ This document is the copy-paste source for the Chrome Web Store developer dashbo
 
 ## Single Purpose Description
 
-Chat Signal Radar analyzes YouTube and Twitch live chat in real-time, clustering messages into categories, detecting trending topics, and tracking chat sentiment.
+Chat Signal analyzes YouTube and Twitch live chat in real-time, clustering messages into categories, detecting trending topics, and tracking chat sentiment.
 
 ---
 
@@ -39,7 +39,7 @@ Reads live chat messages from the Twitch page DOM to perform real-time message c
 The extension's CSP is set in `manifest.json` under `content_security_policy.extension_pages`:
 
 ```
-script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://raw.githubusercontent.com;
+script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://huggingface.co https://cdn-lfs.huggingface.co https://*.xethub.hf.co https://raw.githubusercontent.com;
 ```
 
 ### script-src 'self' 'wasm-unsafe-eval'
@@ -57,6 +57,7 @@ All three connect-src domains support the optional AI summarization feature (Web
 
 - `https://huggingface.co` — WebLLM fetches model configuration and metadata from the HuggingFace model hub (e.g., model card JSON, tokenizer config).
 - `https://cdn-lfs.huggingface.co` — WebLLM downloads ONNX model weight files from HuggingFace's large file storage CDN. These are binary tensor data files, not executable code.
+- `https://*.xethub.hf.co` — HuggingFace's Xet storage backend for large model files. Some model weight shards are served from this CDN subdomain as part of the standard HuggingFace model download pipeline. Like `cdn-lfs.huggingface.co`, these are binary tensor data files, not executable code.
 - `https://raw.githubusercontent.com` — WebLLM fetches WebGPU shader WASM files from the `mlc-ai/binary-mlc-llm-libs` GitHub repository. Confirmed in use at `libs/web-llm/index.js` via the `modelLibURLPrefix` constant: `https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/`.
 
 **Note:** All connect-src entries support the optional AI features. Without AI enabled, no external connections are made. Model weights are binary tensor data, not executable code.

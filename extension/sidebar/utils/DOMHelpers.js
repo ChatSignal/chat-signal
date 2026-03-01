@@ -7,13 +7,19 @@
 
 // Centralized DOMPurify configuration — one place to tighten later
 // DOMPurify is loaded as a global via <script> tag in sidebar.html
-export const DOMPURIFY_CONFIG = {};
+export const DOMPURIFY_CONFIG = {
+  ALLOWED_TAGS: ['div', 'span', 'p', 'ul', 'li', 'strong', 'em', 'br', 'button'],
+  ALLOWED_ATTR: ['class', 'style', 'title'],
+};
 
-// HTML escaping utility
+// HTML escaping utility (string-based, avoids DOM element creation per call)
 export function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 // Safe DOM element creation

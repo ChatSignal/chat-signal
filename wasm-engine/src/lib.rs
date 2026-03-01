@@ -143,6 +143,27 @@ pub struct SpamFilterResult {
     pub original_count: usize,
 }
 
+// ============================================================================
+// WORD-BOUNDARY MATCHING HELPERS
+// ============================================================================
+
+/// Check if a specific word appears as a whole word in the lowercased text.
+/// Words are delimited by whitespace; leading/trailing punctuation is stripped.
+fn text_has_word(text_lower: &str, word: &str) -> bool {
+    text_lower.split_whitespace().any(|part| {
+        let trimmed = part.trim_matches(|c: char| c.is_ascii_punctuation());
+        trimmed == word
+    })
+}
+
+/// Check if any word from the list appears as a whole word in the lowercased text.
+fn text_has_any_word(text_lower: &str, words: &[&str]) -> bool {
+    text_lower.split_whitespace().any(|part| {
+        let trimmed = part.trim_matches(|c: char| c.is_ascii_punctuation());
+        words.contains(&trimmed)
+    })
+}
+
 /// Extended analysis result with spam stats
 #[derive(Serialize, Deserialize)]
 pub struct AnalysisResultWithSpam {
@@ -288,18 +309,8 @@ fn analyze_sentiment_internal(messages: &[Message]) -> SentimentSignals {
         let text_lower = msg.text.to_lowercase();
         let mut msg_classified = false;
 
-        // Check for confusion first (question marks, confused words)
-        if text_lower.contains('?') ||
-           CONFUSED_INDICATORS.iter().any(|w| text_lower.contains(w)) {
-            confused += 1;
-            if confused_samples.len() < MAX_SAMPLES {
-                confused_samples.push(msg.text.clone());
-            }
-            msg_classified = true;
-        }
-
-        // Check for positive signals
-        if !msg_classified && POSITIVE_WORDS.iter().any(|w| text_lower.contains(w)) {
+        // Check for positive signals first (so "this is awesome?" counts as positive)
+        if POSITIVE_WORDS.iter().any(|w| text_has_word(&text_lower, w)) {
             positive += 1;
             if positive_samples.len() < MAX_SAMPLES {
                 positive_samples.push(msg.text.clone());
@@ -308,10 +319,20 @@ fn analyze_sentiment_internal(messages: &[Message]) -> SentimentSignals {
         }
 
         // Check for negative signals
-        if !msg_classified && NEGATIVE_WORDS.iter().any(|w| text_lower.contains(w)) {
+        if !msg_classified && NEGATIVE_WORDS.iter().any(|w| text_has_word(&text_lower, w)) {
             negative += 1;
             if negative_samples.len() < MAX_SAMPLES {
                 negative_samples.push(msg.text.clone());
+            }
+            msg_classified = true;
+        }
+
+        // Check for confusion (question marks, confused words) only when no sentiment signal
+        if !msg_classified && (text_lower.contains('?') ||
+           CONFUSED_INDICATORS.iter().any(|w| text_has_word(&text_lower, w))) {
+            confused += 1;
+            if confused_samples.len() < MAX_SAMPLES {
+                confused_samples.push(msg.text.clone());
             }
             msg_classified = true;
         }
@@ -371,11 +392,11 @@ fn cluster_messages_internal(messages: &[Message]) -> ClusterResult {
     for msg in messages.iter() {
         let text_lower = msg.text.to_lowercase();
 
-        if text_lower.contains('?') || text_lower.contains("how ") || text_lower.contains("what ") || text_lower.contains("why ") {
+        if text_lower.contains('?') || text_has_any_word(&text_lower, &["how", "what", "why"]) {
             questions.push(msg.text.clone());
-        } else if text_lower.contains("bug") || text_lower.contains("error") || text_lower.contains("broken") || text_lower.contains("issue") {
+        } else if text_has_any_word(&text_lower, &["bug", "error", "broken", "issue"]) {
             issues.push(msg.text.clone());
-        } else if text_lower.contains("please") || text_lower.contains("can you") || text_lower.contains("could you") || text_lower.contains("would you") {
+        } else if text_has_word(&text_lower, "please") || text_lower.contains("can you") || text_lower.contains("could you") || text_lower.contains("would you") {
             requests.push(msg.text.clone());
         } else {
             general.push(msg.text.clone());

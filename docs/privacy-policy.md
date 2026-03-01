@@ -5,7 +5,7 @@ permalink: /privacy-policy
 
 # Privacy Policy for Chat Signal
 
-**Last updated: February 2026**
+**Last updated: March 2026**
 
 Chat Signal is a Chrome extension that analyzes live chat on YouTube and Twitch. Here is a plain-English explanation of what happens with your data when you use it.
 
@@ -21,11 +21,14 @@ Session summaries are saved locally on your device using Chrome's storage. You c
 
 Your settings — things like your analysis preferences and whether you have enabled AI summaries — are also saved locally.
 
-## Optional AI summaries and HuggingFace
+## Model downloads from HuggingFace
 
-If you choose to enable AI-powered summaries, the extension downloads a language model (about 400MB) from HuggingFace CDN. This download happens once and the model is stored locally on your device. No chat content is sent to HuggingFace or anywhere else — the model runs entirely in your browser.
+Chat Signal uses two AI models, both downloaded from HuggingFace CDN and stored locally on your device. No chat content is sent to HuggingFace or anywhere else.
 
-If you do not enable AI summaries, the extension makes no external network requests at all. Everything works offline.
+- **Encoder model (~23MB)**: A small model (MiniLM) used for semantic message clustering. This downloads automatically on first use and is cached locally.
+- **Language model (~400MB, optional)**: A larger model (Qwen2.5-0.5B) used for AI-powered summaries and mood analysis. This is only downloaded if you choose to enable AI summaries in the consent dialog or settings.
+
+Both models run entirely in your browser. After the initial download, they work offline.
 
 ## What Chat Signal does not collect
 
@@ -37,4 +40,4 @@ We may update this policy. Check back for changes.
 
 ## Questions
 
-For privacy questions, open an issue at: https://github.com/johnzilla/chat-signal-radar/issues
+For privacy questions, open an issue at: https://github.com/ChatSignal/chat-signal/issues

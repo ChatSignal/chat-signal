@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Signal Radar</title>
+  <title>Chat Signal</title>
   <link rel="stylesheet" href="sidebar.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
     <div id="encoder-status-text" class="encoder-status-text hidden"></div>
 
     <header>
-      <h1>📡 Chat Signal Radar</h1>
+      <h1>📡 Chat Signal</h1>
       <p class="subtitle">Live chat insights</p>
       <div class="tab-buttons">
         <button id="live-tab" class="tab-btn active">Live</button>
@@ -29,6 +29,21 @@
     <div id="status" class="status">
       <span class="status-indicator"></span>
       <span id="status-text">Waiting for chat messages...</span>
+    </div>
+
+    <div id="system-status" class="system-status">
+      <div class="system-status-item" id="ss-analysis" title="Loading...">
+        <span class="system-status-dot dot-loading"></span>
+        <span class="system-status-label">Analysis</span>
+      </div>
+      <div class="system-status-item" id="ss-semantic" title="Loading...">
+        <span class="system-status-dot dot-loading"></span>
+        <span class="system-status-label">Semantic</span>
+      </div>
+      <div class="system-status-item" id="ss-ai" title="Loading...">
+        <span class="system-status-dot dot-off"></span>
+        <span class="system-status-label">AI</span>
+      </div>
     </div>
 
     <div id="stats" class="stats hidden">
@@ -58,21 +73,14 @@
       <div id="topics-cloud" class="topics-cloud"></div>
     </div>
 
-    <div id="ai-opt-in" class="ai-opt-in hidden">
-      <h3>🤖 AI Summaries</h3>
-      <p>Enable AI summaries to generate quick, actionable insights. This will download a ~400MB model once and store it locally.</p>
-      <button id="enable-ai-btn" class="btn btn-primary">Enable AI Summaries</button>
-    </div>
-
     <div id="ai-summary" class="ai-summary hidden">
       <h3>🤖 AI Summary</h3>
       <div id="ai-summary-text" class="ai-summary-text"></div>
     </div>
 
     <div id="ai-fallback-notice" class="ai-fallback-notice hidden">
-      <span class="fallback-label">Basic mode</span>
-      <span class="fallback-separator">&middot;</span>
-      <button id="retry-ai-btn" class="btn-link">Retry AI</button>
+      <span id="fallback-message" class="fallback-message">Using rule-based analysis</span>
+      <button id="retry-ai-btn" class="btn-link hidden">Retry</button>
     </div>
 
     <div id="clusters-header" class="clusters-header hidden">
@@ -143,7 +151,7 @@
   <footer class="footer">
     <button id="end-session-btn" class="end-session-btn hidden">End Session</button>
     <div class="footer-links">
-      <a href="https://github.com/johnzilla/chat-signal-radar/issues" target="_blank" rel="noopener">Feedback</a>
+      <a href="https://github.com/ChatSignal/chat-signal/issues" target="_blank" rel="noopener">Feedback</a>
       <span class="footer-divider">·</span>
       <a href="#" id="settings-link">Settings</a>
     </div>
@@ -186,8 +194,9 @@
         <div id="summary-questions" class="summary-questions"></div>
       </div>
 
-      <div class="modal-actions">
-        <button id="copy-summary-btn" class="btn btn-primary">Copy Summary</button>
+      <div class="modal-actions modal-actions-3">
+        <button id="save-summary-btn" class="btn btn-primary">Save Session</button>
+        <button id="copy-summary-btn" class="btn btn-secondary">Copy Summary</button>
         <button id="close-summary-btn" class="btn btn-secondary">Start New Session</button>
       </div>
 

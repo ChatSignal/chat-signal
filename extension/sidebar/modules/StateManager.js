@@ -3,6 +3,8 @@
  * Replaces scattered global variables with a single state object
  */
 
+import { DEFAULT_SETTINGS } from '../../settings-defaults.js';
+
 export class StateManager {
   constructor() {
     this.state = {
@@ -265,17 +267,6 @@ export class StateManager {
     };
   }
 }
-
-// Default settings (moved from sidebar.js)
-const DEFAULT_SETTINGS = {
-  topicMinCount: 5,
-  spamThreshold: 3,
-  duplicateWindow: 30,
-  aiSummariesEnabled: false,
-  aiConsentShown: false,
-  analysisWindowSize: 500,
-  inactivityTimeout: 120
-};
 
 // Export singleton instance
 export const stateManager = new StateManager();

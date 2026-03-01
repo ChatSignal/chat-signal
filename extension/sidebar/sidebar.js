@@ -1,30 +1,21 @@
 // All innerHTML must use DOMPurify
 // Sidebar script - loads WASM and processes chat messages
 
-import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM, isInFallback, retryLLM } from '../llm-adapter.js';
+import { initializeLLM, summarizeBuckets, analyzeSentiment, computeFallbackSentiment, isLLMReady, resetLLM, isInFallback, getFallbackReason, retryLLM } from '../llm-adapter.js';
 import { saveSession, loadSessions, deleteSession, clearAllSessions } from '../storage-manager.js';
 import { safeSetHTML, DOMPURIFY_CONFIG, escapeHtml, safeCreateElement } from './utils/DOMHelpers.js';
 import { initEncoderWithRetry, scheduleEncode, getEncoderState, getBackendInfo, resetEncoder } from './encoder-adapter.js';
 import { buildPrototypes, classifyBatch, isSemanticReady, setSemanticMode, setKeywordMode, getMode } from './cosine-router.js';
 import { ROUTING_CONFIG } from './routing-config.js';
+import { DEFAULT_SETTINGS } from '../settings-defaults.js';
+import { validateMessages as _validateMessages, validateAnalysisResult as _validateAnalysisResult } from './utils/ValidationHelpers.js';
 
 const DEBUG = false;
 const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
 
 let wasmModule = null;
 let llmEnabled = false;
-
-// Default settings (must match options.js)
-const DEFAULT_SETTINGS = {
-  topicMinCount: 5,
-  spamThreshold: 3,
-  duplicateWindow: 30,
-  sentimentSensitivity: 3,
-  moodUpgradeThreshold: 30,
-  aiSummariesEnabled: false,
-  analysisWindowSize: 500,
-  inactivityTimeout: 120
-};
+let llmLoading = false;
 
 let settings = { ...DEFAULT_SETTINGS };
 
@@ -41,6 +32,10 @@ const MOOD_EMOJIS = {
 // Throttle sentiment analysis to every 10 seconds
 let lastSentimentUpdate = 0;
 const SENTIMENT_UPDATE_INTERVAL = 10000;
+
+// Throttle AI summary generation to every 30 seconds
+let lastSummaryUpdate = 0;
+const SUMMARY_UPDATE_INTERVAL = 30000;
 
 // DOM elements
 const statusText = document.getElementById('status-text');
@@ -61,12 +56,11 @@ const moodSummary = document.getElementById('mood-summary');
 const sentimentSamples = document.getElementById('sentiment-samples');
 const topicsSection = document.getElementById('topics-section');
 const topicsCloud = document.getElementById('topics-cloud');
-const aiOptIn = document.getElementById('ai-opt-in');
-const enableAiBtn = document.getElementById('enable-ai-btn');
 const firstRunDiv = document.getElementById('first-run');
 const settingsLink = document.getElementById('settings-link');
 const endSessionBtn = document.getElementById('end-session-btn');
 const summaryModal = document.getElementById('summary-modal');
+const saveSummaryBtn = document.getElementById('save-summary-btn');
 const copySummaryBtn = document.getElementById('copy-summary-btn');
 const closeSummaryBtn = document.getElementById('close-summary-btn');
 const copyToast = document.getElementById('copy-toast');
@@ -102,12 +96,81 @@ const clusteringModeBadge = document.getElementById('clustering-mode-badge');
 const fallbackNotice = document.getElementById('ai-fallback-notice');
 const retryAiBtn = document.getElementById('retry-ai-btn');
 
+// System status panel elements
+const ssAnalysis = document.getElementById('ss-analysis');
+const ssSemantic = document.getElementById('ss-semantic');
+const ssAi = document.getElementById('ss-ai');
+
 // Encoder state
 let encoderReady = false;
 
 // Update the clustering mode badge text ('Semantic' or 'Keyword')
 function updateClusteringBadge(mode) {
   if (clusteringModeBadge) clusteringModeBadge.textContent = mode;
+}
+
+// Update the system status traffic light panel
+function updateSystemStatus() {
+  // Helper to set dot class and tooltip
+  function setDot(el, dotClass, tooltip) {
+    if (!el) return;
+    const dot = el.querySelector('.system-status-dot');
+    if (dot) {
+      dot.className = 'system-status-dot ' + dotClass;
+    }
+    el.title = tooltip;
+  }
+
+  // --- Analysis (WASM) ---
+  if (wasmModule !== null) {
+    setDot(ssAnalysis, 'dot-ready', 'Analysis engine: ready');
+  } else if (errorDiv && !errorDiv.classList.contains('hidden')) {
+    setDot(ssAnalysis, 'dot-error', 'Analysis engine: failed to load');
+  } else {
+    setDot(ssAnalysis, 'dot-loading', 'Analysis engine: loading...');
+  }
+
+  // --- Semantic (encoder + cosine router) ---
+  const encoderState = getEncoderState();
+  if (encoderReady && isSemanticReady()) {
+    const backend = getBackendInfo();
+    setDot(ssSemantic, 'dot-ready', `Semantic engine: active (${backend.backend})`);
+  } else if (encoderReady && !isSemanticReady()) {
+    setDot(ssSemantic, 'dot-ready', 'Encoder ready, keyword mode');
+  } else if (encoderState === 'loading') {
+    setDot(ssSemantic, 'dot-loading', 'Semantic engine: downloading model...');
+  } else if (encoderState === 'error') {
+    setDot(ssSemantic, 'dot-error', 'Semantic engine: unavailable');
+  } else {
+    setDot(ssSemantic, 'dot-loading', 'Semantic engine: loading...');
+  }
+
+  // --- AI (WebLLM) ---
+  if (!settings.aiSummariesEnabled && !llmLoading) {
+    setDot(ssAi, 'dot-off', 'AI summaries: off');
+    if (ssAi) ssAi.classList.add('clickable');
+  } else if (llmLoading) {
+    setDot(ssAi, 'dot-loading', 'AI: downloading model...');
+    if (ssAi) ssAi.classList.remove('clickable');
+  } else if (isLLMReady() && !isInFallback()) {
+    setDot(ssAi, 'dot-ready', 'AI summaries: active');
+    if (ssAi) ssAi.classList.remove('clickable');
+  } else if (isInFallback()) {
+    const reason = getFallbackReason();
+    let tooltip;
+    if (reason === 'no-gpu') {
+      tooltip = 'AI: needs a GPU \u2014 using rule-based analysis';
+    } else if (reason === 'garbage') {
+      tooltip = 'AI: model not responding \u2014 using rule-based analysis';
+    } else {
+      tooltip = 'AI: could not load \u2014 using rule-based analysis';
+    }
+    setDot(ssAi, 'dot-off', tooltip);
+    if (ssAi) ssAi.classList.remove('clickable');
+  } else {
+    setDot(ssAi, 'dot-off', 'AI summaries: off');
+    if (ssAi) ssAi.classList.add('clickable');
+  }
 }
 
 // Session tracking
@@ -147,15 +210,24 @@ if (!isTestEnv) {
     chrome.runtime.openOptionsPage();
   });
 
-  enableAiBtn.addEventListener('click', async () => {
-    const updatedSettings = { ...settings, aiSummariesEnabled: true };
-    await chrome.storage.sync.set({ settings: updatedSettings });
+  // Click AI dot to open Settings when AI is off
+  ssAi.addEventListener('click', () => {
+    if (!settings.aiSummariesEnabled) {
+      chrome.runtime.openOptionsPage();
+    }
   });
 
   // End session button
   endSessionBtn.addEventListener('click', showSessionSummary);
 
   // Modal buttons
+  saveSummaryBtn.addEventListener('click', async () => {
+    saveSummaryBtn.disabled = true;
+    saveSummaryBtn.textContent = 'Saving...';
+    await saveCurrentSession();
+    saveSummaryBtn.textContent = 'Saved!';
+    setTimeout(() => startNewSession(), 600);
+  });
   copySummaryBtn.addEventListener('click', copySummaryToClipboard);
   closeSummaryBtn.addEventListener('click', startNewSession);
 
@@ -180,25 +252,36 @@ if (!isTestEnv) {
     await chrome.storage.sync.set({ aiConsentShown: true });
     llmEnabled = false;
     statusText.textContent = 'Ready! Waiting for chat messages...';
+    updateSystemStatus();
   });
 
   // Retry AI button: re-initialize the LLM engine after entering fallback mode
   if (retryAiBtn) {
     retryAiBtn.addEventListener('click', async () => {
       if (fallbackNotice) fallbackNotice.classList.add('hidden');
+      retryAiBtn.disabled = true;
+      llmLoading = true;
       statusText.textContent = 'Reloading AI model...';
+      updateSystemStatus();
       try {
         await retryLLM((progress) => {
           statusText.textContent = `Loading AI: ${Math.round(progress.progress * 100)}%`;
         });
         llmEnabled = true;
-        statusText.textContent = 'Ready! Waiting for chat messages...';
+        if (isInFallback()) {
+          statusText.textContent = 'Could not start AI \u2014 rule-based analysis active';
+        } else {
+          statusText.textContent = 'AI ready!';
+        }
       } catch (error) {
         console.warn('[Sidebar] AI retry failed:', error);
         llmEnabled = false;
-        statusText.textContent = 'Ready! Waiting for chat messages...';
+        statusText.textContent = 'AI unavailable \u2014 using rule-based analysis';
       }
+      llmLoading = false;
+      retryAiBtn.disabled = false;
       updateFallbackNotice();
+      updateSystemStatus();
     });
   }
 
@@ -207,6 +290,11 @@ if (!isTestEnv) {
     streamEndedPrompt.classList.add('hidden');
     await saveCurrentSession();
     showSessionSummary();
+    // Mark save button as already saved since inactivity prompt auto-saved
+    if (saveSummaryBtn) {
+      saveSummaryBtn.disabled = true;
+      saveSummaryBtn.textContent = 'Saved!';
+    }
   });
 
   dismissPromptBtn.addEventListener('click', () => {
@@ -233,6 +321,7 @@ if (!isTestEnv) {
     encoderReady = false;
     setKeywordMode();
     updateClusteringBadge('Keyword');
+    updateSystemStatus();
     // Encoder will continue to function via WASM backend on next init
     // No UI change needed — analysis gate falls through when encoderReady is false
   });
@@ -335,6 +424,7 @@ async function initEncoderOnStartup() {
         encoderProgress.classList.add('hidden');
       }, 5000);
       encoderReady = false;
+      updateSystemStatus();
 
       // Hide status text on final encoder failure
       const encoderStatusEl = document.getElementById('encoder-status-text');
@@ -373,6 +463,8 @@ async function initEncoderOnStartup() {
       console.warn('[Sidebar] Failed to build prototypes, staying in keyword mode:', err);
     }
 
+    updateSystemStatus();
+
     // Store backend info for Settings page display
     chrome.storage.local.set({ encoderBackend: getBackendInfo() });
     console.log(`[Encoder] Ready, backend: ${getBackendInfo().backend}`);
@@ -407,6 +499,7 @@ async function initWasm() {
     await init(wasmBinaryPath);
 
     wasmModule = { cluster_messages, analyze_chat, analyze_chat_with_settings };
+    updateSystemStatus();
 
     // Start encoder loading in background — non-blocking, does not delay WASM analysis
     // Messages arriving before encoder is ready are processed normally by WASM keyword clustering
@@ -420,6 +513,7 @@ async function initWasm() {
     statusText.textContent = 'Error loading clustering engine';
     errorDiv.textContent = `Failed to load WASM: ${error.message}`;
     errorDiv.classList.remove('hidden');
+    updateSystemStatus();
   }
 }
 
@@ -435,6 +529,7 @@ async function checkAISettings() {
       // User has seen consent modal before and chose not to enable
       llmEnabled = false;
       statusText.textContent = 'Ready! Waiting for chat messages...';
+      updateSystemStatus();
     } else {
       // First time — check storage then show consent modal
       statusText.textContent = 'Ready! Waiting for chat messages...';
@@ -457,36 +552,48 @@ async function checkAISettings() {
 
 // Start LLM initialization after consent
 function startLLMInitialization() {
+  llmLoading = true;
   statusText.textContent = 'Loading AI model...';
+  updateSystemStatus();
 
   initializeLLM((progress) => {
     statusText.textContent = `Loading AI: ${Math.round(progress.progress * 100)}%`;
   }).then(() => {
+    llmLoading = false;
     llmEnabled = true;
-    statusText.textContent = 'Ready! Waiting for chat messages...';
+    if (isInFallback()) {
+      const reason = getFallbackReason();
+      if (reason === 'no-gpu') {
+        statusText.textContent = 'No compatible GPU \u2014 using rule-based analysis';
+      } else {
+        statusText.textContent = 'AI unavailable \u2014 using rule-based analysis';
+      }
+    } else {
+      statusText.textContent = 'Ready! Waiting for chat messages...';
+    }
+    updateFallbackNotice();
+    updateSystemStatus();
     if (DEBUG) console.log('[Sidebar] LLM initialized');
   }).catch((error) => {
+    llmLoading = false;
     console.warn('[Sidebar] LLM initialization failed, continuing without AI summaries:', error);
     llmEnabled = false;
-    statusText.textContent = 'Ready! Waiting for chat messages...';
+    statusText.textContent = 'AI unavailable \u2014 using rule-based analysis';
+    updateFallbackNotice();
+    updateSystemStatus();
   });
 }
 
 function updateAiSummaryState() {
-  if (!aiOptIn) {
-    return;
-  }
-
   if (settings.aiSummariesEnabled) {
-    aiOptIn.classList.add('hidden');
     if (!isLLMReady() && !llmEnabled) {
       startLLMInitialization();
     }
   } else {
-    aiOptIn.classList.remove('hidden');
     aiSummaryDiv.classList.add('hidden');
     llmEnabled = false;
     resetLLM();
+    updateSystemStatus();
   }
 }
 
@@ -537,7 +644,9 @@ function processMessages(messages) {
 
     // Update UI
     statusDiv.classList.add('active');
-    statusText.textContent = 'Processing live chat...';
+    if (!llmLoading) {
+      statusText.textContent = 'Processing live chat...';
+    }
     statsDiv.classList.remove('hidden');
     processedCount.textContent = totalMessageCount;
 
@@ -632,8 +741,9 @@ function processMessages(messages) {
       clustersDiv.appendChild(bucketEl);
     });
 
-    // Generate AI summary if enabled
-    if (llmEnabled && isLLMReady() && result.buckets.length > 0) {
+    // Generate AI summary if enabled (throttled)
+    if (llmEnabled && isLLMReady() && result.buckets.length > 0 && now - lastSummaryUpdate > SUMMARY_UPDATE_INTERVAL) {
+      lastSummaryUpdate = now;
       generateAISummary(result.buckets);
     }
 
@@ -648,6 +758,7 @@ function processMessages(messages) {
             console.log(`[Sidebar] Encoding too slow (${msPerMessage.toFixed(0)}ms/msg), falling back to keyword mode`);
             setKeywordMode();
             updateClusteringBadge('Keyword');
+            updateSystemStatus();
             return;
           }
         }
@@ -819,13 +930,28 @@ function updateSentimentSamples(mood, signals) {
   `, DOMPURIFY_CONFIG);
 }
 
-// Show or hide the fallback notice based on current isInFallback() state
+// Show or hide the fallback notice with reason-specific messaging
 function updateFallbackNotice() {
   if (!fallbackNotice) return;
-  if (isInFallback()) {
-    fallbackNotice.classList.remove('hidden');
-  } else {
+  if (!isInFallback()) {
     fallbackNotice.classList.add('hidden');
+    return;
+  }
+  fallbackNotice.classList.remove('hidden');
+  const reason = getFallbackReason();
+  const msgEl = document.getElementById('fallback-message');
+  if (msgEl) {
+    if (reason === 'no-gpu') {
+      msgEl.textContent = 'AI needs a GPU \u2014 using rule-based analysis';
+    } else if (reason === 'garbage') {
+      msgEl.textContent = 'AI not responding \u2014 using rule-based analysis';
+    } else {
+      msgEl.textContent = 'AI could not load \u2014 using rule-based analysis';
+    }
+  }
+  // Only show retry for transient failures
+  if (retryAiBtn) {
+    retryAiBtn.classList.toggle('hidden', reason === 'no-gpu');
   }
 }
 
@@ -863,92 +989,9 @@ async function generateAISummary(buckets) {
   }
 }
 
-// Input validation for WASM data
-function validateAnalysisResult(result) {
-  if (!result || typeof result !== 'object') {
-    throw new Error('Invalid result: must be an object');
-  }
-  
-  // Validate buckets
-  if (!Array.isArray(result.buckets)) {
-    throw new Error('Invalid result: buckets must be an array');
-  }
-  result.buckets.forEach((bucket, index) => {
-    if (!bucket || typeof bucket !== 'object') {
-      throw new Error(`Invalid bucket at index ${index}: must be an object`);
-    }
-    if (typeof bucket.label !== 'string' || bucket.label.length > 100) {
-      throw new Error(`Invalid bucket at index ${index}: label must be a string <= 100 chars`);
-    }
-    if (!Number.isFinite(bucket.count) || bucket.count < 0) {
-      throw new Error(`Invalid bucket at index ${index}: count must be a non-negative number`);
-    }
-    if (!Array.isArray(bucket.sample_messages)) {
-      throw new Error(`Invalid bucket at index ${index}: sample_messages must be an array`);
-    }
-    bucket.sample_messages.forEach((msg, msgIndex) => {
-      if (typeof msg !== 'string' || msg.length > 500) {
-        throw new Error(`Invalid message at bucket ${index}, message ${msgIndex}: must be string <= 500 chars`);
-      }
-    });
-  });
-  
-  // Validate topics
-  if (result.topics && !Array.isArray(result.topics)) {
-    throw new Error('Invalid result: topics must be an array if present');
-  }
-  if (result.topics) {
-    result.topics.forEach((topic, index) => {
-      if (!topic || typeof topic !== 'object') {
-        throw new Error(`Invalid topic at index ${index}: must be an object`);
-      }
-      if (typeof topic.term !== 'string' || topic.term.length > 50) {
-        throw new Error(`Invalid topic at index ${index}: term must be string <= 50 chars`);
-      }
-      if (!Number.isFinite(topic.count) || topic.count <= 0) {
-        throw new Error(`Invalid topic at index ${index}: count must be positive number`);
-      }
-      if (typeof topic.is_emote !== 'boolean') {
-        throw new Error(`Invalid topic at index ${index}: is_emote must be boolean`);
-      }
-    });
-  }
-  
-  // Validate sentiment signals
-  if (result.sentiment_signals && typeof result.sentiment_signals !== 'object') {
-    throw new Error('Invalid result: sentiment_signals must be an object if present');
-  }
-  
-  // Validate processed_count
-  if (!Number.isFinite(result.processed_count) || result.processed_count < 0) {
-    throw new Error('Invalid result: processed_count must be a non-negative number');
-  }
-  
-  return true;
-}
-
-function validateMessages(messages) {
-  if (!Array.isArray(messages)) {
-    throw new Error('Messages must be an array');
-  }
-  
-  messages.forEach((msg, index) => {
-    if (!msg || typeof msg !== 'object') {
-      throw new Error(`Message at index ${index} must be an object`);
-    }
-    if (typeof msg.text !== 'string' || msg.text.length > 1000) {
-      throw new Error(`Message at index ${index}: text must be string <= 1000 chars`);
-    }
-    if (!Number.isFinite(msg.timestamp) || msg.timestamp <= 0) {
-      throw new Error(`Message at index ${index}: timestamp must be positive number`);
-    }
-    if (msg.author && (typeof msg.author !== 'string' || msg.author.length > 50)) {
-      throw new Error(`Message at index ${index}: author must be string <= 50 chars`);
-    }
-  });
-  
-  return true;
-}
+// Validation imported from utils/ValidationHelpers.js (aliased to avoid naming conflicts with exports)
+const validateAnalysisResult = _validateAnalysisResult;
+const validateMessages = _validateMessages;
 
 // Accumulate messages across batches for better clustering
 let allMessages = [];
@@ -1112,6 +1155,12 @@ function showSessionSummary() {
     safeSetHTML(questionsContainer, '<p class="summary-no-data">No questions captured</p>');
   }
 
+  // Reset save button state
+  if (saveSummaryBtn) {
+    saveSummaryBtn.disabled = false;
+    saveSummaryBtn.textContent = 'Save Session';
+  }
+
   // Show modal
   summaryModal.classList.remove('hidden');
 }
@@ -1124,7 +1173,7 @@ function generateSummaryText() {
   const duration = Date.now() - sessionStartTime;
   const result = lastAnalysisResult;
 
-  let text = `📡 CHAT SIGNAL RADAR - SESSION SUMMARY\n`;
+  let text = `📡 CHAT SIGNAL - SESSION SUMMARY\n`;
   text += `${'='.repeat(40)}\n\n`;
 
   text += `⏱️  Duration: ${formatDuration(duration)}\n`;
@@ -1173,7 +1222,7 @@ function generateSummaryText() {
   }
 
   text += `${'='.repeat(40)}\n`;
-  text += `Generated by Chat Signal Radar\n`;
+  text += `Generated by Chat Signal\n`;
 
   return text;
 }
@@ -1506,6 +1555,7 @@ function viewSessionDetail(session) {
   modalTitle.textContent = `Session Summary - ${date.toLocaleDateString()}`;
 
   // Change buttons for history view
+  if (saveSummaryBtn) saveSummaryBtn.classList.add('hidden');
   copySummaryBtn.textContent = 'Copy Summary';
   closeSummaryBtn.textContent = 'Close';
 
@@ -1516,6 +1566,7 @@ function viewSessionDetail(session) {
     modalTitle.textContent = 'Session Summary';
     closeSummaryBtn.textContent = 'Start New Session';
     closeSummaryBtn.onclick = originalCloseHandler;
+    if (saveSummaryBtn) saveSummaryBtn.classList.remove('hidden');
   };
 
   // Show modal
@@ -1528,6 +1579,7 @@ if (isTestEnv && typeof globalThis !== 'undefined') {
     updateAiSummaryState,
     updateMoodIndicator,
     updateTopics,
+    updateSystemStatus,
     formatDuration,
     generateSummaryText,
     showSessionSummary,

@@ -4,7 +4,7 @@ This file provides guidance for Claude Code (or any AI assistant) when working w
 
 ## Project Overview
 
-Chat Signal Radar is a Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It provides a real-time dashboard showing:
+Chat Signal is a Chrome extension that analyzes YouTube and Twitch live chat in real-time using Rust + WebAssembly. It provides a real-time dashboard showing:
 
 - **Message Clustering**: Questions, Issues/Bugs, Requests, and General Chat
 - **Sentiment Analysis**: Overall chat mood (excited, positive, angry, negative, confused, neutral)
@@ -283,7 +283,7 @@ await retryLLM();  // Re-initialize engine after fallback
 
 ### Shipped (v1.1 — CWS Readiness)
 - [x] **Privacy Policy**: Hosted at chatsignal.dev/privacy-policy, CWS dashboard compliance docs
-- [x] **Manifest Audit**: Version bump to 1.1.0, unlimitedStorage, CSP audit, disk space warning in consent modal
+- [x] **Manifest Audit**: unlimitedStorage, CSP audit, disk space warning in consent modal
 - [x] **Store Listing Assets**: Three 1280x800 screenshots, 440x280 promotional image, trademark-compliant store copy
 
 ### Shipped (v2.0 — Semantic AI Pipeline)
@@ -291,9 +291,14 @@ await retryLLM();  // Re-initialize engine after fallback
 - [x] **GPU Scheduler**: Promise-chain mutex for single-pipeline GPU access
 - [x] **Semantic Cosine Routing**: Messages classified by cosine similarity to prototype vectors, with per-category thresholds and automatic fallback to keyword mode
 - [x] **Qwen SLM Swap**: Switched from Phi-2 to Qwen2.5-0.5B-Instruct with keyword-scan parser, semantic cluster context in prompts, and garbage-triggered fallback to rule-based mode
+- [x] **Word-boundary matching**: Keyword clustering and sentiment use whole-word matching to reduce false positives
+- [x] **Sentiment priority reorder**: Positive/negative signals checked before confused, so "this is awesome?" counts as positive
+- [x] **Shared settings module**: Single DEFAULT_SETTINGS source of truth across sidebar, options, and state manager
+- [x] **Security hardening**: Restricted web_accessible_resources, explicit DOMPurify config, LLM summary throttle
 
 ### Not Yet Started
 - [ ] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission
+- [ ] **Integration of SessionManager/StateManager**: Wire up modular session/state modules into sidebar
 
 ### Next Up
 - [ ] **Export Options**: Download session data as JSON or Markdown files

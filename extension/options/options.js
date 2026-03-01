@@ -1,15 +1,6 @@
-// Options page for Chat Signal Radar settings
+// Options page for Chat Signal settings
 
-const DEFAULT_SETTINGS = {
-  topicMinCount: 5,
-  spamThreshold: 3,
-  duplicateWindow: 30,
-  sentimentSensitivity: 3,
-  moodUpgradeThreshold: 30,
-  aiSummariesEnabled: false,
-  analysisWindowSize: 500,
-  inactivityTimeout: 120
-};
+import { DEFAULT_SETTINGS } from '../settings-defaults.js';
 
 // DOM elements
 const form = document.getElementById('settings-form');
@@ -23,9 +14,9 @@ const inputs = {
   duplicateWindow: document.getElementById('duplicate-window'),
   sentimentSensitivity: document.getElementById('sentiment-sensitivity'),
   moodUpgradeThreshold: document.getElementById('mood-upgrade-threshold'),
-  aiSummariesEnabled: document.getElementById('ai-summaries-enabled'),
   analysisWindowSize: document.getElementById('analysis-window-size'),
-  inactivityTimeout: document.getElementById('inactivity-timeout')
+  inactivityTimeout: document.getElementById('inactivity-timeout'),
+  aiSummariesEnabled: document.getElementById('ai-summaries-toggle')
 };
 
 // Value display elements
@@ -71,9 +62,9 @@ function setInputValues(settings) {
   inputs.duplicateWindow.value = settings.duplicateWindow;
   inputs.sentimentSensitivity.value = settings.sentimentSensitivity;
   inputs.moodUpgradeThreshold.value = settings.moodUpgradeThreshold;
-  inputs.aiSummariesEnabled.checked = Boolean(settings.aiSummariesEnabled);
   if (inputs.analysisWindowSize) inputs.analysisWindowSize.value = settings.analysisWindowSize;
   if (inputs.inactivityTimeout) inputs.inactivityTimeout.value = settings.inactivityTimeout;
+  if (inputs.aiSummariesEnabled) inputs.aiSummariesEnabled.checked = !!settings.aiSummariesEnabled;
   updateDisplays(settings);
 }
 
@@ -85,7 +76,6 @@ function getInputValues() {
     duplicateWindow: parseInt(inputs.duplicateWindow.value, 10),
     sentimentSensitivity: parseInt(inputs.sentimentSensitivity.value, 10),
     moodUpgradeThreshold: parseInt(inputs.moodUpgradeThreshold.value, 10),
-    aiSummariesEnabled: inputs.aiSummariesEnabled.checked,
     analysisWindowSize: parseInt(inputs.analysisWindowSize.value, 10),
     inactivityTimeout: parseInt(inputs.inactivityTimeout.value, 10)
   };
@@ -166,7 +156,9 @@ async function saveSettings() {
       showStatus('Fix validation errors before saving', 'error');
       return;
     }
-    await chrome.storage.sync.set({ settings: values });
+    // Merge with existing settings to preserve keys not on this page (e.g. aiSummariesEnabled)
+    const existing = await chrome.storage.sync.get('settings');
+    await chrome.storage.sync.set({ settings: { ...existing.settings, ...values } });
     showStatus('Settings saved!', 'success');
   } catch (error) {
     console.error('Failed to save settings:', error);
@@ -202,6 +194,7 @@ function showStatus(message, type) {
 
 // Event listeners for real-time value display updates and validation
 Object.keys(inputs).forEach(key => {
+  if (key === 'aiSummariesEnabled') return; // Toggle has its own handler
   inputs[key].addEventListener('input', () => {
     const values = getInputValues();
     updateDisplays(values);
@@ -210,6 +203,21 @@ Object.keys(inputs).forEach(key => {
     document.getElementById('save-btn').disabled = Object.keys(errors).length > 0;
   });
 });
+
+// AI Summaries toggle — auto-save immediately on change
+if (inputs.aiSummariesEnabled) {
+  inputs.aiSummariesEnabled.addEventListener('change', async () => {
+    try {
+      const existing = await chrome.storage.sync.get('settings');
+      const updated = { ...existing.settings, aiSummariesEnabled: inputs.aiSummariesEnabled.checked };
+      await chrome.storage.sync.set({ settings: updated });
+      showStatus(inputs.aiSummariesEnabled.checked ? 'AI summaries enabled' : 'AI summaries disabled', 'success');
+    } catch (error) {
+      console.error('Failed to save AI toggle:', error);
+      showStatus('Failed to save AI setting', 'error');
+    }
+  });
+}
 
 // Form submission
 form.addEventListener('submit', async (e) => {

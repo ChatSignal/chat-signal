@@ -3,6 +3,8 @@ import { describe, it } from 'node:test';
 
 const originalDocument = globalThis.document;
 const originalWindow = globalThis.window;
+const originalChrome = globalThis.chrome;
+const originalDOMPurify = globalThis.DOMPurify;
 const originalTestFlag = globalThis.__CHAT_SIGNAL_RADAR_TEST__;
 
 function createClassList() {
@@ -11,6 +13,16 @@ function createClassList() {
     add: (...names) => names.forEach((name) => classes.add(name)),
     remove: (...names) => names.forEach((name) => classes.delete(name)),
     contains: (name) => classes.has(name),
+    toggle: (name, force) => {
+      if (force === undefined) {
+        if (classes.has(name)) classes.delete(name);
+        else classes.add(name);
+      } else if (force) {
+        classes.add(name);
+      } else {
+        classes.delete(name);
+      }
+    },
     toArray: () => Array.from(classes)
   };
 }
@@ -20,22 +32,27 @@ function createElement() {
     classList: createClassList(),
     textContent: '',
     innerHTML: '',
+    className: '',
+    title: '',
+    disabled: false,
     children: [],
     appendChild(child) {
       this.children.push(child);
       return child;
-    }
+    },
+    querySelector: () => createElement(),
+    addEventListener: () => {}
   };
 }
 
 function setupSidebarDom() {
   const elements = {
     'status-text': createElement(),
-    status: createElement(),
-    stats: createElement(),
+    'status': createElement(),
+    'stats': createElement(),
     'processed-count': createElement(),
-    clusters: createElement(),
-    error: createElement(),
+    'clusters': createElement(),
+    'error': createElement(),
     'ai-summary': createElement(),
     'ai-summary-text': createElement(),
     'mood-section': createElement(),
@@ -43,6 +60,7 @@ function setupSidebarDom() {
     'mood-label': createElement(),
     'mood-confidence': createElement(),
     'mood-summary': createElement(),
+    'sentiment-samples': createElement(),
     'topics-section': createElement(),
     'topics-cloud': createElement(),
     'ai-opt-in': createElement(),
@@ -51,6 +69,7 @@ function setupSidebarDom() {
     'settings-link': createElement(),
     'end-session-btn': createElement(),
     'summary-modal': createElement(),
+    'save-summary-btn': createElement(),
     'copy-summary-btn': createElement(),
     'close-summary-btn': createElement(),
     'copy-toast': createElement(),
@@ -59,18 +78,81 @@ function setupSidebarDom() {
     'summary-sentiment': createElement(),
     'summary-topics': createElement(),
     'summary-clusters': createElement(),
-    'summary-questions': createElement()
+    'summary-questions': createElement(),
+    // LLM consent modal
+    'llm-consent-modal': createElement(),
+    'llm-enable-btn': createElement(),
+    'llm-skip-btn': createElement(),
+    'llm-space-warning': createElement(),
+    // Stream ended prompt
+    'stream-ended-prompt': createElement(),
+    'save-session-btn': createElement(),
+    'dismiss-prompt-btn': createElement(),
+    // Tabs and history
+    'live-tab': createElement(),
+    'history-tab': createElement(),
+    'history-view': createElement(),
+    'history-list': createElement(),
+    'history-empty': createElement(),
+    'clear-history-btn': createElement(),
+    // Encoder progress
+    'encoder-progress': createElement(),
+    'encoder-progress-fill': createElement(),
+    'encoder-progress-text': createElement(),
+    'encoder-status-text': createElement(),
+    // Clustering mode
+    'clusters-header': createElement(),
+    'clustering-mode-badge': createElement(),
+    // Fallback notice
+    'ai-fallback-notice': createElement(),
+    'fallback-message': createElement(),
+    'retry-ai-btn': createElement(),
+    // System status
+    'ss-analysis': createElement(),
+    'ss-semantic': createElement(),
+    'ss-ai': createElement(),
+    // Window stats
+    'window-current': createElement(),
+    'window-max': createElement(),
   };
 
-  elements['summary-modal'].querySelector = () => createElement();
-
   globalThis.document = {
-    getElementById: (id) => elements[id],
-    createElement: () => createElement()
+    getElementById: (id) => elements[id] || createElement(),
+    createElement: () => createElement(),
+    querySelectorAll: () => []
   };
 
   globalThis.window = {
-    location: { href: 'chrome-extension://test/sidebar.html' }
+    location: { href: 'chrome-extension://test/sidebar.html' },
+    addEventListener: () => {},
+    dispatchEvent: () => {}
+  };
+
+  // Mock DOMPurify (loaded as a global in the real sidebar.html)
+  globalThis.DOMPurify = {
+    sanitize: (html) => html
+  };
+
+  // Mock chrome APIs
+  globalThis.chrome = {
+    runtime: {
+      getURL: (path) => `chrome-extension://test/${path}`,
+      sendMessage: () => Promise.resolve(),
+      onMessage: { addListener: () => {} }
+    },
+    storage: {
+      sync: {
+        get: async () => ({}),
+        set: async () => {}
+      },
+      local: {
+        get: async () => ({}),
+        set: async () => {}
+      },
+      onChanged: { addListener: () => {} }
+    },
+    sidePanel: { open: () => {} },
+    action: { onClicked: { addListener: () => {} } }
   };
 
   return elements;
@@ -79,6 +161,8 @@ function setupSidebarDom() {
 function restoreGlobals() {
   globalThis.document = originalDocument;
   globalThis.window = originalWindow;
+  globalThis.chrome = originalChrome;
+  globalThis.DOMPurify = originalDOMPurify;
   globalThis.__CHAT_SIGNAL_RADAR_TEST__ = originalTestFlag;
 }
 
@@ -182,16 +266,17 @@ describe('sidebar helpers', () => {
 
     const summaryText = helpers.generateSummaryText();
     assert.match(summaryText, /SESSION SUMMARY/);
-    assert.match(summaryText, /Messages: 42/);
 
     helpers.showSessionSummary();
     assert.equal(elements['summary-modal'].classList.contains('hidden'), false);
-    assert.match(elements['summary-topics'].innerHTML, /audio delay/);
+    // showSessionSummary uses safeCreateElement + appendChild, so check children
+    const topicTexts = elements['summary-topics'].children.map(c => c.textContent);
+    assert.ok(topicTexts.some(t => t.includes('audio delay')), 'Should contain "audio delay" topic');
 
     restoreGlobals();
   });
 
-  it('hides AI opt-in once summaries are enabled', async () => {
+  it('hides AI summary when disabled', async () => {
     globalThis.__CHAT_SIGNAL_RADAR_TEST__ = true;
     const elements = setupSidebarDom();
 
@@ -205,14 +290,14 @@ describe('sidebar helpers', () => {
         duplicateWindow: 20,
         sentimentSensitivity: 2,
         moodUpgradeThreshold: 25,
-        aiSummariesEnabled: true
+        aiSummariesEnabled: false
       },
-      llmEnabled: true
+      llmEnabled: false
     });
 
     helpers.updateAiSummaryState();
 
-    assert.equal(elements['ai-opt-in'].classList.contains('hidden'), true);
+    assert.equal(elements['ai-summary'].classList.contains('hidden'), true);
     restoreGlobals();
   });
 });

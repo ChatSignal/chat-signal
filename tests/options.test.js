@@ -6,40 +6,71 @@ const originalChrome = globalThis.chrome;
 const originalTestFlag = globalThis.__CHAT_SIGNAL_RADAR_TEST__;
 
 function createElement(initial = {}) {
-  return {
-    value: initial.value ?? '',
+  const el = {
+    _value: String(initial.value ?? ''),
     checked: initial.checked ?? false,
+    disabled: initial.disabled ?? false,
     textContent: '',
     className: '',
     classList: {
-      add: () => {},
-      remove: () => {}
+      _classes: new Set(),
+      add(...names) { names.forEach(n => this._classes.add(n)); },
+      remove(...names) { names.forEach(n => this._classes.delete(n)); },
+      contains(name) { return this._classes.has(name); },
+      toggle(name, force) {
+        if (force === undefined) {
+          if (this._classes.has(name)) this._classes.delete(name);
+          else this._classes.add(name);
+        } else if (force) {
+          this._classes.add(name);
+        } else {
+          this._classes.delete(name);
+        }
+      }
     },
-    addEventListener: () => {}
+    addEventListener: () => {},
+    closest: () => ({ appendChild: () => {} })
   };
+  // Mimic real DOM: input.value always coerces to string
+  Object.defineProperty(el, 'value', {
+    get() { return el._value; },
+    set(v) { el._value = String(v); },
+    enumerable: true,
+    configurable: true
+  });
+  return el;
 }
 
 function setupOptionsDom() {
   const elements = {
     'settings-form': createElement(),
     'reset-btn': createElement(),
+    'save-btn': createElement(),
     'status': createElement(),
     'topic-min-count': createElement(),
     'spam-threshold': createElement(),
     'duplicate-window': createElement(),
     'sentiment-sensitivity': createElement(),
     'mood-upgrade-threshold': createElement(),
-    'ai-summaries-enabled': createElement({ checked: false }),
+    'analysis-window-size': createElement(),
+    'inactivity-timeout': createElement(),
+    'ai-summaries-toggle': createElement({ checked: false }),
     'topic-min-count-value': createElement(),
     'spam-threshold-value': createElement(),
     'duplicate-window-value': createElement(),
     'sentiment-sensitivity-value': createElement(),
-    'mood-upgrade-threshold-value': createElement()
+    'mood-upgrade-threshold-value': createElement(),
+    'analysis-window-size-value': createElement(),
+    'analysis-window-size-estimate': createElement(),
+    'analysis-window-warning': createElement(),
+    'inactivity-timeout-value': createElement(),
+    'encoder-backend-value': createElement(),
   };
 
   globalThis.document = {
-    getElementById: (id) => elements[id],
-    addEventListener: () => {}
+    getElementById: (id) => elements[id] || createElement(),
+    addEventListener: () => {},
+    querySelectorAll: () => []
   };
 
   const storageState = { settings: null };
@@ -51,6 +82,9 @@ function setupOptionsDom() {
         set: async ({ settings }) => {
           storageState.settings = settings;
         }
+      },
+      local: {
+        get: async () => ({})
       }
     }
   };
@@ -78,6 +112,8 @@ describe('options helpers', () => {
       duplicateWindow: 45,
       sentimentSensitivity: 1,
       moodUpgradeThreshold: 25,
+      analysisWindowSize: 500,
+      inactivityTimeout: 120,
       aiSummariesEnabled: true
     };
 
@@ -88,10 +124,21 @@ describe('options helpers', () => {
     assert.equal(elements['duplicate-window'].value, '45');
     assert.equal(elements['sentiment-sensitivity'].value, '1');
     assert.equal(elements['mood-upgrade-threshold'].value, '25');
-    assert.equal(elements['ai-summaries-enabled'].checked, true);
+    assert.equal(elements['analysis-window-size'].value, '500');
+    assert.equal(elements['inactivity-timeout'].value, '120');
+    assert.equal(elements['ai-summaries-toggle'].checked, true);
 
+    // getInputValues returns only numeric settings (aiSummariesEnabled is handled separately)
     const readValues = helpers.getInputValues();
-    assert.deepEqual(readValues, settings);
+    assert.deepEqual(readValues, {
+      topicMinCount: 2,
+      spamThreshold: 4,
+      duplicateWindow: 45,
+      sentimentSensitivity: 1,
+      moodUpgradeThreshold: 25,
+      analysisWindowSize: 500,
+      inactivityTimeout: 120
+    });
 
     restoreGlobals();
   });
@@ -108,7 +155,8 @@ describe('options helpers', () => {
     elements['duplicate-window'].value = '15';
     elements['sentiment-sensitivity'].value = '2';
     elements['mood-upgrade-threshold'].value = '18';
-    elements['ai-summaries-enabled'].checked = true;
+    elements['analysis-window-size'].value = '200';
+    elements['inactivity-timeout'].value = '60';
 
     await helpers.saveSettings();
 
@@ -118,7 +166,8 @@ describe('options helpers', () => {
       duplicateWindow: 15,
       sentimentSensitivity: 2,
       moodUpgradeThreshold: 18,
-      aiSummariesEnabled: true
+      analysisWindowSize: 200,
+      inactivityTimeout: 60
     });
 
     restoreGlobals();

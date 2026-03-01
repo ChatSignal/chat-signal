@@ -1,14 +1,44 @@
 // Encoder Adapter — Transformers.js feature-extraction pipeline singleton
 // Provides: batch encoding, WebGPU/WASM backend detection, hash cache, retry logic
+//
+// All browser-specific code (Transformers.js import, chrome API, navigator) is
+// deferred to initEncoder() so this module can be safely imported in Node.js tests.
 
-import { env, pipeline } from '../libs/transformers/transformers.js';
-import { scheduleGpuTask, registerDevice } from './modules/gpu-scheduler.js';
+// ---------------------------------------------------------------------------
+// Lazy-loaded browser dependencies (set by initTransformersRuntime)
+// ---------------------------------------------------------------------------
 
-// Configure ONNX WASM paths BEFORE any pipeline() call (Pitfall 2 in research)
-// Must point to vendored files via extension URL to satisfy MV3 CSP
-env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL('libs/transformers/');
-env.allowRemoteModels = true;
-env.useBrowserCache = true;
+let _env = null;
+let _pipeline = null;
+let _scheduleGpuTask = null;
+let _registerDevice = null;
+let _runtimeReady = false;
+
+/**
+ * Load Transformers.js and GPU scheduler at runtime.
+ * Called once from initEncoder(). No-ops on subsequent calls.
+ * Separated from module scope so Node.js tests can import this file
+ * without triggering browser-only code.
+ */
+async function initTransformersRuntime() {
+  if (_runtimeReady) return;
+
+  const transformers = await import('../libs/transformers/transformers.js');
+  _env = transformers.env;
+  _pipeline = transformers.pipeline;
+
+  const scheduler = await import('./modules/gpu-scheduler.js');
+  _scheduleGpuTask = scheduler.scheduleGpuTask;
+  _registerDevice = scheduler.registerDevice;
+
+  // Configure ONNX WASM paths BEFORE any pipeline() call (Pitfall 2 in research)
+  // Must point to vendored files via extension URL to satisfy MV3 CSP
+  _env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL('libs/transformers/');
+  _env.allowRemoteModels = true;
+  _env.useBrowserCache = true;
+
+  _runtimeReady = true;
+}
 
 // ---------------------------------------------------------------------------
 // State
@@ -30,7 +60,7 @@ let encodingQueue = [];
 let flushTimer = null;
 const MIN_BATCH = 10;
 const MAX_BATCH = 50;
-const TIME_FLUSH_MS = 8000; // 8s timeout for slow chats (Claude's discretion)
+const TIME_FLUSH_MS = 8000; // 8s timeout for slow chats
 
 // ---------------------------------------------------------------------------
 // Internal utilities
@@ -113,6 +143,9 @@ async function initEncoder(onProgress) {
   initPromise = (async () => {
     encoderState = 'loading';
 
+    // Load Transformers.js and GPU scheduler on first call
+    await initTransformersRuntime();
+
     // WebGPU detection — Transformers.js does NOT auto-fallback (Pitfall 3)
     let device = 'wasm';
     if (navigator.gpu) {
@@ -144,7 +177,7 @@ async function initEncoder(onProgress) {
       console.log(`[Encoder] Loading ${MODEL_ID} with device: ${device}`);
       const startTime = Date.now();
 
-      encoderPipeline = await pipeline('feature-extraction', MODEL_ID, {
+      encoderPipeline = await _pipeline('feature-extraction', MODEL_ID, {
         device,
         dtype: 'q8',
         progress_callback: progressCallback,
@@ -157,7 +190,7 @@ async function initEncoder(onProgress) {
         console.log('[Encoder] WebGPU init failed, falling back to WASM:', err);
         backendUsed = 'wasm';
 
-        encoderPipeline = await pipeline('feature-extraction', MODEL_ID, {
+        encoderPipeline = await _pipeline('feature-extraction', MODEL_ID, {
           device: 'wasm',
           dtype: 'q8',
           progress_callback: progressCallback,
@@ -173,7 +206,7 @@ async function initEncoder(onProgress) {
     // Warm-up run to prime GPU/WASM JIT before first real encode
     // Route through scheduler so warm-up counts as the first GPU task in the queue
     console.log('[Encoder] Running warm-up inference...');
-    await scheduleGpuTask('encoder', 1, () =>
+    await _scheduleGpuTask('encoder', 1, () =>
       encoderPipeline(['warm up'], { pooling: 'mean', normalize: true })
     );
     console.log(`[Encoder] Warm-up complete. Backend: ${backendUsed}`);
@@ -186,7 +219,7 @@ async function initEncoder(onProgress) {
         const adapter = await navigator.gpu.requestAdapter();
         if (adapter) {
           const device = await adapter.requestDevice();
-          registerDevice(device);
+          _registerDevice(device);
         }
       } catch (e) {
         console.log('[Encoder] Could not register device for loss detection:', e);
@@ -269,7 +302,7 @@ async function encodeMessages(messages) {
     const texts = newMessages.map(m => m.text);
     // Route GPU inference through scheduler — only the pipeline call touches the GPU;
     // cache lookups and cache writes are CPU-only and stay outside the scheduler
-    const output = await scheduleGpuTask('encoder', 1, () =>
+    const output = await _scheduleGpuTask('encoder', 1, () =>
       encoderPipeline(texts, { pooling: 'mean', normalize: true })
     );
     const embeddings = output.tolist(); // number[][], shape [n, 384]

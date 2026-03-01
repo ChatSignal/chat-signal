@@ -5,7 +5,7 @@
 
 import { stateManager } from './StateManager.js';
 import { validateSessionData } from '../utils/ValidationHelpers.js';
-import { saveSession, getAllSessions, clearAllSessions } from '../storage-manager.js';
+import { saveSession, loadSessions, clearAllSessions } from '../../storage-manager.js';
 import { formatDuration } from '../utils/FormattingHelpers.js';
 
 export class SessionManager {
@@ -95,7 +95,7 @@ export class SessionManager {
     }
     
     try {
-      const sessions = await getAllSessions();
+      const sessions = await loadSessions();
       return sessions.sort((a, b) => b.endTime - a.endTime); // Most recent first
     } catch (error) {
       console.error('[SessionManager] Failed to load sessions:', error);

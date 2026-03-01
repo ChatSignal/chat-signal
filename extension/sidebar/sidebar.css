@@ -169,6 +169,50 @@ h1 {
 }
 
 /* ============================================================================
+   SYSTEM STATUS TRAFFIC LIGHTS
+   ============================================================================ */
+
+.system-status {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px 16px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.system-status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.system-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.3s ease;
+}
+
+.system-status-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.system-status-dot.dot-ready   { background: var(--success-color); }
+.system-status-dot.dot-loading { background: var(--warning-color); animation: pulse 2s ease-in-out infinite; }
+.system-status-dot.dot-error   { background: var(--error-color); }
+.system-status-dot.dot-off     { background: var(--text-muted); opacity: 0.4; }
+
+.system-status-item.clickable { cursor: pointer; }
+.system-status-item.clickable:hover .system-status-label { color: var(--accent-color); }
+
+/* ============================================================================
    STATS
    ============================================================================ */
 
@@ -282,23 +326,24 @@ h1 {
   padding-top: 0;
 }
 
-/* Fallback notice ("Basic mode" indicator + Retry AI button) */
+/* Fallback notice (rule-based analysis indicator + optional Retry button) */
 
 .ai-fallback-notice {
   display: flex;
   align-items: center;
-  gap: 0.5em;
-  padding: 0.4em 0.8em;
-  font-size: 0.85em;
-  color: var(--text-muted);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 12px;
 }
 
-.fallback-label {
-  font-style: italic;
-}
-
-.fallback-separator {
-  color: var(--text-muted);
+.fallback-message {
+  flex: 1;
 }
 
 .btn-link {
@@ -940,6 +985,23 @@ h1 {
   display: flex;
   gap: 12px;
   margin-top: 24px;
+}
+
+.modal-actions-3 {
+  flex-wrap: wrap;
+}
+
+.modal-actions-3 .btn:first-child {
+  flex: 1 1 100%;
+}
+
+.modal-actions-3 .btn:not(:first-child) {
+  flex: 1 1 0;
+}
+
+.modal-actions .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .modal-actions .btn {

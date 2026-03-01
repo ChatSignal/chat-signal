@@ -7,6 +7,7 @@ let isInitializing = false;
 let isInitialized = false;
 
 let _inFallback = false;
+let _fallbackReason = 'none'; // 'none' | 'no-gpu' | 'garbage' | 'error'
 let _garbageCount = 0;
 const MAX_GARBAGE_BEFORE_FALLBACK = 2;
 
@@ -46,10 +47,6 @@ async function initializeLLM(progressCallback = null) {
               text: report.text || 'Loading...'
             });
           }
-        },
-        // Use extension storage for caching
-        appConfig: {
-          useIndexedDBCache: true
         }
       });
 
@@ -57,11 +54,15 @@ async function initializeLLM(progressCallback = null) {
       if (DEBUG) console.log('[LLM] WebLLM engine initialized successfully');
 
     } catch (bundleError) {
-      // If bundle doesn't exist, use fallback
+      // If bundle doesn't exist or GPU unavailable, use fallback
       console.warn('[LLM] WebLLM bundle not found, using fallback summarizer:', bundleError);
       engine = createFallbackEngine();
+      _inFallback = true;
+      const msg = bundleError.message || '';
+      const isGpuError = /gpu|adapter|webgpu/i.test(msg);
+      _fallbackReason = isGpuError ? 'no-gpu' : 'error';
       isInitialized = true;
-      
+
       if (progressCallback) {
         progressCallback({ progress: 1, text: 'Using fallback mode' });
       }
@@ -309,6 +310,7 @@ REASON: [one sentence explanation]`;
         // Only schedule auto-retry if the bundle was present (not already a missing-bundle fallback).
         const wasRealEngine = engine && !engine._isFallback;
         _inFallback = true;
+        _fallbackReason = 'garbage';
         engine = createFallbackEngine();
         if (DEBUG) console.warn('[LLM] Too many garbage responses, switching to rule-based fallback for this session.');
 
@@ -497,6 +499,12 @@ async function resetLLM() {
 function isInFallback() { return _inFallback; }
 
 /**
+ * Get the reason why the session entered fallback mode.
+ * @returns {'none'|'no-gpu'|'garbage'|'error'}
+ */
+function getFallbackReason() { return _fallbackReason; }
+
+/**
  * Reset fallback state and re-initialize the LLM engine.
  * Useful for a "Retry AI" user action after the session has entered fallback mode.
  * Relies on IndexedDB cache so re-init is fast (~2-5s) after first download.
@@ -504,6 +512,7 @@ function isInFallback() { return _inFallback; }
  */
 async function retryLLM(progressCallback) {
   _inFallback = false;
+  _fallbackReason = 'none';
   _garbageCount = 0;
   engine = null;
   isInitialized = false;
@@ -519,5 +528,6 @@ export {
   isLLMReady,
   resetLLM,
   isInFallback,
+  getFallbackReason,
   retryLLM
 };

@@ -1,6 +1,6 @@
 # Privacy Policy
 
-The published privacy policy for Chat Signal Radar is hosted at:
+The published privacy policy for Chat Signal is hosted at:
 
 **https://chatsignal.dev/privacy-policy**
 
