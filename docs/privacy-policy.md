@@ -30,6 +30,8 @@ Chat Signal uses two AI models, both downloaded from HuggingFace CDN and stored 
 
 Both models run entirely in your browser. After the initial download, they work offline.
 
+If you enable AI summaries, the extension also downloads WebGPU shader files from GitHub (`raw.githubusercontent.com`). These are small runtime support files required by the AI inference engine. No user data is sent to GitHub.
+
 ## What Chat Signal does not collect
 
 Chat Signal does not collect personal information. It does not track you across sites, run analytics, or share anything with third parties.

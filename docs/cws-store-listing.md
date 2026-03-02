@@ -27,7 +27,7 @@ Chat Signal analyzes YouTube and Twitch live chat in real-time and shows you:
 
 **For creators and moderators:** Spot audience questions in real time, catch sentiment shifts early, and get an AI-generated summary of what happened during the stream.
 
-Free. No account needed. All processing happens locally in your browser — no chat data ever leaves your computer.
+Free. No account needed. All processing happens locally in your browser — no chat data ever leaves your computer. A small encoder model (~23MB) is downloaded once on first use for smarter clustering; the optional AI summary model (~400MB) downloads only if you opt in.
 
 Works with YouTube and Twitch live streams.
 

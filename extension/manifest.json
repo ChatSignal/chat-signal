@@ -3,6 +3,7 @@
   "name": "Chat Signal",
   "version": "2.0.0",
   "description": "AI-powered live chat intelligence for YouTube and Twitch. Clusters messages, tracks sentiment and trending topics. 100% local.",
+  "homepage_url": "https://chatsignal.dev",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",

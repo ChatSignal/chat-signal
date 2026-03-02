@@ -32,6 +32,10 @@ Reads live chat messages from the YouTube page DOM to perform real-time message 
 
 Reads live chat messages from the Twitch page DOM to perform real-time message clustering, topic detection, and sentiment analysis. No data is transmitted off-device.
 
+### all_frames: true (content_scripts)
+
+Required because YouTube serves live chat inside a same-origin iframe (`#chatframe`). The content script must run inside this iframe to observe new chat messages via MutationObserver. Without `all_frames: true`, the script cannot access the chat DOM reliably across all YouTube player configurations.
+
 ---
 
 ## Content Security Policy (CSP) Rationale
