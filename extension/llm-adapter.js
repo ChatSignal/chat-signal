@@ -25,6 +25,9 @@ async function initializeLLM(progressCallback = null) {
     while (isInitializing) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+    if (!isInitialized) {
+      throw new Error('LLM initialization failed in a concurrent call');
+    }
     return;
   }
 
@@ -319,6 +322,7 @@ REASON: [one sentence explanation]`;
           _autoRetryScheduled = true;
           setTimeout(async () => {
             _autoRetryScheduled = false;
+            if (isInitializing) return;
             _inFallback = false;
             _garbageCount = 0;
             engine = null;
@@ -326,7 +330,6 @@ REASON: [one sentence explanation]`;
             isInitializing = false;
             try {
               await initializeLLM();
-              // If retry resolved to a fallback engine, restore the fallback flag
               if (engine && engine._isFallback) {
                 _inFallback = true;
               }

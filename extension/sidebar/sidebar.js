@@ -8,7 +8,7 @@ import { initEncoderWithRetry, scheduleEncode, getEncoderState, getBackendInfo, 
 import { buildPrototypes, classifyBatch, isSemanticReady, setSemanticMode, setKeywordMode, getMode } from './cosine-router.js';
 import { ROUTING_CONFIG } from './routing-config.js';
 import { DEFAULT_SETTINGS } from '../settings-defaults.js';
-import { validateMessages as _validateMessages, validateAnalysisResult as _validateAnalysisResult } from './utils/ValidationHelpers.js';
+import { validateMessages as _validateMessages, validateAnalysisResult as _validateAnalysisResult, validateSettings as _validateSettings } from './utils/ValidationHelpers.js';
 
 const DEBUG = false;
 const isTestEnv = typeof globalThis !== 'undefined' && globalThis.__CHAT_SIGNAL_RADAR_TEST__ === true;
@@ -348,7 +348,14 @@ async function checkStorageAvailability() {
 async function loadSettings() {
   try {
     const result = await chrome.storage.sync.get('settings');
-    settings = { ...DEFAULT_SETTINGS, ...result.settings };
+    const merged = { ...DEFAULT_SETTINGS, ...result.settings };
+    try {
+      _validateSettings(merged);
+      settings = merged;
+    } catch (validationError) {
+      console.warn('[Sidebar] Stored settings invalid, using defaults:', validationError.message);
+      settings = { ...DEFAULT_SETTINGS };
+    }
     updateAiSummaryState();
   } catch (error) {
     console.warn('[Sidebar] Failed to load settings, using defaults:', error);
@@ -1560,14 +1567,16 @@ function viewSessionDetail(session) {
   closeSummaryBtn.textContent = 'Close';
 
   // Temporarily override close button behavior for history view
-  const originalCloseHandler = closeSummaryBtn.onclick;
-  closeSummaryBtn.onclick = () => {
+  closeSummaryBtn.removeEventListener('click', startNewSession);
+  function restoreCloseHandler() {
     summaryModal.classList.add('hidden');
     modalTitle.textContent = 'Session Summary';
     closeSummaryBtn.textContent = 'Start New Session';
-    closeSummaryBtn.onclick = originalCloseHandler;
+    closeSummaryBtn.removeEventListener('click', restoreCloseHandler);
+    closeSummaryBtn.addEventListener('click', startNewSession);
     if (saveSummaryBtn) saveSummaryBtn.classList.remove('hidden');
-  };
+  }
+  closeSummaryBtn.addEventListener('click', restoreCloseHandler);
 
   // Show modal
   summaryModal.classList.remove('hidden');

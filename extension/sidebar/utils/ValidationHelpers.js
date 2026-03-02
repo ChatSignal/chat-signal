@@ -153,95 +153,9 @@ export function validateSettings(settings) {
   }
 
   // Validate boolean settings
-  const booleanSettings = ['aiSummariesEnabled', 'aiConsentShown'];
-  booleanSettings.forEach(setting => {
-    if (typeof settings[setting] !== 'boolean') {
-      throw new Error(`${setting} must be a boolean`);
-    }
-  });
-  
-  return true;
-}
-
-// Session data validation
-export function validateSessionData(sessionData) {
-  if (!sessionData || typeof sessionData !== 'object') {
-    throw new Error('Session data must be an object');
-  }
-  
-  // Required fields
-  const requiredFields = ['startTime', 'endTime', 'platform', 'totalMessages', 'finalMood'];
-  requiredFields.forEach(field => {
-    if (!(field in sessionData)) {
-      throw new Error(`Session data missing required field: ${field}`);
-    }
-  });
-  
-  // Validate timestamps
-  if (!Number.isFinite(sessionData.startTime) || sessionData.startTime <= 0) {
-    throw new Error('Session startTime must be a positive number');
-  }
-  if (!Number.isFinite(sessionData.endTime) || sessionData.endTime <= 0) {
-    throw new Error('Session endTime must be a positive number');
-  }
-  if (sessionData.endTime < sessionData.startTime) {
-    throw new Error('Session endTime must be after startTime');
-  }
-  
-  // Validate platform
-  if (typeof sessionData.platform !== 'string' || !['youtube', 'twitch'].includes(sessionData.platform)) {
-    throw new Error('Session platform must be "youtube" or "twitch"');
-  }
-  
-  // Validate message count
-  if (!Number.isFinite(sessionData.totalMessages) || sessionData.totalMessages < 0) {
-    throw new Error('Session totalMessages must be a non-negative number');
-  }
-  
-  // Validate mood
-  const validMoods = ['neutral', 'positive', 'negative', 'confused', 'excited', 'angry'];
-  if (!validMoods.includes(sessionData.finalMood)) {
-    throw new Error(`Session finalMood must be one of: ${validMoods.join(', ')}`);
-  }
-  
-  // Validate optional fields
-  if (sessionData.questions && !Array.isArray(sessionData.questions)) {
-    throw new Error('Session questions must be an array');
-  }
-  
-  if (sessionData.sentiment && typeof sessionData.sentiment !== 'object') {
-    throw new Error('Session sentiment must be an object');
+  if (typeof settings.aiSummariesEnabled !== 'boolean') {
+    throw new Error('aiSummariesEnabled must be a boolean');
   }
   
   return true;
-}
-
-// Sanitization utilities
-export function sanitizeText(text, maxLength = 1000) {
-  if (typeof text !== 'string') {
-    return '';
-  }
-  
-  // Remove potentially dangerous characters
-  return text
-    .slice(0, maxLength)
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Remove control characters
-}
-
-export function sanitizePlatform(platform) {
-  const validPlatforms = ['youtube', 'twitch'];
-  return validPlatforms.includes(platform) ? platform : null;
-}
-
-// Type checking utilities
-export function isPositiveInteger(value) {
-  return Number.isInteger(value) && value > 0;
-}
-
-export function isNonNegativeInteger(value) {
-  return Number.isInteger(value) && value >= 0;
-}
-
-export function isValidTimestamp(value) {
-  return isPositiveInteger(value) && value <= Date.now() + 86400000; // Allow 1 day in future for clock skew
 }

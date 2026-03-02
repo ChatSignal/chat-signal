@@ -68,7 +68,7 @@ function startBatchTimer() {
         platform: isYouTube ? 'youtube' : 'twitch',
         streamUrl: window.location.href,
         streamTitle: document.title
-      });
+      }).catch(() => {}); // Side panel may be closed
       messageBatch = [];
     }
   }, BATCH_INTERVAL);
@@ -111,18 +111,29 @@ function startContainerMonitor() {
 }
 
 function startNavigationWatcher() {
-  if (!document.body || navObserver) {
-    return;
-  }
-  navObserver = new MutationObserver(() => {
+  if (navObserver) return;
+  navObserver = true; // guard against double-init
+
+  function onNavigate() {
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
       resetObserver();
       startContainerWatcher();
     }
-  });
+  }
 
-  navObserver.observe(document.body, { childList: true, subtree: true });
+  // Intercept SPA navigations (YouTube uses pushState/replaceState)
+  const origPushState = history.pushState;
+  const origReplaceState = history.replaceState;
+  history.pushState = function () {
+    origPushState.apply(this, arguments);
+    onNavigate();
+  };
+  history.replaceState = function () {
+    origReplaceState.apply(this, arguments);
+    onNavigate();
+  };
+  window.addEventListener('popstate', onNavigate);
 }
 
 function findChatContainer() {

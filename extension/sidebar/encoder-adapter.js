@@ -11,7 +11,6 @@
 let _env = null;
 let _pipeline = null;
 let _scheduleGpuTask = null;
-let _registerDevice = null;
 let _runtimeReady = false;
 
 /**
@@ -29,7 +28,6 @@ async function initTransformersRuntime() {
 
   const scheduler = await import('./modules/gpu-scheduler.js');
   _scheduleGpuTask = scheduler.scheduleGpuTask;
-  _registerDevice = scheduler.registerDevice;
 
   // Configure ONNX WASM paths BEFORE any pipeline() call (Pitfall 2 in research)
   // Must point to vendored files via extension URL to satisfy MV3 CSP
@@ -119,6 +117,11 @@ async function flushQueue(onBatchReady) {
     }
   } catch (err) {
     console.log('[Encoder] flushQueue error:', err);
+  }
+
+  // Re-schedule if items remain after this batch
+  if (encodingQueue.length > 0) {
+    flushTimer = setTimeout(() => flushQueue(onBatchReady), TIME_FLUSH_MS);
   }
 }
 
@@ -210,21 +213,6 @@ async function initEncoder(onProgress) {
       encoderPipeline(['warm up'], { pooling: 'mean', normalize: true })
     );
     console.log(`[Encoder] Warm-up complete. Backend: ${backendUsed}`);
-
-    // Register WebGPU device for loss detection (WebGPU backend only)
-    // Transformers.js manages the device internally; request a second device reference
-    // solely to attach the device.lost watcher for the scheduler
-    if (backendUsed === 'webgpu' && navigator.gpu) {
-      try {
-        const adapter = await navigator.gpu.requestAdapter();
-        if (adapter) {
-          const device = await adapter.requestDevice();
-          _registerDevice(device);
-        }
-      } catch (e) {
-        console.log('[Encoder] Could not register device for loss detection:', e);
-      }
-    }
 
     // Signal fully ready to caller
     if (onProgress) {

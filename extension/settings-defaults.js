@@ -1,5 +1,5 @@
 // Shared default settings — single source of truth
-// Imported by sidebar.js, options.js, and StateManager.js
+// Imported by sidebar.js and options.js
 
 export const DEFAULT_SETTINGS = {
   topicMinCount: 5,

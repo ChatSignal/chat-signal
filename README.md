@@ -88,9 +88,7 @@ chat-signal/
 │   │   ├── cosine-router.js      # Semantic cosine classification
 │   │   ├── routing-config.js     # Seed phrases & thresholds
 │   │   ├── modules/       # Modular components
-│   │   │   ├── gpu-scheduler.js   # WebGPU mutex with priority scheduling
-│   │   │   ├── SessionManager.js  # Session lifecycle & persistence
-│   │   │   └── StateManager.js    # Application state management
+│   │   │   └── gpu-scheduler.js   # WebGPU mutex with priority scheduling
 │   │   └── utils/         # Utility modules
 │   │       ├── DOMHelpers.js         # Safe DOM manipulation (DOMPurify)
 │   │       ├── ValidationHelpers.js  # Input validation & sanitization
@@ -180,11 +178,13 @@ cargo test
 
 18 unit tests cover clustering, topic extraction, sentiment analysis, and spam detection.
 
-For extension logic tests (content-script, sidebar, options, LLM adapter):
+For extension logic tests:
 
 ```bash
 npm run test:js
 ```
+
+42 tests across 10 suites covering content-script extraction, sidebar rendering, options persistence, LLM fallback, storage manager, validation helpers, and DOM helpers.
 
 ## 🎯 How It Works
 

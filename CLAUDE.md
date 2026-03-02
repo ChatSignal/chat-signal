@@ -39,7 +39,7 @@ Content Script → Background Worker → Sidebar UI → WASM Engine
     - `encoder-adapter.js`: MiniLM encoder via Transformers.js (lazy-init, WebGPU with WASM fallback)
     - `cosine-router.js`: Cosine similarity classification into 4 buckets
     - `routing-config.js`: Seed phrases, per-category thresholds, tuning config
-    - `modules/gpu-scheduler.js`: WebGPU promise-chain mutex with priority scheduling
+    - `modules/`: Modular components (gpu-scheduler.js)
   - `libs/web-llm/`: Bundled WebLLM library (optional, for AI summaries)
   - `wasm/`: Generated WASM artifacts (git-ignored)
 - **docs/**: GitHub Pages site (privacy policy, CWS compliance docs, store assets)
@@ -82,11 +82,17 @@ There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 npm run test:js
 ```
 
-There are 12 JS tests across 4 suites covering:
+There are 42 JS tests across 10 suites covering:
 - Content-script extraction (3 tests)
 - LLM fallback sentiment (3 tests)
 - Options page settings (2 tests)
 - Sidebar helpers (4 tests)
+- Storage manager (9 tests: save, load, delete, clear, stats, MAX_SESSIONS cap)
+- ValidationHelpers: validateMessages (6 tests)
+- ValidationHelpers: validateAnalysisResult (5 tests)
+- ValidationHelpers: validateSettings (6 tests)
+- DOMHelpers: escapeHtml (3 tests)
+- DOMHelpers: DOMPURIFY_CONFIG (1 test)
 
 ## Key Files
 
@@ -101,9 +107,7 @@ There are 12 JS tests across 4 suites covering:
 - `extension/sidebar/cosine-router.js`: Prototype vector computation, per-message cosine classification, mode state
 - `extension/sidebar/routing-config.js`: Seed phrases per category, per-category thresholds, tuning constants
 - `extension/sidebar/modules/`: Modular components
-  - `gpu-scheduler.js`: WebGPU promise-chain mutex with priority scheduling and device-loss detection
-  - `SessionManager.js`: Session lifecycle, inactivity detection, persistence
-  - `StateManager.js`: Application state management and data accumulation
+  - `gpu-scheduler.js`: WebGPU promise-chain mutex with priority scheduling
 - `extension/sidebar/utils/`: Utility modules
   - `DOMHelpers.js`: Safe DOM manipulation with XSS protection
   - `ValidationHelpers.js`: Input validation and sanitization
@@ -316,7 +320,6 @@ await retryLLM();  // Re-initialize engine after fallback
 
 ### Not Yet Started
 - [ ] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission
-- [ ] **Integration of SessionManager/StateManager**: Wire up modular session/state modules into sidebar
 
 ### Next Up
 - [ ] **Export Options**: Download session data as JSON or Markdown files
