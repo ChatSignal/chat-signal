@@ -132,7 +132,7 @@ chat-signal/
 
 4. **Debugging:** 
    - Check Chrome DevTools Console for validation errors and security warnings
-   - Session data and validation logs are prefixed with `[SessionManager]` or `[StateManager]`
+   - Logs are prefixed with module names: `[Encoder]`, `[LLM]`, `[Storage]`, `[Sidebar]`
    - Security blocks are logged when unsafe content is detected
 
 ### Watch Mode (Auto-rebuild)
@@ -157,10 +157,9 @@ Word lists for emotes, stop words, and sentiment are defined at the top of `lib.
 The extension uses a modular architecture with clear separation of concerns:
 
 - **Security-First Design**: All DOM operations use safe helpers from `DOMHelpers.js` with XSS protection
-- **Input Validation**: Comprehensive validation of WASM data and user input via `ValidationHelpers.js`
-- **Session Management**: `SessionManager.js` handles session lifecycle, inactivity detection, and persistence
-- **State Management**: `StateManager.js` maintains application state and analysis results
-- **Type Safety**: All data structures are validated before processing to prevent runtime errors
+- **Input Validation**: Comprehensive validation of WASM data, user input, and stored settings via `ValidationHelpers.js`
+- **Session Persistence**: Session summaries saved to `chrome.storage.local` via `storage-manager.js`
+- **GPU Scheduling**: Promise-chain mutex in `gpu-scheduler.js` prevents concurrent WebGPU access
 
 ### Security Features
 
@@ -227,7 +226,7 @@ MPL 2.0
 
 ## 🔒 Privacy
 
-Chat Signal processes everything locally in your browser. No chat content is sent to any server. The only external request is an optional one-time AI model download from HuggingFace CDN (if you enable AI summaries).
+Chat Signal processes everything locally in your browser. No chat content is sent to any server. The only external requests are model downloads from HuggingFace CDN: a ~23MB encoder model (auto-downloads on first use) and an optional ~400MB language model (only if you enable AI summaries).
 
 Full privacy policy: **[chatsignal.dev/privacy-policy](https://chatsignal.dev/privacy-policy)**
 
