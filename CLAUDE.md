@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance for Claude Code (or any AI assistant) when working with the chat-signal-radar codebase.
+This file provides guidance for Claude Code (or any AI assistant) when working with the chat-signal codebase.
 
 ## Project Overview
 
@@ -34,10 +34,12 @@ Content Script → Background Worker → Sidebar UI → WASM Engine
   - `content-script.js`: DOM observer for YouTube/Twitch chat
   - `background.js`: Service worker for message relay
   - `llm-adapter.js`: WebLLM integration with fallback summarizer
+  - `settings-defaults.js`: Shared DEFAULT_SETTINGS (single source of truth)
   - `sidebar/`: UI components (HTML, JS, CSS with system theme support)
-    - `encoder-adapter.js`: MiniLM encoder via Transformers.js (WebGPU with WASM fallback)
+    - `encoder-adapter.js`: MiniLM encoder via Transformers.js (lazy-init, WebGPU with WASM fallback)
     - `cosine-router.js`: Cosine similarity classification into 4 buckets
     - `routing-config.js`: Seed phrases, per-category thresholds, tuning config
+    - `modules/gpu-scheduler.js`: WebGPU promise-chain mutex with priority scheduling
   - `libs/web-llm/`: Bundled WebLLM library (optional, for AI summaries)
   - `wasm/`: Generated WASM artifacts (git-ignored)
 - **docs/**: GitHub Pages site (privacy policy, CWS compliance docs, store assets)
@@ -75,6 +77,17 @@ There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 - Spam/duplicate detection (4 tests)
 - Combined analysis (1 test)
 
+```bash
+# Run JavaScript tests (content-script, sidebar, options, LLM adapter)
+npm run test:js
+```
+
+There are 12 JS tests across 4 suites covering:
+- Content-script extraction (3 tests)
+- LLM fallback sentiment (3 tests)
+- Options page settings (2 tests)
+- Sidebar helpers (4 tests)
+
 ## Key Files
 
 - `wasm-engine/src/lib.rs`: Core analysis engine with clustering, topic extraction, and sentiment analysis
@@ -83,10 +96,12 @@ There are 18 unit tests in `wasm-engine/src/lib.rs` covering:
 - `extension/content-script.js`: Platform-specific chat extraction (YouTube/Twitch selectors)
 - `extension/llm-adapter.js`: WebLLM integration for AI-powered sentiment analysis
 - `extension/sidebar/sidebar.js`: Main entry point, WASM loading, UI event handling
-- `extension/sidebar/encoder-adapter.js`: MiniLM encoder pipeline (WebGPU/WASM backends, batched queue)
+- `extension/settings-defaults.js`: Shared DEFAULT_SETTINGS (imported by sidebar.js, options.js, StateManager.js)
+- `extension/sidebar/encoder-adapter.js`: MiniLM encoder pipeline (lazy-init, WebGPU/WASM backends, batched queue)
 - `extension/sidebar/cosine-router.js`: Prototype vector computation, per-message cosine classification, mode state
 - `extension/sidebar/routing-config.js`: Seed phrases per category, per-category thresholds, tuning constants
 - `extension/sidebar/modules/`: Modular components
+  - `gpu-scheduler.js`: WebGPU promise-chain mutex with priority scheduling and device-loss detection
   - `SessionManager.js`: Session lifecycle, inactivity detection, persistence
   - `StateManager.js`: Application state management and data accumulation
 - `extension/sidebar/utils/`: Utility modules
@@ -139,6 +154,8 @@ Analyzes sentiment using lexicon-based matching.
 - Use `chrome.runtime.getURL()` for extension resource paths
 - LLM calls should have fallback behavior for when WebLLM is unavailable
 - Follow modular architecture: separate concerns into modules/ and utils/
+- Browser-only imports (Transformers.js, chrome APIs) should be lazy-loaded via dynamic `import()` in encoder-adapter.js so the module can be imported in Node.js tests
+- Settings defaults must come from `extension/settings-defaults.js` (single source of truth)
 
 ### CSS (sidebar)
 - Use CSS variables for theming (defined in `:root`)
@@ -149,11 +166,12 @@ Analyzes sentiment using lexicon-based matching.
 
 The sentiment system uses a two-tier approach:
 
-1. **WASM Engine** counts messages matching sentiment keywords:
-   - Positive: "love", "great", "pog", "awesome", etc.
-   - Negative: "hate", "bad", "boring", "trash", etc.
-   - Confused: "?", "wait", "huh", "explain", etc.
+1. **WASM Engine** counts messages matching sentiment keywords (whole-word boundary matching):
+   - Positive (checked first): "love", "great", "pog", "awesome", etc.
+   - Negative (checked second): "hate", "bad", "boring", "trash", etc.
+   - Confused (checked last): "?", "wait", "huh", "explain", etc.
    - Neutral: everything else
+   - Priority order means "this is awesome?" counts as positive, not confused
 
 2. **LLM Adapter** (Qwen2.5-0.5B-Instruct) determines mood from signals:
    - Ignores neutral messages when calculating mood
