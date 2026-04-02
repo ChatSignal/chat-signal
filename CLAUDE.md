@@ -318,19 +318,24 @@ await retryLLM();  // Re-initialize engine after fallback
 - [x] **Shared settings module**: Single DEFAULT_SETTINGS source of truth across sidebar, options, and state manager
 - [x] **Security hardening**: Restricted web_accessible_resources, explicit DOMPurify config, LLM summary throttle
 
-### Not Yet Started
-- [ ] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission
+### Shipped (v2.1 — CWS Launch)
+- [x] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission and approval
 
 ### Next Up
-- [ ] **Export Options**: Download session data as JSON or Markdown files
-- [ ] **Platform Expansion**: Add support for additional streaming platforms
+- [ ] **v2.2 — Landing Page Polish**: Meta/OG tags, favicon, CWS install button, feature highlights for chatsignal.dev
+- [ ] **v2.3 — Export Options**: Download session data as JSON or Markdown files
+- [ ] **v2.4 — Analytics/Telemetry**: Opt-in anonymous usage stats to inform roadmap priorities
+- [ ] **v2.5 — Onboarding Improvements**: Guided first-run experience to reduce churn
+- [ ] **v2.6 — Streamer/Viewer Mode Toggle**: Different default views and priorities per user role
+- [ ] **v2.7 — Clip Context**: Capture surrounding messages during sentiment spikes as shareable moments
+
+### Backlog
+- **Platform Expansion**: Add support for additional streaming platforms
   - **Kick** - Best candidate, similar architecture to Twitch
   - **Rumble** - Simpler DOM structure, growing audience
   - *Note: X Spaces investigated but tabled due to audio-first model and Shadow DOM complexity*
-- [ ] **Alerts**: Notify when sentiment spikes (positive or negative)
-- [ ] **Historical Trends**: Graphs showing sentiment/engagement over time during a stream
-
-### Future Ideas
+- **Alerts**: Notify when sentiment spikes (positive or negative)
+- **Historical Trends**: Graphs showing sentiment/engagement over time during a stream
 - User-configurable sentiment keywords
 - Threshold calibration for semantic clustering per-category
 - Moderator-specific features (flagging, quick actions)

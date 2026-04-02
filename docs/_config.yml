@@ -1,1 +1,6 @@
 title: Chat Signal
+defaults:
+  - scope:
+      path: "index.html"
+    values:
+      layout: null

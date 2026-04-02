@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#1a1a2e"/>
+
+  <!-- Radar sweeps -->
+  <path d="M64 64 L64 12 A52 52 0 0 1 116 64 Z" fill="#4f46e5" opacity="0.3"/>
+  <path d="M64 64 L116 64 A52 52 0 0 1 64 116 Z" fill="#4f46e5" opacity="0.2"/>
+  <path d="M64 64 L64 116 A52 52 0 0 1 12 64 Z" fill="#4f46e5" opacity="0.1"/>
+
+  <!-- Radar rings -->
+  <circle cx="64" cy="64" r="45" fill="none" stroke="#4f46e5" stroke-width="2" opacity="0.4"/>
+  <circle cx="64" cy="64" r="30" fill="none" stroke="#4f46e5" stroke-width="2" opacity="0.5"/>
+  <circle cx="64" cy="64" r="15" fill="none" stroke="#4f46e5" stroke-width="2" opacity="0.6"/>
+
+  <!-- Center dot -->
+  <circle cx="64" cy="64" r="6" fill="#4f46e5"/>
+
+  <!-- Signal blips -->
+  <circle cx="85" cy="40" r="5" fill="#22c55e"/>
+  <circle cx="45" cy="75" r="4" fill="#eab308"/>
+  <circle cx="90" cy="80" r="3" fill="#22c55e"/>
+
+  <!-- Radar line -->
+  <line x1="64" y1="64" x2="100" y2="28" stroke="#4f46e5" stroke-width="3" stroke-linecap="round"/>
+</svg>

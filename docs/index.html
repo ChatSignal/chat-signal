@@ -1,0 +1,152 @@
+---
+permalink: /
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat Signal — AI-Powered Live Chat Intelligence</title>
+  <meta name="description" content="Chrome extension that analyzes YouTube and Twitch live chat in real-time. Message clustering, sentiment analysis, and trending topics — 100% local, 100% private.">
+  <meta property="og:title" content="Chat Signal — AI-Powered Live Chat Intelligence">
+  <meta property="og:description" content="Chrome extension that analyzes YouTube and Twitch live chat in real-time. Message clustering, sentiment analysis, and trending topics — 100% local, 100% private.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://chatsignal.dev">
+  <meta property="og:image" content="https://chatsignal.dev/store/promo-440x280.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Chat Signal — AI-Powered Live Chat Intelligence">
+  <meta name="twitter:description" content="Chrome extension that analyzes YouTube and Twitch live chat in real-time. Message clustering, sentiment analysis, and trending topics — 100% local, 100% private.">
+  <meta name="twitter:image" content="https://chatsignal.dev/store/promo-440x280.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    :root {
+      --bg: #fff;
+      --fg: #1a1a1a;
+      --muted: #555;
+      --accent: #4285f4;
+      --accent-hover: #3367d6;
+      --card-bg: #f8f9fa;
+      --card-border: #e1e4e8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --accent-hover: #79b8ff;
+        --card-bg: #161b22;
+        --card-border: #30363d;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3em 1.5em 4em;
+    }
+    h1 {
+      font-size: 2.2em;
+      margin-bottom: 0.15em;
+      letter-spacing: -0.02em;
+    }
+    .tagline {
+      font-size: 1.15em;
+      color: var(--muted);
+      margin-bottom: 1em;
+    }
+    .intro {
+      font-size: 1.05em;
+      margin-bottom: 1.5em;
+    }
+    .cta {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff !important;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.05em;
+      transition: background 0.2s;
+      margin-bottom: 2.5em;
+    }
+    .cta:hover { background: var(--accent-hover); }
+    .features {
+      display: grid;
+      gap: 1.25em;
+      margin-bottom: 2.5em;
+    }
+    .feature {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25em 1.5em;
+    }
+    .feature h3 {
+      font-size: 1em;
+      margin-bottom: 0.3em;
+    }
+    .feature p {
+      color: var(--muted);
+      font-size: 0.95em;
+      margin: 0;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 0.95em;
+      margin-bottom: 2em;
+    }
+    .links {
+      color: var(--muted);
+      font-size: 0.9em;
+    }
+    .links a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .links a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Chat Signal</h1>
+    <p class="tagline">AI-powered live chat intelligence. 100% local. 100% private.</p>
+    <p class="intro">See what live chat is really saying — without losing it in the scroll. Chat Signal analyzes YouTube and Twitch live chat in real-time and shows you what matters.</p>
+
+    <a class="cta" href="https://chromewebstore.google.com/detail/flafbkkicodgeepkmkkgkcecoekgbjmd">Install from Chrome Web Store</a>
+
+    <div class="features">
+      <div class="feature">
+        <h3>Real-Time Message Clustering</h3>
+        <p>Questions, issues, requests, and general chat — automatically sorted so nothing gets buried. Powered by semantic AI classification with cosine similarity routing.</p>
+      </div>
+      <div class="feature">
+        <h3>Sentiment Analysis</h3>
+        <p>Know the room's mood at a glance. Six sentiment states — from excited to angry — detected locally using a two-tier WASM + LLM pipeline.</p>
+      </div>
+      <div class="feature">
+        <h3>Trending Topics</h3>
+        <p>See the words and emotes that keep coming up. Spot what chat cares about before it scrolls away.</p>
+      </div>
+      <div class="feature">
+        <h3>100% Local Processing</h3>
+        <p>All analysis runs in your browser using Rust/WASM and on-device AI models. No data exfiltration — chat messages never leave your computer.</p>
+      </div>
+    </div>
+
+    <p class="note">Free. No account needed. Works with YouTube and Twitch live streams.</p>
+
+    <p class="links">
+      <a href="/privacy-policy">Privacy Policy</a> · <a href="https://github.com/ChatSignal/chat-signal">GitHub</a>
+    </p>
+  </div>
+</body>
+</html>
