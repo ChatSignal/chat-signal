@@ -196,3 +196,41 @@ describe('reconcileMoodWithSignals (output-side defense)', () => {
     assert.deepEqual(reconcileMoodWithSignals(base, null), base);
   });
 });
+
+describe('parseSentimentResponse — OOV mood coercion (Spec a)', () => {
+  it('coerces MOOD: mixed to neutral', () => {
+    assert.equal(parseSentimentResponse('MOOD: mixed').mood, 'neutral');
+  });
+
+  it('coerces an OOV adjective (MOOD: sad) to neutral', () => {
+    assert.equal(parseSentimentResponse('MOOD: sad').mood, 'neutral');
+    assert.equal(parseSentimentResponse('MOOD: bored').mood, 'neutral');
+  });
+
+  it('coerces a garbage/non-word value to neutral', () => {
+    assert.equal(parseSentimentResponse('MOOD: xyzzy').mood, 'neutral');
+    assert.equal(parseSentimentResponse('MOOD: 123!!!').mood, 'neutral'); // no [a-z] match → silent neutral
+  });
+
+  it('passes each enum mood through unchanged', () => {
+    for (const m of ['excited', 'positive', 'angry', 'negative', 'confused', 'neutral']) {
+      assert.equal(parseSentimentResponse(`MOOD: ${m}`).mood, m);
+      assert.equal(parseSentimentResponse(`MOOD: ${m.toUpperCase()}`).mood, m); // case-insensitive
+    }
+  });
+
+  it('preserves confidence and reason when the mood coerces', () => {
+    const r = parseSentimentResponse('MOOD: mixed\nCONFIDENCE: 0.8\nREASON: crowd is split');
+    assert.equal(r.mood, 'neutral');
+    assert.equal(r.confidence, 0.8);
+    assert.equal(r.summary, 'crowd is split');
+    assert.equal(r.emoji, '😐'); // neutral emoji, not undefined
+  });
+
+  it('keeps a coerced mood valid end-to-end through the reconciler', () => {
+    const parsed = parseSentimentResponse('MOOD: mixed\nCONFIDENCE: 0.7\nREASON: split');
+    const signals = { positive_count: 6, negative_count: 5, confused_count: 1, neutral_count: 2, sentiment_score: 5 };
+    const final = reconcileMoodWithSignals(parsed, signals);
+    assert.ok(['excited', 'positive', 'angry', 'negative', 'confused', 'neutral'].includes(final.mood));
+  });
+});
