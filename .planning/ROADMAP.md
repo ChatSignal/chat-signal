@@ -6,7 +6,7 @@
 - ✅ **v1.1 CWS Readiness** — Phases 4-6 (shipped 2026-02-20, Phase 7 deferred)
 - ✅ **v1.2 Semantic AI Pipeline** — Phases 8-12 (shipped 2026-02-21)
 - ✅ **v2.1 CWS Launch / v2.2 Landing Page** — shipped out-of-band (git log; see CLAUDE.md)
-- 🚧 **v2.3 Session Export** — implemented, uncommitted, review nits pending
+- ✅ **v2.3 Session Export** — shipped: nits fixed, export tests added, committed
 - 🚧 **v2.4 Security Review Hardening** — Phases 13-16 (Phase 13 complete, Phase 14 partial)
 
 ## Phases
@@ -67,9 +67,9 @@ Files: `extension/sidebar/sidebar.js`, `sidebar.html`, `sidebar.css` (+173 lines
 - [x] Export session as JSON (blob download, `exportSession`)
 - [x] Export session as Markdown (`generateSessionMarkdown`)
 - [x] Export dropdown UI in summary modal; `currentDetailSession` bridging live + history views
-- [ ] Unit tests for `generateSessionMarkdown` / `exportSession` (exports wired, no tests added)
-- [ ] Fix review nits: (a) `URL.revokeObjectURL` immediately after `a.click()` — defer revocation; (b) whitelist `session.platform` in filename; (c) export menu stays open on backdrop-dismiss; (d) live export captures keyword buckets even in semantic mode
-- [ ] Commit
+- [x] Unit tests for `generateSessionMarkdown` + pure export helpers (`sanitizePlatform`, `buildExportFilename`, `pickDisplayBuckets`) — 5 tests, 68/68 passing
+- [x] Fix review nits: (a) defer `URL.revokeObjectURL` past `a.click()`; (b) whitelist `session.platform` in filename via `sanitizePlatform`; (c) hide export menu on backdrop-dismiss + new session; (d) capture semantic buckets (`lastSemanticBuckets`) so export/save reflect what was displayed
+- [x] Commit
 
 ### v2.4 Security Review Hardening — IN PROGRESS (started 2026-09-06)
 

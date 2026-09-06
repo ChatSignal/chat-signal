@@ -26,3 +26,6 @@ Thumbs.db
 *.swp
 *.swo
 .gstack/
+
+# Packaged extension build artifact
+chat-signal.zip

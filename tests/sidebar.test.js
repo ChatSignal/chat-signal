@@ -301,3 +301,85 @@ describe('sidebar helpers', () => {
     restoreGlobals();
   });
 });
+
+describe('session export (v2.3)', () => {
+  async function loadSidebar() {
+    globalThis.__CHAT_SIGNAL_RADAR_TEST__ = true;
+    setupSidebarDom();
+    await import(`../extension/sidebar/sidebar.js?test=${Date.now()}-${Math.random()}`);
+    return globalThis.ChatSignalRadarSidebar;
+  }
+
+  const sampleSession = () => ({
+    startTime: new Date(2026, 3, 2, 12, 0, 0).getTime(), // local 2026-04-02
+    duration: 3661000,
+    platform: 'twitch',
+    streamTitle: 'Ranked grind',
+    streamUrl: 'https://twitch.tv/foo',
+    messageCount: 128,
+    mood: 'excited',
+    sentimentSignals: { positive_count: 40, negative_count: 5, confused_count: 3, neutral_count: 12 },
+    topics: [{ term: 'pog', count: 9, is_emote: true }, { term: 'audio', count: 6, is_emote: false }],
+    buckets: [{ label: 'Questions', count: 4, sample_messages: ['when is the next map?'] }],
+    sessionQuestions: ['when is the next map?', 'what gpu?']
+  });
+
+  it('generateSessionMarkdown renders all sections with a correct score', async () => {
+    const h = await loadSidebar();
+    const md = h.generateSessionMarkdown(sampleSession());
+    assert.match(md, /# Chat Signal - Session Summary/);
+    assert.match(md, /\*\*Platform:\*\* twitch/);
+    assert.match(md, /\*\*Mood:\*\* excited/);
+    assert.match(md, /\| Positive \| 40 \|/);
+    assert.match(md, /\| \*\*Score\*\* \| \*\*58\/100\*\* \|/); // (40-5)/60 => 58
+    assert.match(md, /## Trending Topics/);
+    assert.match(md, /- pog \(9\) \[emote\]/);
+    assert.match(md, /### Questions \(4\)/);
+    assert.match(md, /## Top Questions/);
+    restoreGlobals();
+  });
+
+  it('generateSessionMarkdown omits optional sections and scores 0 with no signals', async () => {
+    const h = await loadSidebar();
+    const md = h.generateSessionMarkdown({
+      startTime: Date.now(), duration: 1000, platform: 'youtube', messageCount: 0, mood: 'neutral',
+      sentimentSignals: { positive_count: 0, negative_count: 0, confused_count: 0, neutral_count: 0 },
+      topics: [], buckets: [], sessionQuestions: []
+    });
+    assert.match(md, /\*\*Score\*\* \| \*\*0\/100\*\*/);
+    assert.doesNotMatch(md, /## Trending Topics/);
+    assert.doesNotMatch(md, /## Clusters/);
+    assert.doesNotMatch(md, /## Top Questions/);
+    restoreGlobals();
+  });
+
+  it('sanitizePlatform whitelists known platforms', async () => {
+    const h = await loadSidebar();
+    assert.equal(h.sanitizePlatform('youtube'), 'youtube');
+    assert.equal(h.sanitizePlatform('twitch'), 'twitch');
+    assert.equal(h.sanitizePlatform('kick'), 'unknown');
+    assert.equal(h.sanitizePlatform(undefined), 'unknown');
+    assert.equal(h.sanitizePlatform('../../etc'), 'unknown');
+    restoreGlobals();
+  });
+
+  it('buildExportFilename uses date, whitelisted platform, and format extension', async () => {
+    const h = await loadSidebar();
+    const s = sampleSession();
+    assert.equal(h.buildExportFilename(s, 'json'), 'chatsignal-2026-04-02-twitch.json');
+    assert.equal(h.buildExportFilename(s, 'markdown'), 'chatsignal-2026-04-02-twitch.md');
+    assert.equal(h.buildExportFilename({ ...s, platform: 'kick' }, 'json'), 'chatsignal-2026-04-02-unknown.json');
+    restoreGlobals();
+  });
+
+  it('pickDisplayBuckets prefers semantic buckets only when active and non-empty', async () => {
+    const h = await loadSidebar();
+    const kw = [{ label: 'General Chat', count: 3 }];
+    const sem = [{ label: 'Questions', count: 2 }];
+    assert.deepEqual(h.pickDisplayBuckets(kw, sem, true), sem);   // semantic active
+    assert.deepEqual(h.pickDisplayBuckets(kw, sem, false), kw);   // keyword mode
+    assert.deepEqual(h.pickDisplayBuckets(kw, [], true), kw);     // empty semantic
+    assert.deepEqual(h.pickDisplayBuckets(undefined, null, false), []); // nothing
+    restoreGlobals();
+  });
+});

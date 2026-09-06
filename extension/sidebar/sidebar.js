@@ -180,6 +180,7 @@ function updateSystemStatus() {
 // Session tracking
 let sessionStartTime = null;
 let lastAnalysisResult = null;
+let lastSemanticBuckets = null; // Latest cosine-routed buckets when semantic mode is active
 let currentPlatform = null;
 let currentStreamTitle = null;
 let currentStreamUrl = null;
@@ -246,6 +247,7 @@ if (!isTestEnv) {
   // Close modal on backdrop click
   summaryModal.querySelector('.modal-backdrop').addEventListener('click', () => {
     summaryModal.classList.add('hidden');
+    exportMenu.classList.add('hidden');
   });
 
   // LLM consent modal handlers
@@ -776,6 +778,7 @@ function processMessages(messages) {
           if (msPerMessage > ROUTING_CONFIG.wasmSpeedThresholdMsPerMessage) {
             console.log(`[Sidebar] Encoding too slow (${msPerMessage.toFixed(0)}ms/msg), falling back to keyword mode`);
             setKeywordMode();
+            lastSemanticBuckets = null; // keyword mode now authoritative (nit d)
             updateClusteringBadge('Keyword');
             updateSystemStatus();
             return;
@@ -786,6 +789,7 @@ function processMessages(messages) {
         if (isSemanticReady() && embeddings) {
           const labels = classifyBatch(batch, embeddings);
           const semanticBuckets = buildSemanticBuckets(batch, labels);
+          lastSemanticBuckets = semanticBuckets; // capture for export/save (nit d)
 
           // Override the WASM bucket display with semantic buckets
           clustersDiv.innerHTML = '';
@@ -1183,7 +1187,7 @@ function showSessionSummary() {
     streamTitle: currentStreamTitle || '',
     streamUrl: currentStreamUrl || '',
     messageCount: totalMessageCount,
-    buckets: result.buckets || [],
+    buckets: pickDisplayBuckets(result.buckets, lastSemanticBuckets, isSemanticReady()),
     topics: result.topics || [],
     sentimentSignals: { ...sessionSentiment },
     mood: currentMood || 'neutral',
@@ -1279,6 +1283,29 @@ async function copySummaryToClipboard() {
   }
 }
 
+// Platforms we recognize; anything else is normalized so it can't inject
+// unexpected characters into the download filename.
+const KNOWN_PLATFORMS = ['youtube', 'twitch'];
+
+function sanitizePlatform(platform) {
+  return KNOWN_PLATFORMS.includes(platform) ? platform : 'unknown';
+}
+
+function buildExportFilename(session, format) {
+  const date = new Date(session.startTime);
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const ext = format === 'json' ? 'json' : 'md';
+  return `chatsignal-${dateStr}-${sanitizePlatform(session.platform)}.${ext}`;
+}
+
+// Export/save must capture whatever the user actually saw: semantic clusters
+// when semantic mode is active, otherwise the WASM keyword buckets.
+function pickDisplayBuckets(keywordBuckets, semanticBuckets, semanticActive) {
+  return (semanticActive && semanticBuckets && semanticBuckets.length > 0)
+    ? semanticBuckets
+    : (keywordBuckets || []);
+}
+
 function generateSessionMarkdown(session) {
   const date = new Date(session.startTime);
   const signals = session.sentimentSignals;
@@ -1345,34 +1372,31 @@ function exportSession(format) {
   const session = currentDetailSession;
   if (!session) return;
 
-  const date = new Date(session.startTime);
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const baseName = `chatsignal-${dateStr}-${session.platform}`;
-
-  let content, mimeType, extension;
+  let content, mimeType;
   if (format === 'json') {
     content = JSON.stringify(session, null, 2);
     mimeType = 'application/json';
-    extension = 'json';
   } else {
     content = generateSessionMarkdown(session);
     mimeType = 'text/markdown';
-    extension = 'md';
   }
 
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${baseName}.${extension}`;
+  a.download = buildExportFilename(session, format);
   a.click();
-  URL.revokeObjectURL(url);
+  // Defer revocation: revoking immediately after click() can cancel the
+  // download before the browser has started reading the blob.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function startNewSession() {
   // Reset session state
   sessionStartTime = null;
   lastAnalysisResult = null;
+  lastSemanticBuckets = null;
   allMessages = [];
   sessionQuestions = [];
   totalMessageCount = 0;
@@ -1459,7 +1483,7 @@ async function saveCurrentSession() {
     streamTitle: currentStreamTitle || 'Unknown Stream',
     streamUrl: currentStreamUrl || '',
     messageCount: totalMessageCount,
-    buckets: lastAnalysisResult.buckets,
+    buckets: pickDisplayBuckets(lastAnalysisResult.buckets, lastSemanticBuckets, isSemanticReady()),
     topics: lastAnalysisResult.topics,
     sentimentSignals: { ...sessionSentiment },
     mood: currentMood,
@@ -1712,6 +1736,9 @@ if (isTestEnv && typeof globalThis !== 'undefined') {
     generateSummaryText,
     generateSessionMarkdown,
     exportSession,
+    sanitizePlatform,
+    buildExportFilename,
+    pickDisplayBuckets,
     showSessionSummary,
     startInactivityCheck,
     stopInactivityCheck,
