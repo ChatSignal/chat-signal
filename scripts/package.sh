@@ -6,18 +6,23 @@ ZIP_NAME="chat-signal.zip"
 echo "🏗️  Building Chat Signal for CWS submission..."
 echo ""
 
-# 1. Build WASM
-echo "Step 1/3: Building WASM engine..."
+# 1. Install locked dev deps (reproducible: uses package-lock.json exactly)
+echo "Step 1/4: Installing locked dependencies (npm ci)..."
+npm ci --ignore-scripts
+
+# 2. Build WASM
+echo ""
+echo "Step 2/4: Building WASM engine..."
 ./scripts/build.sh
 
-# 2. Vendor Transformers.js
+# 3. Vendor Transformers.js
 echo ""
-echo "Step 2/3: Vendoring Transformers.js..."
+echo "Step 3/4: Vendoring Transformers.js..."
 ./scripts/vendor-transformers.sh
 
-# 3. Create ZIP
+# 4. Create ZIP
 echo ""
-echo "Step 3/3: Packaging extension..."
+echo "Step 4/4: Packaging extension..."
 
 # Remove old ZIP if it exists
 rm -f "$ZIP_NAME"

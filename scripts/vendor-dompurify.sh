@@ -4,7 +4,7 @@ set -e
 # Re-vendor DOMPurify from the pinned npm package into the extension.
 # Version is pinned exactly in package.json ("dompurify": "3.3.1") and locked
 # in package-lock.json, so `npm install` fetches the same bytes every time.
-# After running, verify the hash against extension/libs/PROVENANCE.md.
+# After running, verify the hash against extension/libs/VENDORED.md.
 
 DEST="extension/libs/dompurify"
 SRC="node_modules/dompurify/dist/purify.min.js"
