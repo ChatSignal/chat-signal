@@ -44,6 +44,14 @@ async function initTransformersRuntime() {
 
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 
+// Pin the model to a specific HuggingFace commit rather than tracking `main`.
+// Transformers.js has no built-in integrity check, so an unpinned model would
+// silently pick up whatever the repo's main branch points at (a compromised
+// repo, or a CDN/MITM swap). Pinning to a reviewed commit SHA bounds what can
+// be fetched. To rotate: verify the new commit at
+// https://huggingface.co/Xenova/all-MiniLM-L6-v2/commits/main and update here.
+const MODEL_REVISION = '751bff37182d3f1213fa05d7196b954e230abad9';
+
 let encoderPipeline = null;
 let encoderState = 'idle'; // 'idle' | 'loading' | 'ready' | 'error'
 let backendUsed = null;    // 'webgpu' | 'wasm' | null
@@ -183,6 +191,7 @@ async function initEncoder(onProgress) {
       encoderPipeline = await _pipeline('feature-extraction', MODEL_ID, {
         device,
         dtype: 'q8',
+        revision: MODEL_REVISION,
         progress_callback: progressCallback,
       });
 
@@ -196,6 +205,7 @@ async function initEncoder(onProgress) {
         encoderPipeline = await _pipeline('feature-extraction', MODEL_ID, {
           device: 'wasm',
           dtype: 'q8',
+          revision: MODEL_REVISION,
           progress_callback: progressCallback,
         });
       } else {
