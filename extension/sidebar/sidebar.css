@@ -995,7 +995,8 @@ h1 {
   flex: 1 1 100%;
 }
 
-.modal-actions-3 .btn:not(:first-child) {
+.modal-actions-3 .btn:not(:first-child),
+.modal-actions-3 .export-dropdown {
   flex: 1 1 0;
 }
 
@@ -1032,6 +1033,49 @@ h1 {
 
 .modal-actions .btn-secondary:hover {
   background: var(--bg-tertiary);
+}
+
+/* Export dropdown */
+.export-dropdown {
+  position: relative;
+  flex: 1 1 0;
+}
+
+.export-dropdown .btn {
+  width: 100%;
+}
+
+.export-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.export-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.export-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.export-menu-item + .export-menu-item {
+  border-top: 1px solid var(--border-color);
 }
 
 /* Copy toast */

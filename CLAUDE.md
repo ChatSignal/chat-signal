@@ -321,13 +321,22 @@ await retryLLM();  // Re-initialize engine after fallback
 ### Shipped (v2.1 — CWS Launch)
 - [x] **Verification & Submission**: Incognito testing, clean ZIP build, CRXcavator scan, CWS submission and approval
 
+### Shipped (v2.2 — Landing Page Polish)
+- [x] **Landing Page**: Meta/OG tags, favicon, CWS install button, feature highlights for chatsignal.dev
+
+### Shipped (v2.3 — Export Options)
+- [x] **Export Options**: Download session data as JSON or Markdown files (implemented 2026-04-02; review nits tracked in `.planning/ROADMAP.md`)
+
 ### Next Up
-- [ ] **v2.2 — Landing Page Polish**: Meta/OG tags, favicon, CWS install button, feature highlights for chatsignal.dev
-- [ ] **v2.3 — Export Options**: Download session data as JSON or Markdown files
-- [ ] **v2.4 — Analytics/Telemetry**: Opt-in anonymous usage stats to inform roadmap priorities
-- [ ] **v2.5 — Onboarding Improvements**: Guided first-run experience to reduce churn
-- [ ] **v2.6 — Streamer/Viewer Mode Toggle**: Different default views and priorities per user role
-- [ ] **v2.7 — Clip Context**: Capture surrounding messages during sentiment spikes as shareable moments
+- [ ] **v2.4 — Security Review Hardening** (from 2026-04-02 full-repo security review):
+  - ✅ **Phase 13 (HIGH): LLM prompt-injection hardening** — DONE 2026-09-06 (`bb5ea62`): sample sanitization, untrusted-data fences, last-match parser, mood↔signal polarity reconciliation, strict summary validation, +20 adversarial tests
+  - 🚧 **Phase 14 (HIGH): Model supply-chain integrity** — PARTIAL (`49052f1` pinned MiniLM to HF commit; `6981a52` dependabot). Remaining: web-llm + DOMPurify provenance/SHA-256, verify WebLLM 400MB weight pinning, commit package-lock.json + npm ci, evaluate bundling MiniLM (~23MB) in package
+  - **Phase 15 (MED): Trust boundaries** — sender validation + per-tab messaging, validate settings in onChanged, unify AI consent across options/sidebar
+  - **Phase 16 (ARCH): GPU scheduler wire-up-or-delete; evaluate Chrome Built-in AI (Prompt API / Gemini Nano) vs WebLLM**
+- [ ] **v2.5 — Analytics/Telemetry**: Opt-in anonymous usage stats to inform roadmap priorities
+- [ ] **v2.6 — Onboarding Improvements**: Guided first-run experience to reduce churn
+- [ ] **v2.7 — Streamer/Viewer Mode Toggle**: Different default views and priorities per user role
+- [ ] **v2.8 — Clip Context**: Capture surrounding messages during sentiment spikes as shareable moments
 
 ### Backlog
 - **Platform Expansion**: Add support for additional streaming platforms

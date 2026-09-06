@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Real-time chat analysis must be accurate enough to be actionable — semantic clustering via MiniLM encoder vectors replaces keyword matching for dramatically better message classification.
-**Current focus:** Planning next milestone
+**Current focus:** v2.4 Security Review Hardening — Phase 13 complete, Phase 14 in progress
 
 ## Current Position
 
 Phase: None — between milestones
 Plan: N/A
-Status: v1.2 Semantic AI Pipeline shipped (5 phases, 9 plans). Milestone archived.
-Last activity: 2026-02-21 — v1.2 milestone completed and archived
+Status: v2.4 in progress — HIGH-1 resolved (`bb5ea62`, 2026-09-06), HIGH-2 partial (`49052f1` MiniLM pin + `6981a52` sharp bump). v2.3 export still uncommitted. Tests 63/63.
+Last activity: 2026-04-02 — security review + verification; v2.3 export feature landed in working tree (sidebar.js/html/css, +173 lines)
 
-Progress: [██████████] 100% (v1.2 complete)
+Progress: v2.3 pending commit; v2.4 Phase 13-16 planned
 
 ## Performance Metrics
 
@@ -55,12 +55,17 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 7 (verification + submission) still deferred from v1.1 — VERIF-01, VERIF-02 pending
-- sidePanel incognito behavior is MEDIUM confidence — deferred VERIF-01 from v1.1, still pending
-- v1.2 tech debt accepted: GPU scheduler bypass (low), keyword-not-semantic buckets to LLM (low), orphaned exports (trivial)
+- ~~**HIGH-1:** LLM prompt injection~~ → RESOLVED 2026-09-06 (`bb5ea62`): sanitizeChatSample + untrusted-data fences + anti-instruction system messages + last-match parser + reconcileMoodWithSignals polarity cross-check + strict hasSummaryFormat; +20 adversarial tests (63/63 passing).
+- **HIGH-2 (partial):** MiniLM pinned to HF commit `751bff37182d3f1213fa05d7196b954e230abad9` (`49052f1`); Dependabot configured. Remaining open: `libs/web-llm/index.js` provenance/hash unrecorded; WebLLM 400MB weight pinning unverified; `package-lock.json` still git-ignored; MiniLM bundling unevaluated.
+- **MEDIUM (open):** CHAT_MESSAGES no sender validation + global broadcast — two streams in two windows mix into one session. Fix with port-based per-tab routing.
+- **MEDIUM (open):** `chrome.storage.onChanged` path skips `validateSettings`; options-page AI toggle bypasses consent disclosure + disk-space check.
+- v2.3 export nits: revokeObjectURL race, platform not whitelisted in filename, export menu persists on backdrop-close, no unit tests for new export functions.
+- Security review upgraded GPU-scheduler finding: scheduler never serializes SLM access and `registerDevice` has zero callers — decide wire-up vs delete in Phase 16 (note: STATE.md previously logged this as accepted low-risk tech debt).
+- sidePanel incognito behavior is MEDIUM confidence — deferred VERIF-01 from v1.1, resolved per CWS launch (v2.1) per CLAUDE.md.
+- v1.2 tech debt accepted: keyword-not-semantic buckets to LLM (low), orphaned exports (trivial).
 
 ## Session Continuity
 
-Last session: 2026-02-21
-Stopped at: v1.2 milestone completed and archived.
+Last session: 2026-09-06
+Stopped at: HIGH-1 closed (bb5ea62); HIGH-2 partial — MiniLM pinned, remaining: web-llm/DOMPurify provenance+hashes, lockfile commit, WebLLM weight pinning, MiniLM bundling evaluation; v2.3 export nits pending.
 Resume file: None

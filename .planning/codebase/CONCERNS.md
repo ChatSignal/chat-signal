@@ -1,8 +1,46 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-02-19
+**Analysis Date:** 2026-02-19 (updated 2026-09-06: HIGH-1 resolved, HIGH-2 partial)
 
-## Tech Debt
+## Security Review Findings (2026-04-02)
+
+Full-repo code + security review conducted 2026-04-02. Entries below supersede/extend older items. **Verification same day: both HIGH findings remain OPEN** — the v2.3 export changes did not touch them.
+
+### HIGH-1: LLM Prompt Injection Undermines Mood/Summary Integrity — RESOLVED 2026-09-06 (`bb5ea62`)
+- **Issue:** Raw chat messages interpolated directly into prompts; `MOOD:` scan-anywhere parser; trivial `hasSummaryFormat`.
+- **Files:** `extension/llm-adapter.js`
+- **Resolution:** Layered mitigation shipped: `sanitizeChatSample()` (newline collapse, fence-marker strip, control-token neutralization, 200-char cap), `<<<CHAT>>>…<<<END>>>` data fences + anti-instruction system messages, last-match MOOD parser, `reconcileMoodWithSignals()` polarity cross-check vs WASM signals (contradiction → rule-based fallback), strict `hasSummaryFormat` (emoji/known-category prefix). +20 adversarial unit tests; 63/63 passing.
+- **Residual (accepted):** Semantic instruction-injection reduced, not eliminated; a tastefully-formatted injected line (emoji + colon) can still pass summary validation, bounded by fallback layers.
+
+### HIGH-2: Runtime Model Downloads Lack Integrity Pinning — PARTIAL (2026-09-06)
+- **Resolved:** MiniLM encoder pinned to HF commit `751bff37182d3f1213fa05d7196b954e230abad9` via `MODEL_REVISION` on both WebGPU/WASM pipeline calls; rotation process documented in-code (commit `49052f1`). Revision verified to resolve against the live HF endpoint.
+- **Still open:** (1) `libs/web-llm/index.js` (6.5MB shipped blob) — no recorded upstream version/URL/SHA-256; (2) WebLLM 400MB Qwen weight pinning unverified (MLC registry); (3) `package-lock.json` still git-ignored → `vendor-transformers.sh` output not reproducible; (4) vendored DOMPurify unpinned/unhashed; (5) MiniLM bundling (~23MB, eliminates always-on runtime fetch) unevaluated — scoped as follow-up by `49052f1`.
+- **Files:** `extension/sidebar/encoder-adapter.js` (done), `extension/llm-adapter.js` (open), `scripts/vendor-transformers.sh`, `.gitignore`
+- **Fix approach:** `VENDORED.md` provenance + hash verification script; commit lockfile + `npm ci` in package.sh; verify WebLLM weight pinning or add hash check; decide MiniLM bundling. Remainder of Phase 14.
+
+### MED-1: Message Relay — No Sender Validation, Cross-Tab Session Mixing
+- **Issue:** `background.js` relays any CHAT_MESSAGES; sidebar re-broadcast reaches every extension context in every window; no `sender` checks. Two streams in two windows merge into one session.
+- **Files:** `extension/background.js`, `extension/sidebar/sidebar.js` (onMessage listener ~L1050)
+- **Fix approach:** Validate sender; port-based per-tab messaging (also fixes always-on observer CPU cost). Planned as Phase 15.
+
+### MED-2: Validation Bypass Paths
+- **Issue:** `chrome.storage.onChanged` listener merges settings without `validateSettings`; options-page AI toggle writes `aiSummariesEnabled: true` directly, bypassing consent disclosure + disk-space check.
+- **Files:** `extension/sidebar/sidebar.js` (onChanged ~L340, checkAISettings), `extension/options/options.js` (AI toggle handler)
+- **Fix approach:** Validate in onChanged; route options toggle through the same consent function as the modal. Planned as Phase 15.
+
+### MED-3 (upgrade of existing tech debt): GPU Scheduler Never Serializes SLM Access
+- **Issue:** Only encoder calls `scheduleGpuTask`; WebLLM manages its own WebGPU engine — 'slm' priority/burst-limit paths are dead code. `registerDevice` has zero callers, so the `gpu-unavailable` recovery listener can never fire.
+- **Files:** `extension/sidebar/modules/gpu-scheduler.js`, `extension/llm-adapter.js`
+- **Fix approach:** Wire WebLLM through the scheduler or delete the machinery; decision tied to Chrome Built-in AI (Prompt API / Gemini Nano) evaluation — could replace WebLLM entirely. Planned as Phase 16.
+
+### New Correctness Findings (v2.3 export + content extraction)
+- Double-escaping: `safeCreateElement(tag, cls, escapeHtml(text))` renders entities literally via textContent — chat text with `&`/`<`/`>` displays wrong.
+- Observer captures only first matching descendant per subtree — messages dropped in bursts; no removal handling for moderated messages; YouTube `<img>` emotes lose alt text.
+- SPA nav: isolated-world `history.pushState` patch never catches page navigation — use YouTube `yt-navigate-finish` DOM event.
+- `saveSession` read-modify-write race (auto-save vs manual click).
+- v2.3 nits: revokeObjectURL-immediately-after-click race; platform not whitelisted in filename; export menu persists on backdrop-close; no tests for new export functions.
+
+## Tech Debt (from 2026-02-19 analysis)
 
 ### 1. Large Bundled WebLLM Library
 - **Issue:** `extension/libs/web-llm/index.js` is 5.8MB and contains 12,830 lines
