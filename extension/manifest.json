@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Chat Signal",
-  "version": "2.1.0",
+  "version": "2.1.1",
+  "minimum_chrome_version": "114",
   "description": "AI-powered live chat intelligence for YouTube and Twitch. Clusters messages, tracks sentiment and trending topics. 100% local.",
   "homepage_url": "https://chatsignal.dev",
   "icons": {

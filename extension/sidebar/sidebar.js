@@ -163,7 +163,7 @@ function updateSystemStatus() {
     const reason = getFallbackReason();
     let tooltip;
     if (reason === 'no-gpu') {
-      tooltip = 'AI: Chrome on-device AI unavailable \u2014 using rule-based analysis';
+      tooltip = 'AI: update Chrome to enable built-in AI \u2014 using rule-based analysis';
     } else if (reason === 'garbage') {
       tooltip = 'AI: model not responding \u2014 using rule-based analysis';
     } else {
@@ -577,7 +577,7 @@ function startLLMInitialization() {
     if (isInFallback()) {
       const reason = getFallbackReason();
       if (reason === 'no-gpu') {
-        statusText.textContent = 'Chrome on-device AI unavailable \u2014 using rule-based analysis';
+        statusText.textContent = 'Update Chrome to enable built-in AI \u2014 using rule-based analysis';
       } else {
         statusText.textContent = 'AI unavailable \u2014 using rule-based analysis';
       }
@@ -736,14 +736,14 @@ function processMessages(messages) {
 
       // Build bucket content safely
       const headerDiv = safeCreateElement('div', 'cluster-header');
-      const labelDiv = safeCreateElement('div', 'cluster-label', escapeHtml(bucket.label));
+      const labelDiv = safeCreateElement('div', 'cluster-label', bucket.label);
       const countDiv = safeCreateElement('div', 'cluster-count', bucket.count.toString());
       headerDiv.appendChild(labelDiv);
       headerDiv.appendChild(countDiv);
       
       const messagesDiv = safeCreateElement('div', 'cluster-messages');
       bucket.sample_messages.forEach(msg => {
-        const msgDiv = safeCreateElement('div', 'message-item', escapeHtml(msg));
+        const msgDiv = safeCreateElement('div', 'message-item', msg);
         messagesDiv.appendChild(msgDiv);
       });
       
@@ -793,14 +793,14 @@ function processMessages(messages) {
               bucketEl.className = 'cluster-bucket';
 
               const headerDiv = safeCreateElement('div', 'cluster-header');
-              const labelDiv = safeCreateElement('div', 'cluster-label', escapeHtml(bucket.label));
+              const labelDiv = safeCreateElement('div', 'cluster-label', bucket.label);
               const countDiv = safeCreateElement('div', 'cluster-count', bucket.count.toString());
               headerDiv.appendChild(labelDiv);
               headerDiv.appendChild(countDiv);
 
               const messagesDiv = safeCreateElement('div', 'cluster-messages');
               bucket.sample_messages.forEach(msg => {
-                const msgDiv = safeCreateElement('div', 'message-item', escapeHtml(msg));
+                const msgDiv = safeCreateElement('div', 'message-item', msg);
                 messagesDiv.appendChild(msgDiv);
               });
 
@@ -957,7 +957,7 @@ function updateFallbackNotice() {
   const msgEl = document.getElementById('fallback-message');
   if (msgEl) {
     if (reason === 'no-gpu') {
-      msgEl.textContent = 'Chrome on-device AI unavailable \u2014 using rule-based analysis';
+      msgEl.textContent = 'Update Chrome to enable built-in AI \u2014 using rule-based analysis';
     } else if (reason === 'garbage') {
       msgEl.textContent = 'AI not responding \u2014 using rule-based analysis';
     } else {
@@ -986,7 +986,7 @@ async function generateAISummary(buckets) {
       // Use safe DOM manipulation instead of innerHTML
       const ul = safeCreateElement('ul', 'ai-summary-list');
       lines.forEach(line => {
-        const li = safeCreateElement('li', '', escapeHtml(line));
+        const li = safeCreateElement('li', '', line);
         ul.appendChild(li);
       });
       aiSummaryText.innerHTML = '';
@@ -1145,7 +1145,7 @@ function showSessionSummary() {
     topicsContainer.innerHTML = '';
     result.topics.slice(0, 10).forEach(topic => {
       const span = safeCreateElement('span', `summary-topic ${topic.is_emote ? 'emote' : ''}`,
-        `${escapeHtml(topic.term)} (${topic.count})`);
+        `${topic.term} (${topic.count})`);
       topicsContainer.appendChild(span);
     });
   } else {

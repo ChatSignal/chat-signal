@@ -3,6 +3,30 @@
 All notable changes to Chat Signal are documented here. This project
 follows semantic versioning.
 
+## [2.1.1] — 2026-09-07
+
+Follow-up fixes after the 2.1.0 on-device migration.
+
+### Fixed
+- Chat messages containing `&`, `<`, `>`, or quotes no longer display
+  escaped HTML entities (e.g. `<3` rendering as `&lt;3`) in cluster
+  buckets, the AI summary list, or trending topics. Text bound via
+  `textContent` is no longer pre-escaped (double-encoding).
+
+### Changed
+- The Settings AI toggle and the sidebar fallback notice now guide users
+  to update Chrome to enable built-in AI, rather than only reporting that
+  on-device AI is unavailable.
+- Removed a stale "~400 MB language model download" description from the
+  Settings AI toggle — the AI backend is Chrome's built-in Gemini Nano
+  (on-device, no download).
+
+### Added
+- `minimum_chrome_version` (114) in the manifest — the extension's true
+  floor (Side Panel API), so older browsers get a clear message instead
+  of a broken install. AI summaries remain a runtime, gracefully
+  degrading feature, not an install gate.
+
 ## [2.1.0] — 2026-09-07
 
 On-device AI migration and a reduced permission/network footprint,
