@@ -26,6 +26,25 @@ describe('escapeHtml', () => {
   });
 });
 
+describe('safeCreateElement', () => {
+  it('stores raw text as textContent without escaping (callers must not pre-escape)', () => {
+    // safeCreateElement assigns textContent, which never parses HTML — so it is
+    // already XSS-safe. Passing escapeHtml(text) here would double-encode and
+    // render literal entities (e.g. "<3" showing as "&lt;3") in the UI.
+    const prev = globalThis.document;
+    globalThis.document = {
+      createElement: () => ({ className: '', textContent: '' }),
+    };
+    try {
+      const el = safeCreateElement('div', 'cluster-label', '<3 & "quoted"');
+      assert.equal(el.textContent, '<3 & "quoted"');
+      assert.equal(el.className, 'cluster-label');
+    } finally {
+      globalThis.document = prev;
+    }
+  });
+});
+
 describe('DOMPURIFY_CONFIG', () => {
   it('has allowed tags and attributes', () => {
     assert.ok(Array.isArray(DOMPURIFY_CONFIG.ALLOWED_TAGS));
