@@ -103,3 +103,38 @@ Full-repo security review conducted 2026-04-02. Re-verification 2026-09-06: comm
 | 14. Model Supply-Chain Integrity | v2.4 | Complete | **Complete** | 2026-09-07 (pin + provenance + lockfile; WebLLM items obsoleted) |
 | 15. Trust-Boundary Mediums | v2.4 | 0/? | Planned | - |
 | 16. Gemini Nano migration | v2.4 | Complete | **Complete** | 2026-09-07 (Nano live; WebLLM removed; 79/79) |
+
+## Backlog — Moderation / Deleted-Message Handling
+
+### Deleted / moderated messages — PLANNED (foundation landed 2026-09-07)
+
+Deleted/moderated messages are currently never removed from analysis, so
+mod-deleted spam still skews clustering and session-wide stats. Belongs with the
+broader "Moderator-specific features" backlog item.
+
+**Foundation — DONE 2026-09-07 (`8038465`):** every captured message now carries
+a stable, DOM-anchored `id` — the platform's native element id when present
+(YouTube renderers), else a synthesized id cached per element via a `WeakMap`
+(kept off the page DOM, GC-friendly with the chat's virtualized list). No
+behavior change; nothing consumes `id` yet. It's the anchor a future deletion
+handler needs to correlate a mutation back to a captured message.
+
+**Remaining work (deferred — milestone-shaped, not a patch):**
+
+- **Detection — per-platform, attribute-based, NOT `removedNodes`.** Live chat
+  virtualizes: the platforms constantly rip old messages out of the DOM as they
+  scroll off, so `removedNodes` is ~all pruning, not moderation. Wiring
+  "removed node → drop from analysis" would corrupt stats on every scroll. Real
+  signals:
+  - YouTube: tombstone / `is-deleted` attribute on the message renderer.
+  - Twitch: `chat-line__message--deleted` class (or a "message deleted" text
+    swap) on the *persisting* node.
+  - Requires an attribute/`characterData` observer mode alongside the current
+    `childList` one.
+- **Propagation:** emit a deletion signal from the content script (keyed by the
+  message `id`) → background relay → sidebar.
+- **Removal — the design fork:** forward-only is near-useless (the message is
+  already counted); the useful version is *retroactive* — subtract from the
+  rolling window AND the session-wide accumulators, then re-derive clustering.
+  That touches the WASM analysis and the stats accumulators, neither of which
+  supports removal/recompute today.
