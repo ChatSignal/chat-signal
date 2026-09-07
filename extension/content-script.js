@@ -15,6 +15,28 @@ const YOUTUBE_CHAT_SELECTOR = 'yt-live-chat-text-message-renderer';
 // Twitch chat selector
 const TWITCH_CHAT_SELECTOR = '.chat-line__message';
 
+// Stable per-message id machinery. Foundation for future moderation/deletion
+// handling — nothing consumes `id` yet. Prefer the platform's native element
+// id (YouTube renderers carry one); otherwise synthesize a stable id and cache
+// it against the element via a WeakMap, so a later deletion handler can
+// correlate an attribute mutation on that same element back to this message.
+// A WeakMap keeps this off the page DOM and lets entries GC when the element
+// is pruned by the chat's virtualized list.
+let messageIdCounter = 0;
+const messageIdCache = new WeakMap();
+
+function getMessageId(element) {
+  if (!element || typeof element !== 'object') return null;
+  const nativeId = element.id
+    || (typeof element.getAttribute === 'function' && element.getAttribute('id'))
+    || null;
+  if (nativeId) return nativeId;
+  if (messageIdCache.has(element)) return messageIdCache.get(element);
+  const id = `cs-${Date.now().toString(36)}-${(messageIdCounter++).toString(36)}`;
+  messageIdCache.set(element, id);
+  return id;
+}
+
 function extractYouTubeMessage(element) {
   const authorElement = element.querySelector('#author-name');
   const messageElement = element.querySelector('#message');
@@ -22,6 +44,7 @@ function extractYouTubeMessage(element) {
   if (!authorElement || !messageElement) return null;
 
   return {
+    id: getMessageId(element),
     text: messageElement.textContent.trim(),
     author: authorElement.textContent.trim(),
     timestamp: Date.now()
@@ -35,6 +58,7 @@ function extractTwitchMessage(element) {
   if (!authorElement || !messageElement) return null;
 
   return {
+    id: getMessageId(element),
     text: messageElement.textContent.trim(),
     author: authorElement.textContent.trim(),
     timestamp: Date.now()
@@ -222,6 +246,7 @@ const ChatSignalRadarContent = {
   extractYouTubeMessage,
   extractTwitchMessage,
   collectMessageElements,
+  getMessageId,
   getSelector,
   findChatContainer
 };
