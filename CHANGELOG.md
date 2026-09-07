@@ -12,6 +12,10 @@ Follow-up fixes after the 2.1.0 on-device migration.
   escaped HTML entities (e.g. `<3` rendering as `&lt;3`) in cluster
   buckets, the AI summary list, or trending topics. Text bound via
   `textContent` is no longer pre-escaped (double-encoding).
+- The chat observer no longer silently drops messages during burst
+  inserts. When one added subtree carried multiple messages, only the
+  first was captured (`querySelector`); it now gathers every match, so
+  fast-moving chats are counted completely.
 
 ### Changed
 - The Settings AI toggle and the sidebar fallback notice now guide users

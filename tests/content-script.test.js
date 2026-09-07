@@ -62,6 +62,41 @@ describe('content-script helpers', () => {
     restoreGlobals();
   });
 
+  it('captures every message in a burst-added subtree, not just the first', async () => {
+    const helpers = await loadContentScript('www.twitch.tv');
+    const selector = '.chat-line__message';
+    const msgA = { id: 'a', matches: (s) => s === selector };
+    const msgB = { id: 'b', matches: (s) => s === selector };
+    const msgC = { id: 'c', matches: (s) => s === selector };
+    // One subtree attached in a single mutation, already holding 3 messages.
+    const wrapper = {
+      matches: () => false,
+      querySelectorAll: (s) => (s === selector ? [msgA, msgB, msgC] : [])
+    };
+
+    const result = helpers.collectMessageElements(wrapper, selector);
+
+    assert.deepEqual(result.map((n) => n.id), ['a', 'b', 'c']);
+    restoreGlobals();
+  });
+
+  it('captures a node that is itself a message', async () => {
+    const helpers = await loadContentScript('www.twitch.tv');
+    const selector = '.chat-line__message';
+    const node = { id: 'x', matches: (s) => s === selector, querySelectorAll: () => [] };
+
+    assert.deepEqual(helpers.collectMessageElements(node, selector).map((n) => n.id), ['x']);
+    restoreGlobals();
+  });
+
+  it('ignores non-element nodes (no matches method)', async () => {
+    const helpers = await loadContentScript('www.twitch.tv');
+    const textNode = { nodeType: 3, textContent: 'hi' };
+
+    assert.deepEqual(helpers.collectMessageElements(textNode, '.chat-line__message'), []);
+    restoreGlobals();
+  });
+
   it('finds Twitch chat container using the expected selector', async () => {
     const container = { id: 'twitch-chat' };
     const helpers = await loadContentScript('www.twitch.tv', (selector) => {

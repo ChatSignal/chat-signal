@@ -41,6 +41,16 @@ function extractTwitchMessage(element) {
   };
 }
 
+// Collect every chat-message element inside a single added subtree.
+// A burst insert can attach one subtree that already contains multiple
+// messages, so we must gather ALL matches — returning only the first
+// (querySelector) silently drops the rest during fast chats.
+function collectMessageElements(node, selector) {
+  if (!node || typeof node.matches !== 'function') return [];
+  if (node.matches(selector)) return [node];
+  return Array.from(node.querySelectorAll(selector));
+}
+
 let currentObserver = null;
 let currentContainer = null;
 let batchTimer = null;
@@ -166,16 +176,15 @@ function attachObserver(container) {
   if (DEBUG) console.log(`[Chat Signal] Started observing ${platform} chat`);
 
   currentObserver = new MutationObserver((mutations) => {
+    const extractor = isYouTube ? extractYouTubeMessage : extractTwitchMessage;
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const messageElement = node.matches(getSelector()) ? node : node.querySelector(getSelector());
-          if (messageElement) {
-            const extractor = isYouTube ? extractYouTubeMessage : extractTwitchMessage;
-            const message = extractor(messageElement);
-            if (message) {
-              messageBatch.push(message);
-            }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        // Capture every message in the subtree, not just the first.
+        for (const messageElement of collectMessageElements(node, getSelector())) {
+          const message = extractor(messageElement);
+          if (message) {
+            messageBatch.push(message);
           }
         }
       });
@@ -212,6 +221,7 @@ if (!isTestEnv) {
 const ChatSignalRadarContent = {
   extractYouTubeMessage,
   extractTwitchMessage,
+  collectMessageElements,
   getSelector,
   findChatContainer
 };
