@@ -27,9 +27,9 @@ Chat Signal analyzes YouTube and Twitch live chat in real-time and shows you:
 
 **For creators and moderators:** Spot audience questions in real time, catch sentiment shifts early, and get an AI-generated summary of what happened during the stream.
 
-Free. No account needed. All processing happens locally in your browser — no chat data ever leaves your computer. A small encoder model (~23MB) is downloaded once on first use for smarter clustering; the optional AI summary model (~400MB) downloads only if you opt in.
+Free. No account needed. All processing happens locally in your browser — no chat data ever leaves your computer, and the extension makes no external network connections. Smarter clustering uses a small model bundled right into the extension (no download). Optional AI summaries run on Chrome's built-in AI (Gemini Nano) — fully on-device.
 
-Works with YouTube and Twitch live streams.
+Works with YouTube and Twitch live streams. AI summaries require a recent version of Chrome with built-in AI support; on older browsers Chat Signal automatically falls back to a simpler rule-based analysis, so core clustering and sentiment keep working everywhere.
 
 ---
 

@@ -10,7 +10,7 @@ A Chrome extension that uses Rust + WebAssembly to analyze YouTube and Twitch li
 - **Trending Topics**: Word cloud of frequently mentioned terms, with special highlighting for emotes
 - **Session History**: Save and review past session summaries with full sentiment breakdown and captured questions
 - **Smart Session Detection**: Auto-prompts to save when stream chat goes inactive for 2+ minutes
-- **AI Summaries**: Optional WebLLM-powered chat summaries using Qwen2.5-0.5B-Instruct (works offline, falls back gracefully with "Basic mode" indicator)
+- **AI Summaries**: Optional on-device chat summaries via Chrome's built-in AI (Gemini Nano); falls back gracefully to a rule-based "Basic mode" when unavailable
 - **Configurable Thresholds**: Adjust analysis window size and inactivity timeout from the settings page
 
 ## 🏗️ Architecture
@@ -73,7 +73,7 @@ chat-signal/
 │   ├── manifest.json
 │   ├── background.js      # Service worker
 │   ├── content-script.js  # Chat DOM observer
-│   ├── llm-adapter.js     # WebLLM integration
+│   ├── llm-adapter.js     # Gemini Nano (Chrome built-in AI) + rule-based fallback
 │   ├── storage-manager.js # Session history persistence
 │   ├── options/           # Settings page
 │   │   ├── options.html
@@ -198,7 +198,7 @@ npm run test:js
    - MiniLM encodes messages into 384-dim embeddings
    - Cosine similarity routes each message to the nearest prototype vector
    - Badge shows "Semantic" or "Keyword" to indicate active mode
-6. **LLM Adapter** (Qwen2.5-0.5B-Instruct) enhances sentiment and generates summaries from semantic clusters
+6. **LLM Adapter** (Gemini Nano, Chrome built-in AI) enhances sentiment and generates summaries from semantic clusters
    - Keyword-scan parser tolerates model preamble
    - Garbage-triggered fallback to rule-based mode with "Basic mode" UI indicator
 7. **Sidebar UI** displays:
@@ -226,7 +226,7 @@ MPL 2.0
 
 ## 🔒 Privacy
 
-Chat Signal processes everything locally in your browser. No chat content is sent to any server. The only external requests are model downloads from HuggingFace CDN: a ~23MB encoder model (auto-downloads on first use) and an optional ~400MB language model (only if you enable AI summaries).
+Chat Signal processes everything locally in your browser. No chat content is sent to any server, and the extension makes no external network connections (`connect-src 'self'`): the MiniLM encoder (~23MB) is bundled in the extension package, and optional AI summaries run on Chrome's built-in Gemini Nano, which is managed by the browser.
 
 Full privacy policy: **[chatsignal.dev/privacy-policy](https://chatsignal.dev/privacy-policy)**
 
