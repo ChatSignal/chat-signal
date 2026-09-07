@@ -7,7 +7,8 @@
 - ✅ **v1.2 Semantic AI Pipeline** — Phases 8-12 (shipped 2026-02-21)
 - ✅ **v2.1 CWS Launch / v2.2 Landing Page** — shipped out-of-band (git log; see CLAUDE.md)
 - ✅ **v2.3 Session Export** — shipped: nits fixed, export tests added, committed
-- 🚧 **v2.4 Security Review Hardening** — Phases 13-16 (13, 14, 16 complete incl. Nano migration 16.1–16.3 + MiniLM bundling; 15 planned)
+- ✅ **v2.4 Security Review Hardening** — Phases 13-16 all complete (13, 14, 16 incl. Nano migration 16.1–16.3 + MiniLM bundling; 15 trust-boundary mediums)
+- ✅ **v2.1.0 CWS Re-submission** — manifest `2.0.0 → 2.1.0` (`32fcb07`); packages the on-device stack (Gemini Nano + locally-bundled MiniLM, zero third-party runtime network surface). Code-complete; tests green (85 JS + 18 Rust); CWS dashboard upload is the remaining human step.
 
 ## Phases
 
@@ -89,10 +90,10 @@ Full-repo security review conducted 2026-04-02. Re-verification 2026-09-06: comm
   - [x] Un-ignored `package-lock.json`; `npm ci` in `scripts/package.sh`
   - [x] WebLLM/Qwen weight pinning — obsolete (WebLLM removed in Phase 16)
   - [x] (optional follow-up) Bundle MiniLM (~23MB) — DONE 2026-09-07 `7ee5a11` (+`54f2a19` interim Xet-CDN CSP repair): MiniLM vendored at pinned SHA `751bff3…` via `scripts/vendor-minilm.sh`, `allowLocalModels`+`localModelPath`, `allowRemoteModels=false`; runtime HF fetch eliminated; CSP `connect-src` now `'self'` — zero third-party network surface remains
-- [ ] Phase 15: Trust-Boundary Mediums — READY (rescoped 2026-09-07 post-Nano; two mediums + one cosmetic tidy)
-  - 15.1 Sender validation + per-tab port routing — drops multi-window session mixing + always-on observer cost (background relay has no sender checks; broadcast reaches every extension context)
-  - 15.2 Validate settings in `chrome.storage.onChanged` listener (sidebar merges stored settings raw; load-path validates, live path bypasses `_validateSettings`)
-  - 15.3 Consent leftovers tidy (rescoped from "unify AI consent"; Nano collapsed the disclosure premise — options toggle bypasses nothing now in any compliance sense, only cosmetic asymmetry: mark `aiConsentShown` when AI enabled from options; rename stale 'no-gpu' copy that now means "Chrome on-device AI unavailable")
+- [x] Phase 15: Trust-Boundary Mediums — COMPLETE (2026-09-07; two mediums + one cosmetic tidy)
+  - [x] 15.1 Sender validation + per-window chat routing (`445a8b1`) — background relay validates sender and routes per-window; drops multi-window session mixing + always-on observer cost
+  - [x] 15.2 Validate settings in `chrome.storage.onChanged` listener (`e9bddcc`) — live storage-change path now runs `_validateSettings`, matching the load path
+  - [x] 15.3 Consent leftovers tidy (`3906104`) — mark `aiConsentShown` when AI enabled from options; rename stale 'no-gpu' copy to "Chrome on-device AI unavailable"
 - [x] Phase 16: Gemini Nano migration — SHIPPED 2026-09-07
   - **Gemini Nano feasibility spike (Prompt API) — PASSED (2026-09-07).** Gate-2 replay of 72-batch fixture through live Nano, scored with the extension's own machinery (tests/fixtures/nano-batches.json + scripts/nano-spike-oneshot.js). Results: mood garbage/OOV 0%, summary hasFormat 100%, injection flips 0/8, mood p95 4.8s (<10s), summary p95 5.6s (<30s), reconcile agreement ~96% (caught 2-3 injection baits/run). Design rules learned: (1) clone a pristine session per call — sharing one stateful session across calls bloated latency 7x (30-57s); (2) keep the signal-authoritative fenced prompt (kept Nano on-enum + injection-resistant); (3) parseSentimentResponse + reconcileMoodWithSignals are load-bearing — Nano's own injection resistance is only ~60-75%.
   - **Migrated (16.1→16.3):** NanoEngine behind the existing interface (availability-gated, pristine-session-per-call), all hardening retained; WebLLM/Qwen fully removed (6.5MB bundle, gpu-scheduler SLM path + dead registerDevice, heavy consent modal → lightweight on-device note, unlimitedStorage, raw.githubusercontent.com CSP); docs updated. Encoder/MiniLM (and gpu-scheduler, HF CSP) deliberately kept — they belong to embeddings, not WebLLM. 79/79 tests green.
@@ -101,5 +102,5 @@ Full-repo security review conducted 2026-04-02. Re-verification 2026-09-06: comm
 |-------|-----------|----------------|--------|-----------|
 | 13. LLM Prompt-Injection Hardening | v2.4 | 2/2 | **Complete** | 2026-09-06 (`bb5ea62`, +20 adversarial tests, 63/63 pass) |
 | 14. Model Supply-Chain Integrity | v2.4 | Complete | **Complete** | 2026-09-07 (pin + provenance + lockfile; WebLLM items obsoleted) |
-| 15. Trust-Boundary Mediums | v2.4 | 0/? | Planned | - |
+| 15. Trust-Boundary Mediums | v2.4 | 3/3 | **Complete** | 2026-09-07 (`445a8b1` 15.1, `e9bddcc` 15.2, `3906104` 15.3) |
 | 16. Gemini Nano migration | v2.4 | Complete | **Complete** | 2026-09-07 (Nano live; WebLLM removed; 79/79) |
