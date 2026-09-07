@@ -97,6 +97,38 @@ describe('content-script helpers', () => {
     restoreGlobals();
   });
 
+  it('prefers a native element id for the message id', async () => {
+    const helpers = await loadContentScript('www.youtube.com');
+    const el = { id: 'ChwKGkNMmsg123', getAttribute: () => null };
+    assert.equal(helpers.getMessageId(el), 'ChwKGkNMmsg123');
+    restoreGlobals();
+  });
+
+  it('synthesizes a stable id per element when no native id exists', async () => {
+    const helpers = await loadContentScript('www.twitch.tv');
+    const el1 = {};
+    const el2 = {};
+    const id1 = helpers.getMessageId(el1);
+    assert.match(id1, /^cs-/);
+    assert.equal(helpers.getMessageId(el1), id1); // stable for same element
+    assert.notEqual(helpers.getMessageId(el2), id1); // distinct per element
+    restoreGlobals();
+  });
+
+  it('includes an id on extracted messages', async () => {
+    const helpers = await loadContentScript('www.youtube.com');
+    const element = {
+      id: 'msg-42',
+      querySelector: (selector) => {
+        if (selector === '#author-name') return { textContent: 'Ada' };
+        if (selector === '#message') return { textContent: 'gg' };
+        return null;
+      }
+    };
+    assert.equal(helpers.extractYouTubeMessage(element).id, 'msg-42');
+    restoreGlobals();
+  });
+
   it('finds Twitch chat container using the expected selector', async () => {
     const container = { id: 'twitch-chat' };
     const helpers = await loadContentScript('www.twitch.tv', (selector) => {

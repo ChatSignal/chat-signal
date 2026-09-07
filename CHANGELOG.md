@@ -33,6 +33,11 @@ Follow-up fixes after the 2.1.0 on-device migration.
   SHA-256 updated in `extension/libs/VENDORED.md`.
 
 ### Added
+- Each captured chat message now carries a stable, DOM-anchored `id`
+  (native element id where the platform provides one, else a synthesized
+  id cached per element via a `WeakMap`). Foundation for future
+  moderation/deletion handling — nothing consumes it yet, and there is no
+  behavior change.
 - `minimum_chrome_version` (114) in the manifest — the extension's true
   floor (Side Panel API), so older browsers get a clear message instead
   of a broken install. AI summaries remain a runtime, gracefully
