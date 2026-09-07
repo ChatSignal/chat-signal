@@ -203,6 +203,7 @@ let sessionSentiment = {
 
 // Inactivity detection
 let lastMessageTime = null;
+let myWindowId = null; // this side panel's window; used to drop other windows' streams
 let inactivityCheckInterval = null;
 
 // Current view state
@@ -498,6 +499,13 @@ async function initEncoderOnStartup() {
 // Initialize WASM module
 async function initWasm() {
   try {
+    // Record which window this side panel belongs to so we can drop chat
+    // relayed from streams in *other* windows (fixes two-windows mixing).
+    try {
+      const win = await chrome.windows.getCurrent();
+      myWindowId = win?.id ?? null;
+    } catch (_) { myWindowId = null; }
+
     statusText.textContent = 'Loading settings...';
     await loadSettings();
 
@@ -1003,10 +1011,23 @@ const validateMessages = _validateMessages;
 // Accumulate messages across batches for better clustering
 let allMessages = [];
 
+// Trust boundary: accept a relayed chat batch only if it belongs to this side
+// panel's window. Fail-open when either window id is unknown (own id not yet
+// resolved, or a batch that predates the background stamping it) so behavior is
+// unchanged on single-window setups. Pure + exported for testing.
+function isMessageForThisWindow(message, windowId) {
+  if (windowId == null) return true;
+  if (message == null || message.sourceWindowId == null) return true;
+  return message.sourceWindowId === windowId;
+}
+
 // Listen for messages from content script
 if (!isTestEnv) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'CHAT_MESSAGES') {
+      // Drop chat relayed from streams in other windows.
+      if (!isMessageForThisWindow(message, myWindowId)) return false;
+
       // Track platform and stream info
       if (message.platform) currentPlatform = message.platform;
       if (message.streamTitle) currentStreamTitle = message.streamTitle;
@@ -1724,6 +1745,7 @@ if (isTestEnv && typeof globalThis !== 'undefined') {
     buildExportFilename,
     pickDisplayBuckets,
     applyValidatedSettings,
+    isMessageForThisWindow,
     showSessionSummary,
     startInactivityCheck,
     stopInactivityCheck,

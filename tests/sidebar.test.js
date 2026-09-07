@@ -418,3 +418,32 @@ describe('applyValidatedSettings (15.2 — onChanged validation)', () => {
     restoreGlobals();
   });
 });
+
+describe('isMessageForThisWindow (15.1 — per-window routing)', () => {
+  async function loadSidebar() {
+    globalThis.__CHAT_SIGNAL_RADAR_TEST__ = true;
+    setupSidebarDom();
+    await import(`../extension/sidebar/sidebar.js?test=${Date.now()}-${Math.random()}`);
+    return globalThis.ChatSignalRadarSidebar;
+  }
+
+  it('accepts a batch from the same window', async () => {
+    const h = await loadSidebar();
+    assert.equal(h.isMessageForThisWindow({ sourceWindowId: 5 }, 5), true);
+    restoreGlobals();
+  });
+
+  it('drops a batch from a different window', async () => {
+    const h = await loadSidebar();
+    assert.equal(h.isMessageForThisWindow({ sourceWindowId: 9 }, 5), false);
+    restoreGlobals();
+  });
+
+  it('fails open when this window id is unknown or the batch is unstamped', async () => {
+    const h = await loadSidebar();
+    assert.equal(h.isMessageForThisWindow({ sourceWindowId: 9 }, null), true); // own id unresolved
+    assert.equal(h.isMessageForThisWindow({}, 5), true);                       // unstamped batch
+    assert.equal(h.isMessageForThisWindow(null, 5), true);
+    restoreGlobals();
+  });
+});
