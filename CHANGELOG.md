@@ -21,6 +21,13 @@ Follow-up fixes after the 2.1.0 on-device migration.
   Settings AI toggle — the AI backend is Chrome's built-in Gemini Nano
   (on-device, no download).
 
+### Security
+- Bumped the shipped DOMPurify from 3.3.1 to 3.4.15 (non-major) to clear
+  the sanitizer advisories affecting <=3.3.1 — notably general
+  mutation-XSS (GHSA-h8r8-wccr-v5f2). DOMPurify sanitizes chat-derived
+  HTML at runtime, so this is the extension's XSS boundary. Provenance and
+  SHA-256 updated in `extension/libs/VENDORED.md`.
+
 ### Added
 - `minimum_chrome_version` (114) in the manifest — the extension's true
   floor (Side Panel API), so older browsers get a clear message instead

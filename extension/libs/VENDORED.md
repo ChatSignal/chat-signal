@@ -12,19 +12,22 @@ sha256sum extension/libs/dompurify/purify.min.js
 
 | File | Version | License | Source | Reproducible via |
 |------|---------|---------|--------|------------------|
-| `dompurify/purify.min.js` | 3.3.1 | Apache-2.0 / MPL-2.0 | [cure53/DOMPurify](https://github.com/cure53/DOMPurify) (npm `dompurify@3.3.1`) | `scripts/vendor-dompurify.sh` |
+| `dompurify/purify.min.js` | 3.4.15 | Apache-2.0 / MPL-2.0 | [cure53/DOMPurify](https://github.com/cure53/DOMPurify) (npm `dompurify@3.4.15`) | `scripts/vendor-dompurify.sh` |
 | `transformers/` (git-ignored, generated) | `@huggingface/transformers` ^3.8.1 | Apache-2.0 | [huggingface/transformers.js](https://github.com/huggingface/transformers.js) | `scripts/vendor-transformers.sh` |
 | `models/Xenova/all-MiniLM-L6-v2/` (git-ignored, generated) | commit `751bff37` | Apache-2.0 | [Xenova/all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2) | `scripts/vendor-minilm.sh` |
 
 ## SHA-256
 
 ```
-9b494057fad6656fd9ce2089d0b6898df9632c10e45e4775a43073a46cffc8cb  extension/libs/dompurify/purify.min.js
+f263b05369e050fa175d4ecb9c9358eb4253602d510297adfb31df48b2f1c4d5  extension/libs/dompurify/purify.min.js
 ```
 
 `dompurify/purify.min.js` is byte-for-byte identical to the `dist/purify.min.js`
-shipped in npm `dompurify@3.3.1` (verified), so it is fully pinned via
-`package.json` + `package-lock.json`.
+shipped in npm `dompurify@3.4.15` (verified), so it is fully pinned via
+`package.json` + `package-lock.json`. Bumped from 3.3.1 to 3.4.15 to clear the
+DOMPurify sanitizer advisories affecting <=3.3.1 (including general mutation-XSS
+GHSA-h8r8-wccr-v5f2); 3.4.15 is a non-major update with the same
+`DOMPurify.sanitize(html, config)` API.
 
 ## Models — no runtime downloads
 
