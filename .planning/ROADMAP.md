@@ -7,7 +7,7 @@
 - ✅ **v1.2 Semantic AI Pipeline** — Phases 8-12 (shipped 2026-02-21)
 - ✅ **v2.1 CWS Launch / v2.2 Landing Page** — shipped out-of-band (git log; see CLAUDE.md)
 - ✅ **v2.3 Session Export** — shipped: nits fixed, export tests added, committed
-- 🚧 **v2.4 Security Review Hardening** — Phases 13-16 (13, 14, 16 complete; 15 planned)
+- 🚧 **v2.4 Security Review Hardening** — Phases 13-16 (13, 14, 16 complete incl. Nano migration 16.1–16.3 + MiniLM bundling; 15 planned)
 
 ## Phases
 
@@ -88,7 +88,7 @@ Full-repo security review conducted 2026-04-02. Re-verification 2026-09-06: comm
   - [x] DOMPurify pinned 3.3.1 + provenance/SHA-256 in `VENDORED.md`; web-llm provenance moot (bundle removed in Phase 16)
   - [x] Un-ignored `package-lock.json`; `npm ci` in `scripts/package.sh`
   - [x] WebLLM/Qwen weight pinning — obsolete (WebLLM removed in Phase 16)
-  - [ ] (optional follow-up) Bundle MiniLM (~23MB) to eliminate the one remaining runtime fetch
+  - [x] (optional follow-up) Bundle MiniLM (~23MB) — DONE 2026-09-07 `7ee5a11` (+`54f2a19` interim Xet-CDN CSP repair): MiniLM vendored at pinned SHA `751bff3…` via `scripts/vendor-minilm.sh`, `allowLocalModels`+`localModelPath`, `allowRemoteModels=false`; runtime HF fetch eliminated; CSP `connect-src` now `'self'` — zero third-party network surface remains
 - [ ] Phase 15: Trust-Boundary Mediums
   - Sender validation + per-tab port routing (multi-window session mixing)
   - Validate settings in `chrome.storage.onChanged` listener (still bypasses `validateSettings`)
