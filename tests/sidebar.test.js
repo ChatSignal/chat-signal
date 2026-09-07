@@ -383,3 +383,38 @@ describe('session export (v2.3)', () => {
     restoreGlobals();
   });
 });
+
+describe('applyValidatedSettings (15.2 — onChanged validation)', () => {
+  async function loadSidebar() {
+    globalThis.__CHAT_SIGNAL_RADAR_TEST__ = true;
+    setupSidebarDom();
+    await import(`../extension/sidebar/sidebar.js?test=${Date.now()}-${Math.random()}`);
+    return globalThis.ChatSignalRadarSidebar;
+  }
+  const DEFAULTS = {
+    topicMinCount: 5, spamThreshold: 3, duplicateWindow: 30, sentimentSensitivity: 3,
+    moodUpgradeThreshold: 30, aiSummariesEnabled: false, analysisWindowSize: 500, inactivityTimeout: 120
+  };
+
+  it('applies a valid change merged over defaults', async () => {
+    const h = await loadSidebar();
+    const out = h.applyValidatedSettings({ spamThreshold: 7 });
+    assert.equal(out.spamThreshold, 7);
+    assert.equal(out.topicMinCount, DEFAULTS.topicMinCount); // untouched default preserved
+    restoreGlobals();
+  });
+
+  it('falls back to defaults when a synced value is out of range', async () => {
+    const h = await loadSidebar();
+    assert.deepEqual(h.applyValidatedSettings({ topicMinCount: 9999 }), DEFAULTS);
+    assert.deepEqual(h.applyValidatedSettings({ duplicateWindow: 'not-a-number' }), DEFAULTS);
+    restoreGlobals();
+  });
+
+  it('returns defaults for missing/null synced settings', async () => {
+    const h = await loadSidebar();
+    assert.deepEqual(h.applyValidatedSettings(undefined), DEFAULTS);
+    assert.deepEqual(h.applyValidatedSettings(null), DEFAULTS);
+    restoreGlobals();
+  });
+});

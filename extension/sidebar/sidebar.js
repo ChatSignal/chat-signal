@@ -342,18 +342,26 @@ if (!isTestEnv) {
 }
 
 
+// Merge stored/synced settings over defaults, then validate; fall back to a
+// clean default set on validation failure. Single source of truth for both the
+// initial load and the live storage.onChanged path so corrupt synced values
+// can't bypass validation on either.
+function applyValidatedSettings(rawSettings) {
+  const merged = { ...DEFAULT_SETTINGS, ...rawSettings };
+  try {
+    _validateSettings(merged);
+    return merged;
+  } catch (validationError) {
+    console.warn('[Sidebar] Stored settings invalid, using defaults:', validationError.message);
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
 // Load settings from chrome.storage
 async function loadSettings() {
   try {
     const result = await chrome.storage.sync.get('settings');
-    const merged = { ...DEFAULT_SETTINGS, ...result.settings };
-    try {
-      _validateSettings(merged);
-      settings = merged;
-    } catch (validationError) {
-      console.warn('[Sidebar] Stored settings invalid, using defaults:', validationError.message);
-      settings = { ...DEFAULT_SETTINGS };
-    }
+    settings = applyValidatedSettings(result.settings);
     updateAiSummaryState();
   } catch (error) {
     console.warn('[Sidebar] Failed to load settings, using defaults:', error);
@@ -362,11 +370,11 @@ async function loadSettings() {
   }
 }
 
-// Listen for settings changes
+// Listen for settings changes — validate the live value the same way as load.
 if (!isTestEnv) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'sync' && changes.settings) {
-      settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
+      settings = applyValidatedSettings(changes.settings.newValue);
       updateAiSummaryState();
     }
   });
@@ -1715,6 +1723,7 @@ if (isTestEnv && typeof globalThis !== 'undefined') {
     sanitizePlatform,
     buildExportFilename,
     pickDisplayBuckets,
+    applyValidatedSettings,
     showSessionSummary,
     startInactivityCheck,
     stopInactivityCheck,
