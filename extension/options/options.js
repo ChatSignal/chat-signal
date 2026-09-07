@@ -210,7 +210,11 @@ if (inputs.aiSummariesEnabled) {
     try {
       const existing = await chrome.storage.sync.get('settings');
       const updated = { ...existing.settings, aiSummariesEnabled: inputs.aiSummariesEnabled.checked };
-      await chrome.storage.sync.set({ settings: updated });
+      const payload = { settings: updated };
+      // Enabling AI here also marks the first-run note as seen, so it never
+      // re-appears in the sidebar (parity with the note's own Enable button).
+      if (inputs.aiSummariesEnabled.checked) payload.aiConsentShown = true;
+      await chrome.storage.sync.set(payload);
       showStatus(inputs.aiSummariesEnabled.checked ? 'AI summaries enabled' : 'AI summaries disabled', 'success');
     } catch (error) {
       console.error('Failed to save AI toggle:', error);

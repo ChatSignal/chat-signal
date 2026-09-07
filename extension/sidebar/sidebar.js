@@ -163,7 +163,7 @@ function updateSystemStatus() {
     const reason = getFallbackReason();
     let tooltip;
     if (reason === 'no-gpu') {
-      tooltip = 'AI: needs a GPU \u2014 using rule-based analysis';
+      tooltip = 'AI: Chrome on-device AI unavailable \u2014 using rule-based analysis';
     } else if (reason === 'garbage') {
       tooltip = 'AI: model not responding \u2014 using rule-based analysis';
     } else {
@@ -569,7 +569,7 @@ function startLLMInitialization() {
     if (isInFallback()) {
       const reason = getFallbackReason();
       if (reason === 'no-gpu') {
-        statusText.textContent = 'No compatible GPU \u2014 using rule-based analysis';
+        statusText.textContent = 'Chrome on-device AI unavailable \u2014 using rule-based analysis';
       } else {
         statusText.textContent = 'AI unavailable \u2014 using rule-based analysis';
       }
@@ -949,7 +949,7 @@ function updateFallbackNotice() {
   const msgEl = document.getElementById('fallback-message');
   if (msgEl) {
     if (reason === 'no-gpu') {
-      msgEl.textContent = 'AI needs a GPU \u2014 using rule-based analysis';
+      msgEl.textContent = 'Chrome on-device AI unavailable \u2014 using rule-based analysis';
     } else if (reason === 'garbage') {
       msgEl.textContent = 'AI not responding \u2014 using rule-based analysis';
     } else {
